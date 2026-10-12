@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-12T20:56:27.950094+00:00",
+  "generatedAt": "2026-10-12T21:22:28.319029+00:00",
   "title": "Design System: Workbench",
   "mode": "operate",
   "extensions": {
@@ -37,6 +37,23 @@
     "tokenMirror": {
       "source": "DESIGN.md frontmatter",
       "purpose": "Explicit requested token mirror; DESIGN.md remains normative."
+    },
+    "workspace": {
+      "desktop": "Viewport-height flex column (100dvh; minimum 560px), fixed-height surrounding regions and remaining-space workspace (minimum 320px).",
+      "settingsPanel": "370px; 330px at 1000px; independent desktop scrolling.",
+      "mobile": "Document flow at 700px; bounded scrolling List region (360px), YAML region (480px), full-width settings.",
+      "initialListMaximumWidth": "1000px",
+      "automaticListMaximumWidth": "700px"
+    },
+    "zoomControlSize": "44px",
+    "disclosure": {
+      "collapsedMarker": "+",
+      "expandedMarker": "\u2212",
+      "runInputs": "Collapsed by default; expanded desktop maximum 35dvh with scrolling; mobile follows document flow."
+    },
+    "mobileStepNavigation": {
+      "selection": "Focus the settings heading without intermediate scrolling, then scroll details into view.",
+      "back": "Focus the selected List button, then scroll to the workflow list."
     }
   },
   "components": [
@@ -78,6 +95,13 @@
       "description": "Selected step with direct append action.",
       "html": "<article class=\"ds-node\"><small>Command \u00b7 pending</small><strong>Run tests</strong><button class=\"ds-add\">Add next</button></article>",
       "css": ".ds-node{width:228px;padding:14px 16px;border:1px solid #aabec6;border-radius:8px;background:#fff;color:var(--ink,#182a30);font:16px/1.5 system-ui,sans-serif;outline:2px solid var(--accent,#165c73);outline-offset:2px}.ds-node small{font-size:12px;color:var(--muted,#4a6068)}.ds-node strong{display:block;margin:6px 0}.ds-add{font:16px/1.5 system-ui,sans-serif;min-height:44px;border:1px solid var(--line,#cbd7db);border-radius:6px;padding:8px 12px;cursor:pointer;background:#f5f8f9;width:100%;margin-top:12px;font-size:13px}.ds-add:hover{background:#eaf1f4;border-color:var(--accent,#165c73)}.ds-add:focus-visible{outline:3px solid var(--accent,#165c73);outline-offset:3px}"
+    },
+    {
+      "name": "Run Inputs Disclosure",
+      "kind": "custom",
+      "description": "Collapsed run inputs and evidence with explicit expanded state.",
+      "html": "<details class=\"ds-disclosure\"><summary>Inputs and run evidence</summary><div class=\"ds-disclosure-body\">Run evidence and workflow input fields appear here.</div></details>",
+      "css": ".ds-disclosure{font:16px/1.5 system-ui,sans-serif;color:var(--ink,#182a30);border-top:1px solid var(--line,#cbd7db);padding:8px 24px;background:var(--surface,#fff)}.ds-disclosure>summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-weight:600}.ds-disclosure>summary::before{content:\"+\";padding-right:10px}.ds-disclosure[open]>summary::before{content:\"\u2212\"}.ds-disclosure>summary:focus-visible{outline:3px solid var(--accent,#165c73);outline-offset:3px}.ds-disclosure[open]{max-height:35dvh;overflow:auto}.ds-disclosure-body{padding:8px 4px 16px}@media(max-width:700px){.ds-disclosure{padding:8px 20px}.ds-disclosure[open]{max-height:none}}"
     }
   ],
   "narrative": {

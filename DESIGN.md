@@ -91,7 +91,9 @@ Use the system sans stack for interface text and the monospace stack for YAML an
 
 ## Layout
 
-The desktop working area pairs a flexible graph with a 370px settings panel; the panel narrows to 330px at 1000px. Header and toolbar wrap as needed. At 700px the work area stacks, the settings panel becomes full width, and the list provides equivalent editing. Initial representation is list at widths up to 1000px. On narrow screens the canvas shows a message directing users to List.
+The desktop app is a viewport-height flex column (100dvh, minimum 560px). Header, toolbar, banners, footer and run inputs keep their own height; the workspace fills the remaining space with a minimum height of 320px. The flexible graph pairs with a 370px independently scrolling settings panel; the panel narrows to 330px at 1000px. Header and toolbar wrap as needed.
+
+At 700px the app uses document scrolling, the workspace stacks and the settings panel becomes full width. The mobile list occupies a bounded, scrolling 360px graph region, keeping settings reachable regardless of workflow length; YAML uses a 480px region. Initial representation is List at widths up to 1000px; entering the 700px breakpoint automatically switches Canvas to List. The narrow Canvas fallback directs users to List.
 
 Use the documented spacing scale for repeated rhythm. The implementation also uses local values such as 6px label gaps, 14px node padding, 20px mobile padding and 28px header padding; these are component details rather than an expanded global scale.
 
@@ -101,13 +103,17 @@ Working surfaces are flat, separated by borders and background tones. The modal 
 
 ## Shapes
 
-Controls and code blocks use gently rounded corners, workflow nodes slightly softer corners, and dialogs the largest radius. Ordinary controls have a 44px minimum height. Desktop connection insertion buttons are circular and 32px; mobile insertion targets grow to at least 44px. Checkboxes remain 18px native controls, so 44px is not a universal rule for every rendered element.
+Controls and code blocks use gently rounded corners, workflow nodes slightly softer corners, and dialogs the largest radius. Ordinary controls have a 44px minimum height. Canvas zoom and fit controls have 44px square targets. Desktop connection insertion buttons are circular and 32px; mobile insertion targets grow to at least 44px. Checkboxes remain 18px native controls, so 44px is not a universal rule for every rendered element.
 
 ## Components
 
 Buttons use white surfaces and line borders. Primary buttons use dark ink, changing to teal on hover; ordinary buttons use the pale hover surface and teal border. Pressed representation and list buttons use the selected surface. Disabled buttons reduce opacity to one half.
 
 Inputs and text areas use white surfaces, line borders and consistent padding. Text areas resize vertically. Buttons, links, fields and disclosure summaries share a 3px teal focus outline offset by 3px.
+
+Disclosure summaries show a plus when collapsed and a minus when expanded. Inputs and run evidence occupy a collapsed-by-default disclosure below the workspace; its expanded desktop content scrolls within a maximum of 35dvh, while mobile expansion follows document flow.
+
+At the mobile breakpoint, selecting a list step focuses the settings heading and scrolls the details into view. Back to workflow steps restores focus to the selected list button and scrolls to the list.
 
 Workflow nodes carry title, type and status, with a direct Add next action. Selection uses a 2px teal outline offset by 2px. Success and failure borders reinforce explicit outcome labels.
 

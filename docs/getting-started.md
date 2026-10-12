@@ -29,13 +29,15 @@ Select **Add manual gate** when a person must inspect evidence or prepare device
 
 Expand **Advanced settings** for platform commands, resources, timeouts, input requirements, progress parsing and reports. Workflow settings contains input definitions, environment references, profiles and detection hooks. Complex fields use labelled JSON controls; the YAML tab is the complete configuration view, not a second configuration store.
 
-**List** provides equivalent selection and step editing on narrow screens. **Undo/Redo** affects unsaved configuration only. Execution evidence is never undone.
+**List** provides equivalent selection and step editing on narrow screens. Below 700px it is selected automatically. Choosing a step opens and focuses its settings; **Back to workflow steps** returns to the list. Workflow settings also opens in view on mobile. **Undo/Redo** affects unsaved configuration only. Execution evidence is never undone.
 
 ## Saving and resuming
 
 Switching away from YAML validates and applies pending edits; invalid YAML stays in the editor and is never discarded. New/delete dialogs trap keyboard focus, close with Escape and return focus to their triggering control.
 
 Save checks that the file has not changed externally, validates all settings and writes atomically. A conflict asks you to reload rather than overwriting someone else's edit. Configuration edits are disabled while execution or paused scheduling is active.
+
+The desktop work area fits the viewport, with independently scrollable settings and larger canvas controls. In Run, **View running step** focuses the active job; **Inputs and run evidence** expands to reveal detection and report links. Manual gates show evidence status instead of execution percentages.
 
 Reloading the page leaves execution on the server running. Stop the server only after stopping jobs and waiting for cleanup. To resume a matching saved run:
 
