@@ -251,7 +251,7 @@ class Engine:
                     if cancel.is_set():code=130;break
                     with self.lock:value['stage']=f'Command {n}/{len(commands)}: '+self.masker.text(shlex.join(command))[:500]
                     write(f'STAGE {n}/{len(commands)}: {step["name"]}\nCOMMAND: {shlex.join(command)}\nDIRECTORY: {cwd}\n')
-                    env=dict(os.environ,PYTHONUNBUFFERED='1',**self.workflow.get('env',{}),**extra_env)
+                    env={**os.environ,'PYTHONUNBUFFERED':'1',**self.workflow.get('env',{}),**extra_env}
                     process=subprocess.Popen(command,cwd=cwd,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,stdin=subprocess.DEVNULL,start_new_session=os.name!='nt')
                     # Read lines on a separate thread so cancellation/timeouts never depend on output.
                     def read_output():

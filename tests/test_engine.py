@@ -116,6 +116,8 @@ class EngineTests(unittest.TestCase):
  def test_failed_job_keeps_partial_report_evidence(self):
   e=self.engine([command('a','import pathlib;pathlib.Path("partial.json").write_text("{}");raise SystemExit(1)',reports=['partial.json'])]);e.start();s=self.wait(e)
   self.assertEqual(e.exit_code(),1);self.assertTrue(s['steps']['a']['attempts'][0]['reports'])
+ def test_workflow_and_step_environment_overrides_are_merged(self):
+  e=self.engine([command('a','import os;assert os.environ["WB_SETTING"]=="step";assert os.environ["WB_GLOBAL"]=="global"',env={'WB_SETTING':'step'})],env={'WB_SETTING':'workflow','WB_GLOBAL':'global'});e.start();self.wait(e);self.assertEqual(e.exit_code(),0)
  def test_resume_requires_matching_workflow_and_source(self):
   e=self.engine([command('a')]);e.start();self.wait(e);resumed=Engine(self.root,e.workflow,resume=e.run_id);self.assertEqual(resumed.state['steps']['a']['status'],'passed')
   with self.assertRaises(ValueError):Engine(self.root,workflow([command('b')]),resume=e.run_id)
