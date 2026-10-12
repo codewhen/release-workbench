@@ -1,0 +1,9 @@
+include LICENSE README.md CONTRIBUTING.md PRODUCT.md DESIGN.md
+recursive-include docs *.md
+recursive-include examples *.yaml
+recursive-include frontend/src *.js *.jsx *.css
+include frontend/package.json frontend/package-lock.json frontend/vite.config.js frontend/index.html
+include .impeccable/design.json
+recursive-include src/release_workbench/static *
+include src/release_workbench/NOTICE.txt
+include src/release_workbench/schema.json

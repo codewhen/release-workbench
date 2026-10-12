@@ -1,0 +1,41 @@
+version: 1
+name: Example test and release workflow
+concurrency: 4
+inputs:
+  build_name:
+    label: Build name
+    type: string
+    default: demo
+steps:
+  - id: check-one
+    name: Check first component
+    kind: command
+    mode: background
+    commands:
+      - argv: ['${python}', '-c', 'import time; time.sleep(0.5); print("First component passed")']
+    expected_seconds: 2
+    position: {x: 0, y: 0}
+  - id: check-two
+    name: Check second component
+    kind: command
+    mode: background
+    commands:
+      - argv: ['${python}', '-c', 'import time; time.sleep(0.5); print("Second component passed")']
+    expected_seconds: 2
+    position: {x: 0, y: 180}
+  - id: assemble
+    name: Prepare demonstration artifact
+    kind: command
+    needs: [check-one, check-two]
+    commands:
+      - argv: ['${python}', '-c', 'from pathlib import Path; p=Path(".workbench/demo.txt"); p.write_text("Synthetic demonstration artifact"); print("::workbench::{\"done\":1,\"total\":1,\"stage\":\"Artifact prepared\"}")']
+    reports: ['.workbench/demo.txt']
+    expected_seconds: 2
+    position: {x: 310, y: 90}
+  - id: release-review
+    name: Review evidence
+    kind: manual
+    approval: true
+    description: Record the tested source and demonstration artifact hash. This example never publishes anything.
+    needs: [assemble]
+    position: {x: 620, y: 90}
