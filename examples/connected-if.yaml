@@ -1,0 +1,81 @@
+%YAML 1.2
+---
+version: 1
+name: If input fallback
+concurrency: 4
+inputs: {}
+steps:
+  - id: probe
+    name: Read program result
+    kind: command
+    needs: []
+    mode: background
+    commands:
+      - argv:
+          - ${python}
+          - -c
+          - print("true")
+    capture: json
+    position:
+      x: 0
+      y: 0
+  - id: choose
+    name: If ready
+    kind: condition
+    needs:
+      - probe
+    condition:
+      input: {}
+    position:
+      x: 310
+      y: 0
+  - id: ready
+    name: 'True: process ready data'
+    kind: command
+    needs:
+      - choose
+    mode: background
+    commands:
+      - argv:
+          - ${python}
+          - -c
+          - print("Ready path selected")
+    when:
+      step: choose
+      equals: true
+    position:
+      x: 620
+      y: 0
+  - id: waiting
+    name: 'False: defer processing'
+    kind: command
+    needs:
+      - choose
+    mode: background
+    commands:
+      - argv:
+          - ${python}
+          - -c
+          - print("Waiting path selected")
+    when:
+      step: choose
+      equals: false
+    position:
+      x: 620
+      y: 180
+  - id: finish
+    name: Join the chosen path
+    kind: command
+    needs:
+      - ready
+      - waiting
+    mode: background
+    commands:
+      - argv:
+          - ${python}
+          - -c
+          - print("Chosen path completed")
+    join: any
+    position:
+      x: 930
+      y: 0

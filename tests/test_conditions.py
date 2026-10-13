@@ -58,6 +58,23 @@ class ConditionalWorkflowTests(unittest.TestCase):
   if os.name=='nt':self.skipTest('Native Windows remains unverified')
   w=self.computed('');w['steps'][1]['condition']['compute']['commands']=[{'shell':'sh','script':'echo false'}]
   e=self.run_workflow(w);self.assertFalse(e.state['steps']['choose']['result']['decision'])
+ def test_connected_compute_port_and_entry_fallback(self):
+  for explicit in (True,False):
+   for decision in (True,False):
+    w=make_template('ports','branching');w['steps'][0]['commands'][0]['argv'][-1]='import json;print(json.dumps('+str(decision)+'))';w['steps'][1]['condition']={'input':{'step':'probe'} if explicit else {}}
+    e=self.run_workflow(w);self.assertEqual(e.exit_code(),0);self.assertIs(e.state['steps']['choose']['result']['decision'],decision);self.assertEqual(e.state['steps']['choose']['result']['compute_source'],'probe')
+ def test_compute_port_overrides_entry(self):
+  w=make_template('override','branching');w['steps'][0]['commands'][0]['argv'][-1]='print("true")'
+  w['steps'].insert(1,{'id':'compute','name':'Compute','kind':'command','capture':'json','commands':[{'argv':['${python}','-c','print("false")']}]})
+  w['steps'][2]['needs']=['probe','compute'];w['steps'][2]['condition']={'input':{'step':'compute'}}
+  e=self.run_workflow(w);self.assertFalse(e.state['steps']['choose']['result']['decision']);self.assertEqual(e.state['steps']['waiting']['status'],'passed')
+ def test_connected_compute_field_and_invalid_output(self):
+  w=make_template('field','branching');w['steps'][1]['condition']={'input':{'field':'ready'}};self.assertEqual(self.run_workflow(w).exit_code(),0)
+  w['steps'][1]['condition']={'input':{}};e=self.run_workflow(w);self.assertEqual(e.exit_code(),1);self.assertEqual(e.state['steps']['waiting']['status'],'blocked')
+ def test_input_port_validation(self):
+  w=make_template('invalid','branching');w['steps'][1]['condition']={'input':{'step':'finish'}};self.assertTrue(validate(w))
+  w['steps'][1]['condition']={'input':{}};w['steps'][1]['needs']=[];self.assertTrue(validate(w))
+  w['steps'][1]['needs']=['probe','ready'];self.assertTrue(validate(w))
  def test_true_false_and_join(self):
   for value in (True,False):
    w=make_template('branch','branching');w['steps'][0]['commands'][0]['argv'][-1]='import json;print(json.dumps({"ready":'+str(value)+'}))'

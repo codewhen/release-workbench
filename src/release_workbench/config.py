@@ -108,6 +108,11 @@ def validate(workflow):
             if not s.get('condition'):errors.append(f'{s["id"]}: configure an If condition.')
             if s.get('commands') or s.get('platform_commands'):errors.append(f'{s["id"]}: put If commands inside condition.compute.')
             if s.get('condition',{}).get('compute') and any(code!=0 for code in s.get('success_codes',[0])):errors.append(f'{s["id"]}: computed If requires exit code 0 and a Boolean result.')
+            if 'input' in s.get('condition',{}):
+                source=s['condition']['input'].get('step')
+                if source and source not in s.get('needs',[]):errors.append(f'{s["id"]}: Compute source must be a directly connected prerequisite.')
+                if len([dep for dep in s.get('needs',[]) if dep!=source])>1:errors.append(f'{s["id"]}: If Entry accepts only one connected card.')
+                if not source and not s.get('needs'):errors.append(f'{s["id"]}: connect a card to Input or Compute before running.')
         elif 'condition' in s:errors.append(f'{s["id"]}: condition belongs on an If card.')
         when=s.get('when')
         if when and (when['step'] not in s.get('needs',[]) or by_id.get(when['step'],{}).get('kind')!='condition'):errors.append(f'{s["id"]}: branch must directly depend on its If card.')
@@ -135,7 +140,7 @@ def validate(workflow):
                 family,path=reference;parts=path.split('.')
                 if family=='steps' and (len(parts)<3 or parts[0] not in deps or parts[1]!='result'):errors.append(f'{s["id"]}: action result bindings must reference ancestor results.')
                 if family=='input' and (len(parts)!=1 or parts[0] not in inputs):errors.append(f'{s["id"]}: unknown action input binding.')
-            if s['kind']=='condition' and s.get('condition') and not s['condition'].get('compute'):
+            if s['kind']=='condition' and s.get('condition') and not s['condition'].get('compute') and 'input' not in s['condition']:
 
                 source=s['condition']['source'];parts=source.split('.')
                 if parts[0]=='inputs':

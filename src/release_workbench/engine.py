@@ -275,7 +275,23 @@ class Engine:
         if step.get('join','all')=='any':return 'ready' if any(d in PASSED for d in deps) else 'skipped'
         return 'skipped' if any(d in SKIPPED for d in deps) else 'ready'
     def evaluate_condition(self,step):
-        condition=step['condition'];parts=condition['source'].split('.')
+        condition=step['condition']
+        if 'input' in condition:
+            source=condition['input'].get('step') or step.get('needs',[])[-1]
+            result=self.state['steps'][source].get('result',{})
+            if 'decision' in result:value=result['decision']
+            elif 'json' in result:value=result['json']
+            elif 'stdout' in result:
+                try:value=json.loads(result['stdout'])
+                except (ValueError,TypeError):raise ValueError('Compute source must return JSON true or false.') from None
+            else:raise ValueError('No captured result from '+source+'. Enable JSON output capture on that card.')
+            field=condition['input'].get('field','')
+            try:
+                for part in field.split('.') if field else []:value=value[int(part)] if isinstance(value,list) else value[part]
+            except (KeyError,IndexError,TypeError,ValueError):raise ValueError('Compute Boolean field is missing: '+field) from None
+            if type(value) is not bool:raise ValueError('Compute source must return a Boolean true or false; configure a Boolean JSON field for an object.')
+            return value
+        parts=condition['source'].split('.')
         value=self.inputs() if parts[0]=='inputs' else self.state['steps']
         try:
             for part in parts[1:]:value=value[int(part)] if isinstance(value,list) else value[part]
@@ -297,7 +313,9 @@ class Engine:
         key=step['id'];value=self.state['steps'][key]
         try:decision=self.evaluate_condition(step);status='passed';error=''
         except ValueError as exc:decision=None;status='failed';error=str(exc)
-        value.update(status=status,result={'decision':decision},error=error,stage='If: '+str(decision))
+        result={'decision':decision}
+        if 'input' in step['condition']:result['compute_source']=step['condition']['input'].get('step') or step.get('needs',[])[-1]
+        value.update(status=status,result=result,error=error,stage='If: '+str(decision))
         log=f'{key}-{len(value["attempts"])+1}.log'
         (self.directory/log).write_text(self.masker.text(json.dumps({'condition':step['condition'],'decision':decision,'error':error},indent=2)))
         value['attempts'].append(dict(status=status,seconds=0,started=stamp(),commands=[],reports=[],log=log))
