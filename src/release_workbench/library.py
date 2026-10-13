@@ -7,7 +7,7 @@ from pathlib import Path
 import re
 import tempfile
 import threading
-from .config import Store,checked_path,render_yaml
+from .config import workspace_root,Store,checked_path,render_yaml
 from .engine import fingerprint
 
 class Library:
@@ -99,13 +99,13 @@ class Library:
         for key,path in sorted(self.paths().items(),key=lambda item:str(item[1]).casefold()):
             item=dict(id=key,path=str(path),project_id=self.identity(path.parent),project=str(path.parent),filename=path.name,name=path.stem,description='',steps=0,error='',busy=False,latest=None)
             try:
-                value=Store(path).read()['workflow'];item.update(name=value['name'],description=value.get('description',''),steps=len(value['steps']))
+                value=Store(path).read()['workflow'];project=workspace_root(path.parent,value);item.update(project=str(project),project_id=self.identity(project));item.update(name=value['name'],description=value.get('description',''),steps=len(value['steps']))
                 current=self.apps.get(key)
                 summaries=[]
                 if current:
                     snapshot=current.engine.snapshot();item['busy']=snapshot['busy'];summaries=[snapshot]
                 else:
-                    output=checked_path(path.parent,self.output)
+                    output=checked_path(project,self.output)
                     for report in sorted(output.glob('*/summary.json'),reverse=True):
                         try:
                             saved=json.loads(report.read_text())
