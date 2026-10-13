@@ -12,3 +12,5 @@ export function nextExecutionSelection(steps,selected,previous,current){
  const eligible=steps.filter(s=>s.enabled!==false&&['running','manual','queued'].includes(current?.steps?.[s.id]?.status)&&(s.needs||[]).every(id=>['passed','recorded'].includes(current?.steps?.[id]?.status)));
  return (eligible.find(s=>(s.needs||[]).includes(selected))||eligible.find(s=>current.steps[s.id].status==='running')||eligible[0])?.id||null;
 }
+
+export function clampPanelWidth(width,workspaceWidth){return Math.round(Math.max(280,Math.min(Number.isFinite(width)?width:370,720,Math.max(280,workspaceWidth-332))));}

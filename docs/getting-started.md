@@ -70,3 +70,7 @@ When you choose Run all, Run selected or Save and run, the browser checks the in
 Inputs produced by a selected prerequisite through declared JSON outputs are collected during execution instead of being requested beforehand. If a step later needs input, its **Review** action opens the fields or the step details. Changing inputs after attempts or manual evidence have been recorded requires an explicitly labelled new run; previous evidence remains in its historical run.
 
 Commands should consume configured workflow inputs or environment references. An arbitrary command-line stdin prompt does not become a browser form automatically; model human preparation as a manual gate and values as workflow inputs.
+
+## Arrange your workspace
+
+Details appear on the left of the workflow. Drag the divider to change its width, or focus the divider and press Left/Right (Shift for larger changes); Home and End select the allowed minimum and maximum. **Hide details** gives the workflow the full width; **Show details** restores the panel. The browser remembers your preference. Selecting a step or opening Workflow settings reveals the panel. Both panes scroll independently. On a phone the workflow and details stack vertically, and the horizontal divider is hidden.
