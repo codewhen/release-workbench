@@ -74,3 +74,7 @@ Commands should consume configured workflow inputs or environment references. An
 ## Arrange your workspace
 
 Details appear on the left of the workflow. Drag the divider to change its width, or focus the divider and press Left/Right (Shift for larger changes); Home and End select the allowed minimum and maximum. **Hide details** gives the workflow the full width; **Show details** restores the panel. The browser remembers your preference. Selecting a step or opening Workflow settings reveals the panel. Both panes scroll independently. On a phone the workflow and details stack vertically, and the horizontal divider is hidden.
+
+## Open an existing workflow from Home
+
+Click **Open YAML file** and choose a `.yaml` or `.yml` file in the native file picker. Workbench validates the YAML and schema, registers its original project folder and opens it. Invalid workflows show an error on Home without being imported; cancelling leaves the library unchanged. No commands run until you choose Run. Relative paths remain relative to the original YAML folder. Linux needs zenity or kdialog for the native picker; **Add project or file** remains available for direct path entry and headless sessions. macOS dialog opening and cancellation are verified locally; native Windows/Linux dialogs remain unverified. Valid-file registration and invalid-file errors are covered by automated tests.

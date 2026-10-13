@@ -17,6 +17,40 @@ class ServerTests(unittest.TestCase):
   payload=json.dumps(data).encode() if data is not None else None
   request=Request(self.url+path,data=payload,headers={'Content-Type':'application/json',**({'X-Workbench-Token':self.server.token} if token else {}),**(headers or {})})
   return urlopen(request,timeout=5)
+ def test_open_file_registers_original_project_and_does_not_execute(self):
+  from unittest.mock import patch
+  with tempfile.TemporaryDirectory() as directory:
+   path=Path(directory)/'existing workflow.yaml';path.write_text(render_yaml(workflow([command('imported')])))
+   with patch('release_workbench.server.choose_workflow',return_value=path):result=json.load(self.request('/api/library/open-file',{}))
+   config=json.load(self.request('/api/config?workflow='+result['id']));self.assertEqual(config['workflow']['steps'][0]['id'],'imported')
+   state=json.load(self.request('/api/state?workflow='+result['id']));self.assertEqual(state['steps']['imported']['attempts'],[]);self.assertEqual(result['path'],str(path.resolve()))
+ def test_open_file_cancel_invalid_and_unauthenticated_are_nonmutating(self):
+  from unittest.mock import patch
+  before=json.load(self.request('/api/library'))
+  with patch('release_workbench.server.choose_workflow',return_value=None) as picker:
+   self.assertTrue(json.load(self.request('/api/library/open-file',{}))['cancelled'])
+   with self.assertRaises(HTTPError) as error:self.request('/api/library/open-file',{},token=False)
+   error.exception.close();self.assertEqual(picker.call_count,1)
+  invalid=self.root/'invalid.yaml';invalid.write_text('version: 999\n')
+  with patch('release_workbench.server.choose_workflow',return_value=invalid):
+   with self.assertRaises(HTTPError) as error:self.request('/api/library/open-file',{})
+   self.assertIn('error',json.load(error.exception));error.exception.close()
+  after=json.load(self.request('/api/library'));self.assertEqual([w['id'] for w in before['workflows']],[w['id'] for w in after['workflows']]);self.assertEqual(before['projects'],after['projects'])
+ def test_picker_does_not_lock_library_while_waiting(self):
+  from unittest.mock import patch
+  entered=threading.Event();release=threading.Event();errors=[]
+  def pick(root):entered.set();release.wait(5);return None
+  def request():
+   try:self.request('/api/library/open-file',{}).close()
+   except Exception as error:errors.append(error)
+  with patch('release_workbench.server.choose_workflow',side_effect=pick):
+   thread=threading.Thread(target=request);thread.start();self.assertTrue(entered.wait(2))
+   try:
+    self.assertTrue(json.load(self.request('/api/library'))['workflows'])
+    with self.assertRaises(HTTPError) as error:self.request('/api/library/open-file',{})
+    error.exception.close()
+   finally:release.set();thread.join(5)
+  self.assertFalse(errors)
  def test_csrf_origin_and_host_protection(self):
   for headers,token in [({},False),({'Origin':'https://untrusted.example'},True),({'Host':'untrusted.example'},True)]:
    with self.assertRaises(HTTPError) as error:self.request('/api/run',{},token,headers)

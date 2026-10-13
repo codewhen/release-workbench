@@ -13,6 +13,7 @@ from urllib.parse import unquote,urlparse,parse_qs
 import webbrowser
 from .config import SCHEMA,Store,assert_valid,checked_path,parse_yaml,render_yaml
 from .engine import Engine,resolved_commands
+from .file_picker import choose_workflow
 from .library import Library
 
 class App:
@@ -57,7 +58,7 @@ class App:
 
 def make_server(app,port=3103):
     library=app if isinstance(app,Library) else Library(app.store.path,app.output,initial_app=app)
-    token=secrets.token_urlsafe(32);static=Path(__file__).with_name('static')
+    picker_lock=threading.Lock();token=secrets.token_urlsafe(32);static=Path(__file__).with_name('static')
     class Handler(BaseHTTPRequestHandler):
         def log_message(self,*args):pass
         def send(self,value,code=200,kind='application/json'):
@@ -100,8 +101,18 @@ def make_server(app,port=3103):
                 if not 0<length<=2*1024*1024:raise ValueError('Invalid request size.')
                 data=json.loads(self.rfile.read(length))
                 if not isinstance(data,dict):raise ValueError('Expected an object.')
+                route=urlparse(self.path).path
+                if route=='/api/library/open-file':
+                    if data:raise ValueError('File selection does not accept a path or command.')
+                    if not picker_lock.acquire(blocking=False):raise ValueError('A file picker is already open. Select a file or cancel that dialog.')
+                    try:
+                        selected=choose_workflow(library.root)
+                        if selected is None:return self.send({'cancelled':True})
+                        with library.lock:
+                            library.register(config=str(selected))
+                            return self.send({'id':library.identity(selected.resolve()),'path':str(selected.resolve())})
+                    finally:picker_lock.release()
                 with library.lock:
-                    route=urlparse(self.path).path
                     if route=='/api/library/register':return self.send(library.register(data.get('project'),data.get('config')))
                     if route=='/api/library/create':return self.send(library.create(data['project'],data['name'],data['filename'],data.get('template','blank')))
                     app=library.get(parse_qs(urlparse(self.path).query).get('workflow',[None])[0])
