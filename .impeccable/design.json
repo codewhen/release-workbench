@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-12T21:22:28.319029+00:00",
+  "generatedAt": "2026-10-13T00:00:00Z",
   "title": "Design System: Workbench",
   "mode": "operate",
   "extensions": {
@@ -19,6 +19,10 @@
       {
         "name": "stacked",
         "value": "700px"
+      },
+      {
+        "name": "directory-compact",
+        "value": "850px"
       }
     ],
     "focus": {
@@ -54,6 +58,16 @@
     "mobileStepNavigation": {
       "selection": "Focus the settings heading without intermediate scrolling, then scroll details into view.",
       "back": "Focus the selected List button, then scroll to the workflow list."
+    },
+    "typographyMeta": {
+      "directory-title": {
+        "displayName": "Directory title",
+        "purpose": "Workflow Home heading; 26px at 700px."
+      },
+      "workflow-title": {
+        "displayName": "Workflow title",
+        "purpose": "Workflow names in border-separated directory rows."
+      }
     }
   },
   "components": [
@@ -105,7 +119,7 @@
     }
   ],
   "narrative": {
-    "overview": "Operate mode preserves the existing checklist's restrained light palette and legible controls. The system feels practical and calm: cool paper surrounds white working surfaces, with dark text and a muted teal accent distinguishing interaction.",
+    "overview": "Operate mode preserves the existing checklist's restrained light palette and legible controls. The system feels practical and calm: cool paper surrounds white working surfaces, with dark text and a muted teal accent distinguishing interaction. Workflow Home extends these flat surfaces into a responsive, border-separated directory with paths and written run evidence.",
     "keyCharacteristics": [
       "Clear, compact controls with visible keyboard focus.",
       "Borders and tonal surfaces define working areas.",

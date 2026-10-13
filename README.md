@@ -1,9 +1,9 @@
 # Release Workbench
 
-A local visual workflow builder and parallel test/release runner. Configure steps in the browser canvas, YAML, or a terminal starter wizard. Runs stay on your own machine. MIT licensed; no subscriptions or hosted service required.
+A local visual workflow builder and parallel test/release runner with a multi-project workflow home page. Configure steps in the browser canvas, YAML, or a terminal starter wizard. Runs stay on your own machine. MIT licensed; no subscriptions or hosted service required.
 
 ```bash
-python -m pip install https://github.com/codewhen/release-workbench/releases/download/v0.1.2/release_workbench-0.1.2-py3-none-any.whl
+python -m pip install https://github.com/codewhen/release-workbench/releases/download/v0.2.0/release_workbench-0.2.0-py3-none-any.whl
 release-workbench init
 release-workbench serve
 ```

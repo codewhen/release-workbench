@@ -18,7 +18,7 @@ Create a ten-step workflow without writing YAML, run parallel branches safely, a
 Local browser UI and CLI/CI execution on macOS, Linux and Windows. Workflows live in version-controlled YAML. Consuming projects pin the package while retaining their own application commands.
 
 ## Capabilities and Constraints
-Canvas, equivalent list view, advanced settings, YAML editing, terminal wizard, dependencies, locks, exclusive jobs, cancellation, progress, reports and manual evidence gates. MIT license. No paid services, remote agents, multiplayer editing or hosted server in v1.
+Multi-project workflow library, separate YAML creation, protected Home navigation, canvas, equivalent list view, advanced settings, YAML editing, terminal wizard, dependencies, locks, exclusive jobs, cancellation, progress, reports and manual evidence gates. MIT license. No paid services, remote agents, multiplayer editing or hosted server in v1.
 
 ## Product Principles
 - One configuration shared by every editing and execution interface.

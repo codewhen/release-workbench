@@ -44,3 +44,17 @@ class ServerTests(unittest.TestCase):
   old=self.app.config();new=old['workflow'];new['name']='Configured in browser'
   saved=json.load(self.request('/api/save',{'workflow':new,'revision':old['revision']}))
   self.assertEqual(saved['workflow'],self.app.config()['workflow']);self.assertEqual(saved['workflow']['name'],'Configured in browser')
+
+ def test_library_actions_are_authenticated_and_workflow_scoped(self):
+  with self.assertRaises(HTTPError) as error:self.request('/api/library/create',{'project':'invalid','name':'Other','filename':'other.yaml'},token=False)
+  self.assertEqual(error.exception.code,403);error.exception.close()
+  catalog=json.load(self.request('/api/library'));project=catalog['projects'][0]['id']
+  created=json.load(self.request('/api/library/create',{'project':project,'name':'Other','filename':'release-workbench-other.yaml'}))
+  other=json.load(self.request('/api/config?workflow='+created['id']))
+  self.assertEqual(other['workflow']['name'],'Other');self.assertEqual(self.app.config()['workflow']['name'],'Example workflow')
+  with self.assertRaises(HTTPError) as error:self.request('/api/config?workflow=unknown')
+  error.exception.close()
+ def test_library_report_routes_use_selected_workflow(self):
+  catalog=json.load(self.request('/api/library'));created=json.load(self.request('/api/library/create',{'project':catalog['projects'][0]['id'],'name':'Other','filename':'release-workbench-other.yaml'}))
+  state=json.load(self.request('/api/state?workflow='+created['id']));relative=state['directory']+'/report.html'
+  response=self.request('/files/'+relative+'?workflow='+created['id']);self.assertTrue(response.read())

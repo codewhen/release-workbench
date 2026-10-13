@@ -9,10 +9,11 @@ import subprocess
 import threading
 import time
 from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
-from urllib.parse import unquote,urlparse
+from urllib.parse import unquote,urlparse,parse_qs
 import webbrowser
 from .config import SCHEMA,Store,assert_valid,checked_path,parse_yaml,render_yaml
 from .engine import Engine,resolved_commands
+from .library import Library
 
 class App:
     def __init__(self,config,output='.workbench',resume=None):
@@ -55,6 +56,7 @@ class App:
         raise ValueError('File is outside configured report locations.')
 
 def make_server(app,port=3103):
+    library=app if isinstance(app,Library) else Library(app.store.path,app.output,initial_app=app)
     token=secrets.token_urlsafe(32);static=Path(__file__).with_name('static')
     class Handler(BaseHTTPRequestHandler):
         def log_message(self,*args):pass
@@ -66,6 +68,11 @@ def make_server(app,port=3103):
             if not self.trusted():return self.send({'error':'Invalid local host.'},403)
             route=unquote(urlparse(self.path).path)
             try:
+                if route=='/api/schema':return self.send(SCHEMA)
+                if route=='/api/library':
+                    with library.lock:return self.send(library.catalog())
+                if route.startswith(('/api/','/files/')):
+                    with library.lock:app=library.get(parse_qs(urlparse(self.path).query).get('workflow',[None])[0])
                 if route=='/api/config':return self.send(app.config())
                 if route=='/api/schema':return self.send(SCHEMA)
                 if route=='/api/state':
@@ -90,8 +97,11 @@ def make_server(app,port=3103):
                 if not 0<length<=2*1024*1024:raise ValueError('Invalid request size.')
                 data=json.loads(self.rfile.read(length))
                 if not isinstance(data,dict):raise ValueError('Expected an object.')
-                with app.lock:
+                with library.lock:
                     route=urlparse(self.path).path
+                    if route=='/api/library/register':return self.send(library.register(data.get('project'),data.get('config')))
+                    if route=='/api/library/create':return self.send(library.create(data['project'],data['name'],data['filename'],data.get('template','blank')))
+                    app=library.get(parse_qs(urlparse(self.path).query).get('workflow',[None])[0])
                     if route=='/api/render':return self.send({'yaml':render_yaml(data['workflow'],app.config()['yaml'])})
                     if route=='/api/validate':
                         value=parse_yaml(data['yaml']) if 'yaml' in data else data['workflow'];assert_valid(value)
@@ -104,22 +114,23 @@ def make_server(app,port=3103):
                     elif route=='/api/preview':return self.send(app.engine.preview(data.get('step'),data.get('profile','all')))
                     elif route=='/api/run':
                         if app.store.read()['workflow']!=app.engine.workflow:raise ValueError('Workflow changed on disk. Reload and start a new run.')
+                        library.ensure_can_run(app)
                         app.engine.start(data.get('profile','all'),data.get('step'),data.get('rerun',False))
-                    elif route=='/api/record':app.engine.record(data['step'],data['note'])
+                    elif route=='/api/record':
+                        library.ensure_can_run(app);app.engine.record(data['step'],data['note'])
                     elif route=='/api/stop':app.engine.stop(data.get('step'))
                     elif route=='/api/pause':app.engine.pause(data.get('paused',True))
                     else:raise ValueError('Unknown action.')
                 return self.send({'ok':True})
             except (ValueError,KeyError,OSError,TypeError,subprocess.SubprocessError) as error:return self.send({'error':str(error)},400)
-    server=ThreadingHTTPServer(('127.0.0.1',port),Handler);server.token=token;return server
+    server=ThreadingHTTPServer(('127.0.0.1',port),Handler);server.token=token;server.library=library;return server
 
 def serve(config,port=3103,no_open=False,output='.workbench',resume=None):
-    app=App(config,output,resume);server=make_server(app,port)
-    url=f'http://127.0.0.1:{server.server_port}'
-    print(f'Release Workbench: {url}\nWorkflow: {app.store.path}\nEvidence: {app.engine.directory}',flush=True)
+    library=Library(config,output,resume);server=make_server(library,port)
+    url=f'http://127.0.0.1:{server.server_port}'+(f'?workflow={library.identity(library.primary)}' if resume else '')
+    print(f'Release Workbench: {url}\nInitial project: {library.root}\nWorkflow library: {library.registry}',flush=True)
     if not no_open:webbrowser.open(url)
     try:server.serve_forever()
     except KeyboardInterrupt:
-        app.engine.stop()
-        while app.engine.busy():time.sleep(.1)
+        library.shutdown()
     finally:server.server_close()

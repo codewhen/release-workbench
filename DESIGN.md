@@ -27,6 +27,12 @@ typography:
     fontSize: "22px"
     lineHeight: 1.3
     letterSpacing: "-0.02em"
+  directory-title:
+    fontSize: "30px"
+    lineHeight: 1.3
+    letterSpacing: "-0.02em"
+  workflow-title:
+    fontSize: "19px"
   label:
     fontSize: "14px"
   caption:
@@ -87,13 +93,15 @@ The primary teal accent identifies links, focus and selection. Dark ink anchors 
 
 ## Typography
 
-Use the system sans stack for interface text and the monospace stack for YAML and logs. The headline is the project identity; title text introduces panels; body text supports editing; smaller labels and captions explain fields and state. Paragraphs are capped at 75 characters where the layout permits. The mobile brand headline drops to 22px.
+Use the system sans stack for interface text and the monospace stack for YAML and logs. The headline is the project identity; title text introduces panels; body text supports editing; smaller labels and captions explain fields and state. Paragraphs are capped at 75 characters where the layout permits. The mobile brand headline drops to 22px. Workflow Home uses a 30px directory title (26px at 700px) and 19px workflow names; inline form headings use 20px. These surface roles extend the existing type hierarchy.
 
 ## Layout
 
 The desktop app is a viewport-height flex column (100dvh, minimum 560px). Header, toolbar, banners, footer and run inputs keep their own height; the workspace fills the remaining space with a minimum height of 320px. The flexible graph pairs with a 370px independently scrolling settings panel; the panel narrows to 330px at 1000px. Header and toolbar wrap as needed.
 
 At 700px the app uses document scrolling, the workspace stacks and the settings panel becomes full width. The mobile list occupies a bounded, scrolling 360px graph region, keeping settings reachable regardless of workflow length; YAML uses a 480px region. Initial representation is List at widths up to 1000px; entering the 700px breakpoint automatically switches Canvas to List. The narrow Canvas fallback directs users to List.
+
+Workflow Home follows document flow within a centered container capped at 1180px, with 40px 28px 48px desktop padding and 28px 20px padding at 700px. Directory rows use a flexible identity column, 180px evidence column and action column, with 28px gaps and 24px vertical padding. At 850px evidence moves below identity; at 700px rows stack and Open actions become full width. Search and project filters stack, and two-column inline forms become one column at 700px.
 
 Use the documented spacing scale for repeated rhythm. The implementation also uses local values such as 6px label gaps, 14px node padding, 20px mobile padding and 28px header padding; these are component details rather than an expanded global scale.
 
@@ -118,6 +126,8 @@ At the mobile breakpoint, selecting a list step focuses the settings heading and
 Workflow nodes carry title, type and status, with a direct Add next action. Selection uses a 2px teal outline offset by 2px. Success and failure borders reinforce explicit outcome labels.
 
 Dialogs use native modal behavior, a labelled heading, Escape cancellation and focus restoration. YAML editing occupies its own representation and settings explanation; pending edits are validated and applied before switching representations, preserving invalid text for correction.
+
+Workflow Home uses border-separated rows rather than raised cards: name and description lead, paths distinguish projects, and written outcome and run counts support selection. Inline registration and creation forms use white surfaces, 6px corners and 24px padding (20px on mobile). Header actions expose their expanded state; loading and empty results use explicit copy. Opening a row enters the editor; returning Home preserves server-side run evidence, with pending editor changes guarded before navigation.
 
 ## Do's and Don'ts
 

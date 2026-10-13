@@ -31,7 +31,7 @@ def wizard(path,template=None,name=None):
 
 def main(argv=None):
     parser=argparse.ArgumentParser(description='Visual workflows, parallel jobs and release evidence on your own machine.')
-    parser.add_argument('--version',action='version',version='0.1.2')
+    parser.add_argument('--version',action='version',version='0.2.0')
     sub=parser.add_subparsers(dest='action',required=True)
     for command in ('init','validate','serve','run','report'):
         child=sub.add_parser(command);child.add_argument('--config',default='release-workbench.yaml');child.add_argument('--output',default='.workbench')
@@ -44,6 +44,9 @@ def main(argv=None):
     try:
         path=Path(args.config).resolve()
         if args.action=='init':wizard(path,args.template,args.name);return 0
+        if args.action=='serve':
+            if args.input:raise ValueError('Enter browser inputs after opening the workbench; --input is for CLI run.')
+            serve(path,args.port,args.no_open,args.output,args.resume);return 0
         store=Store(path);record=store.read()
         if args.action=='validate':print(f'Valid: {record["workflow"]["name"]} · {len(record["workflow"]["steps"])} steps');return 0
         if args.action=='report':
@@ -56,9 +59,6 @@ def main(argv=None):
             key,value=item.split('=',1)
             try:inputs[key]=json.loads(value)
             except ValueError:inputs[key]=value
-        if args.action=='serve':
-            if inputs:raise ValueError('Enter browser inputs after opening the workbench; --input is for CLI run.')
-            serve(path,args.port,args.no_open,args.output,args.resume);return 0
         engine=Engine(store.root,record['workflow'],args.output,args.resume,inputs)
         engine.start(args.profile,args.step,args.rerun);seen={}
         try:

@@ -9,10 +9,25 @@ release-workbench serve
 
 `init` asks for a workflow name, starter template and test command. Use `--template blank --name "My release"` to create a blank configuration without prompts. Add `--config path/to/release-workbench.yaml` to each command to select a different file. The file's parent directory is the workspace; commands and report paths resolve from it.
 
+## Home: multiple workflows and projects
+
+`serve` opens the workflow library first. The initial project is the parent folder of `--config`; that folder must exist, but the YAML file need not exist yet. You can start in an empty project with `release-workbench serve` and create its first checklist from Home.
+
+- **Add project or file** registers an absolute local folder path or an existing YAML file. Folders discover `release-workbench*.yaml` and `release-workbench*.yml` directly within them. Add an individual file for a different filename. Registration validates YAML files and never executes commands.
+- **New workflow** selects a registered project, name, YAML filename and blank/test/release starter. It creates a separate file without overwriting any existing configuration. Commands resolve from that file's parent project folder.
+- Search names, descriptions, projects or filenames; use the Project filter for one folder. Workflow rows show the current session's run, or the last matching configuration run on disk. A displayed completion is historical evidence, not permission to publish a release.
+- **Open workflow** enters its canvas. **Home** returns to the list; unsaved changes require an explicit keep/discard choice. Existing server-side jobs continue while Home is displayed, and opening the same workflow again keeps its current engine and evidence.
+
+Project registration is persisted in `library.json` inside the initial project's configured output directory (default `.workbench`). It contains local absolute paths; do not commit or publish it. The same relative output setting applies in each registered project; logs and reports stay inside that project's output directory. Keep generated outputs ignored by Git.
+
+One workflow runs at a time in a launcher, including paused scheduling. Finish or stop it before executing another workflow. Parallel branches within the chosen workflow continue to use its configured concurrency and resource locks. Separate launcher processes do not coordinate hardware locks; use one launcher for a shared desktop/phone.
+
+Opening an uncached workflow creates a fresh run and never silently inherits old passes. Use `serve --config PATH --resume RUN_ID` for a matching saved run; it opens that workflow directly. Source/configuration changes still require fresh verification. Creating a YAML file changes a Git checkout, so an already-fingerprinted run may need **New run** before further execution.
+
 ## Ten steps without writing YAML
 
 1. Open the local URL printed by `serve` (default port 3103).
-2. Choose **New workflow**, enter its name, and select **Blank checklist**. This creates a draft; the file remains unchanged.
+2. On Home choose **New workflow**, enter its name and filename, select the project and **Blank checklist**, then **Create and open**. This creates a separate empty YAML file; no commands run. Step edits remain unsaved until Save.
 3. Choose **Add first step**, enter the step name and command. The default command is a harmless Python demonstration, not a test of your application.
 4. Choose **Add next step** nine times, naming each step and entering its command. Connections automatically make each new step depend on the preceding step.
 5. Choose **Validate & review**. Fix missing commands, unknown dependencies, invalid fields or cycles; inspect the YAML diff.

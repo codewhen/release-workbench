@@ -7,3 +7,5 @@ include .impeccable/design.json
 recursive-include src/release_workbench/static *
 include src/release_workbench/NOTICE.txt
 include src/release_workbench/schema.json
+
+recursive-include .impeccable/surfaces *.md
