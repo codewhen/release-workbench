@@ -48,7 +48,7 @@ class Library:
                 for pattern in ('release-workbench*.yaml','release-workbench*.yml','workflow-workbench*.yaml','workflow-workbench*.yml'):
                     # Explicitly registered folders grant access; discovery never follows
                     # a configuration symlink to a different, unregistered folder.
-                    paths.update(p for p in root.glob(pattern) if p.is_file() and not p.is_symlink())
+                    paths.update(p for p in [*root.glob(pattern),*root.glob('workflows/**/'+pattern)] if p.is_file() and not p.is_symlink() and p.resolve().is_relative_to(root.resolve()))
         return {self.identity(p):p.resolve() for p in paths}
 
     def register(self,project=None,config=None):

@@ -18,7 +18,7 @@ import threading
 import time
 import uuid
 import psutil
-from .config import assert_valid,checked_path,input_value,Store
+from .config import assert_valid,checked_path,input_value,Store,workspace_root
 
 PASSED={'passed','recorded'}
 SKIPPED={'skipped'}
@@ -105,7 +105,7 @@ def resolved_commands(step,root,inputs):
 
 class Engine:
     def __init__(self,root,workflow,output='.workbench',resume=None,inputs=None):
-        self.root=Path(root).resolve();self.workflow=copy.deepcopy(assert_valid(workflow))
+        self.root=workspace_root(root,workflow);self.workflow=copy.deepcopy(assert_valid(workflow))
         self.output=checked_path(self.root,output);self.output.mkdir(parents=True,exist_ok=True)
         self.lock=threading.RLock();self.running={};self.events={};self.thread=None
         self.paused=False;self.stopped=False;self.selected=set();self.outputs={}
@@ -184,8 +184,9 @@ class Engine:
         path=checked_path(self.root,str(path))
         if path in seen or len(seen)>=16:raise ValueError('Child workflows contain a cycle or exceed 16 levels.')
         workflow=Store(path).read()['workflow']
+        if workspace_root(path.parent,workflow)!=self.root:raise ValueError('Child workflows must declare the same workspace as their parent.')
         for child in workflow['steps']:
-            if child['kind']=='workflow':self.check_child_workflow(checked_path(path.parent,child['workflow']),(*seen,path))
+            if child['kind']=='workflow':self.check_child_workflow(checked_path(self.root,child['workflow']),(*seen,path))
         return path
     def prepare(self,step):
         if step.get('action',{}).get('type')=='run_tests':
@@ -193,8 +194,12 @@ class Engine:
             step={**step,'commands':[{'argv':test_command(step['action'],self.root,step.get('cwd','.'))}]}
         if step['kind']=='workflow':
             path=self.check_child_workflow(step['workflow'])
-            if path.parent!=self.root:raise ValueError('Run workflow cards currently require a YAML file in this project root. Use a command for another project.')
-            step={**step,'commands':[{'argv':[sys.executable,'-m','release_workbench.cli','run','--config',str(path),'--output',str(self.directory/'children'/step['id']),'--non-interactive']}]}
+            child=Store(path).read()['workflow'];bindings=self.resolve_action(step.get('workflow_inputs',{}),{**os.environ,**self.workflow.get('env',{}),**step.get('env',{})})
+            if set(bindings)-set(child.get('inputs',{})):raise ValueError('Unknown child workflow input.')
+            command=[sys.executable,'-m','release_workbench.cli','run','--config',str(path),'--output',str(self.directory/'children'/step['id']),'--non-interactive']
+            for key,value in bindings.items():
+                input_value(key,value,child['inputs'][key]);command.extend(['--input',key+'='+json.dumps(value)])
+            step={**step,'commands':[{'argv':command}]}
         values=self.inputs()
         references=set(re.findall(r'\$\{input\.([^}]+)\}',json.dumps(step)))&set(self.workflow.get('inputs',{}))
         for key in set(step.get('requires_inputs',[]))|references|{k for k,v in self.workflow.get('inputs',{}).items() if v.get('required')}:
@@ -232,7 +237,7 @@ class Engine:
                 if current['id'] not in selected or not current.get('enabled',True):continue
                 ancestors=self.ancestors(current['id'])-{current['id']}
                 produced={out['input'] for parent in self.workflow['steps'] if parent['id'] in selected&ancestors for out in parent.get('outputs',[])}
-                settings=dict(condition=current.get('condition',{}),action=current.get('action',{}),commands=current.get('platform_commands',{}).get(PLATFORM,current.get('commands',[])),env={**self.workflow.get('env',{}),**current.get('env',{})},cwd=current.get('cwd','.'),resources=current.get('resources',[]))
+                settings=dict(workflow_inputs=current.get('workflow_inputs',{}),condition=current.get('condition',{}),action=current.get('action',{}),commands=current.get('platform_commands',{}).get(PLATFORM,current.get('commands',[])),env={**self.workflow.get('env',{}),**current.get('env',{})},cwd=current.get('cwd','.'),resources=current.get('resources',[]))
                 references=set(re.findall(r'\$\{input\.([^}]+)\}',json.dumps(settings)))&set(specs)
                 if current.get('when') and self.state['steps'][current['when']['step']]['status'] not in PASSED:continue
                 if current.get('when') and self.state['steps'][current['when']['step']].get('result',{}).get('decision') is not current['when']['equals']:continue

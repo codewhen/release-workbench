@@ -29,7 +29,7 @@ def wizard(path,template=None,name=None):
 
 def main(argv=None):
     parser=argparse.ArgumentParser(description='Visual workflows, parallel jobs and release evidence on your own machine.')
-    parser.add_argument('--version',action='version',version='0.7.1')
+    parser.add_argument('--version',action='version',version='0.8.0')
     sub=parser.add_subparsers(dest='action',required=True)
     for command in ('init','validate','serve','run','report'):
         child=sub.add_parser(command);child.add_argument('--config',default='release-workbench.yaml');child.add_argument('--output',default='.workbench')
@@ -49,7 +49,8 @@ def main(argv=None):
         if args.action=='validate':print(f'Valid: {record["workflow"]["name"]} · {len(record["workflow"]["steps"])} steps');return 0
         if args.action=='report':
             from .config import checked_path
-            report=checked_path(checked_path(store.root,args.output),args.run)/'report.html'
+            from .config import workspace_root
+            report=checked_path(checked_path(workspace_root(store.root,record['workflow']),args.output),args.run)/'report.html'
             if not report.is_file():raise ValueError('Run report not found.')
             print(report);return 0
         inputs={}

@@ -75,6 +75,23 @@ class ConditionalWorkflowTests(unittest.TestCase):
   w=make_template('invalid','branching');w['steps'][1]['condition']={'input':{'step':'finish'}};self.assertTrue(validate(w))
   w['steps'][1]['condition']={'input':{}};w['steps'][1]['needs']=[];self.assertTrue(validate(w))
   w['steps'][1]['needs']=['probe','ready'];self.assertTrue(validate(w))
+ def test_nested_child_uses_declared_workspace_and_typed_inputs(self):
+  from release_workbench.config import render_yaml
+  with tempfile.TemporaryDirectory() as directory:
+   root=Path(directory);folder=root/'workflows'/'build';folder.mkdir(parents=True)
+   child={'version':1,'workspace':'../..','name':'child','inputs':{'updated':{'type':'boolean','label':'updated'}},'steps':[{'id':'check','kind':'command','name':'check','capture':'json','commands':[{'argv':['${python}','-c','import sys,json;from pathlib import Path;assert sys.argv[1]=="True";Path("child-marker.txt").write_text("ok");print("true")','${input.updated}']}]}]}
+   (folder/'child.yaml').write_text(render_yaml(child))
+   w={'version':1,'name':'parent','steps':[{'id':'child','kind':'workflow','name':'child','workflow':'workflows/build/child.yaml','workflow_inputs':{'updated':True}}]}
+   e=Engine(root,w);e.start()
+   while e.busy():time.sleep(.02)
+   self.assertEqual(e.exit_code(),0);self.assertTrue((root/'child-marker.txt').is_file());self.assertFalse((folder/'child-marker.txt').exists())
+ def test_child_with_other_workspace_is_rejected(self):
+  from release_workbench.config import render_yaml
+  with tempfile.TemporaryDirectory() as directory:
+   root=Path(directory);(root/'nested').mkdir();(root/'nested'/'child.yaml').write_text(render_yaml({'version':1,'name':'child','steps':[]}))
+   e=Engine(root,{'version':1,'name':'parent','steps':[{'id':'child','name':'child','kind':'workflow','workflow':'nested/child.yaml'}]});e.start()
+   while e.busy():time.sleep(.02)
+   self.assertEqual(e.exit_code(),2)
  def test_true_false_and_join(self):
   for value in (True,False):
    w=make_template('branch','branching');w['steps'][0]['commands'][0]['argv'][-1]='import json;print(json.dumps({"ready":'+str(value)+'}))'

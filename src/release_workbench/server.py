@@ -32,7 +32,7 @@ class App:
         with self.lock:
             self.idle();workflow=self.store.read()['workflow'];hook=workflow.get('detect')
             if not hook:raise ValueError('No detection hook configured.')
-            commands,cwd,env=resolved_commands(dict(name='Input detection',commands=hook['commands']),self.store.root,self.engine.inputs())
+            commands,cwd,env=resolved_commands(dict(name='Input detection',commands=hook['commands']),self.engine.root,self.engine.inputs())
             import os
             values={};warnings=[]
             for command in commands:
@@ -46,11 +46,11 @@ class App:
                         values[key]=options
             return dict(candidates=values,warnings=warnings)
     def allowed_file(self,relative):
-        file=checked_path(self.store.root,relative)
+        file=checked_path(self.engine.root,relative)
         if file.is_relative_to(self.engine.output):return file
         workflow=self.store.read()['workflow']
         for directory in workflow.get('report_paths',[]):
-            if file.is_relative_to(checked_path(self.store.root,directory)):return file
+            if file.is_relative_to(checked_path(self.engine.root,directory)):return file
         for step in workflow['steps']:
             for pattern in step.get('reports',[]):
                 if file in self.engine.matches(pattern):return file
@@ -80,7 +80,7 @@ def make_server(app,port=3103):
                 if route=='/api/config':return self.send(app.config())
                 if route=='/api/schema':return self.send(SCHEMA)
                 if route=='/api/state':
-                    result=app.engine.snapshot();result['directory']=str(app.engine.directory.relative_to(app.store.root));return self.send(result)
+                    result=app.engine.snapshot();result['directory']=str(app.engine.directory.relative_to(app.engine.root));return self.send(result)
                 if route.startswith('/files/'):
                     file=app.allowed_file(route[7:])
                     if not file.is_file():return self.send({'error':'File not found.'},404)

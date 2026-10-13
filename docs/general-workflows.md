@@ -134,3 +134,7 @@ Useful next additions, rather than features already supported:
 Remote workers, hosted services, shared editing and paid integrations remain outside this version. The engine name and repository stay compatible while the browser presents Workflow Workbench.
 
 For comparison with established engines, see the official [Kestra loop and subflow guide](https://kestra.io/docs/how-to-guides/loop) and [n8n flow-logic documentation](https://github.com/n8n-io/n8n-docs/blob/main/docs/build/flow-logic/README.md). Their documented loop/subflow patterns inform the roadmap above; they are not dependencies of this application.
+
+## Organized child workflows
+
+Set `workspace: ../..` in YAML stored two directories beneath the project root. Commands, child workflow paths, outputs and reports resolve beneath that declared workspace; configuration remains in its own file. The declaration may include parent directories but cannot be absolute. Only open trusted local configuration. Child workflows must declare the same workspace as the parent. `workflow_inputs` maps child input names to typed values or `${input.NAME}` / `${steps.ID.result.FIELD}` bindings. Parent browser inputs should declare required fields used by children. Child runs remain noninteractive: prepare devices through a parent manual gate and pass a preparation flag when children have conditional preparation gates. Manual gates reached inside a child still block its CLI run. Home discovers conventional workflow files beneath `workflows/` as well as the project root.

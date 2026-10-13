@@ -900,6 +900,16 @@
                 ]
               }
             ]
+          },
+          "workflow_inputs": {
+            "type": "object",
+            "additionalProperties": {
+              "type": [
+                "string",
+                "number",
+                "boolean"
+              ]
+            }
           }
         },
         "required": [
@@ -908,6 +918,11 @@
           "kind"
         ]
       }
+    },
+    "workspace": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Project directory relative to the YAML file, including parent folders."
     }
   },
   "required": [
@@ -1638,6 +1653,16 @@
               ]
             }
           ]
+        },
+        "workflow_inputs": {
+          "type": "object",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          }
         }
       },
       "required": [

@@ -71,6 +71,7 @@ def validate(workflow):
     for field in ('report_paths','source_paths'):
         for value in workflow.get(field,[]):
             if Path(value).is_absolute() or '..' in Path(value).parts:errors.append(f'{field}: paths must stay within the workspace.')
+    if Path(workflow.get('workspace','.')).is_absolute():errors.append('Workspace must be relative to the YAML file.')
     steps=workflow['steps'];ids=[s['id'] for s in steps];known=set(ids)
     if len(known)!=len(ids):errors.append('Step IDs must be unique.')
     inputs=workflow.get('inputs',{})
@@ -103,6 +104,7 @@ def validate(workflow):
             if not s.get('workflow'):errors.append(f'{s["id"]}: select a child workflow YAML file.')
             elif Path(s['workflow']).is_absolute() or '..' in Path(s['workflow']).parts:errors.append(f'{s["id"]}: child workflow must stay within the workspace.')
             if s.get('commands') or s.get('platform_commands'):errors.append(f'{s["id"]}: workflow cards cannot also define commands.')
+        elif 'workflow_inputs' in s:errors.append(f'{s["id"]}: child inputs belong on a Run workflow card.')
         elif 'workflow' in s:errors.append(f'{s["id"]}: workflow path belongs on a Run workflow card.')
         if s['kind']=='condition':
             if not s.get('condition'):errors.append(f'{s["id"]}: configure an If condition.')
@@ -136,7 +138,7 @@ def validate(workflow):
     try:
         for s in steps:
             deps=ancestors(s['id'])
-            for reference in re.findall(r'\$\{(steps|input|env)\.([^}]+)\}',json.dumps([s.get('action',{}),s.get('condition',{}).get('compute',{})])):
+            for reference in re.findall(r'\$\{(steps|input|env)\.([^}]+)\}',json.dumps([s.get('action',{}),s.get('condition',{}).get('compute',{}),s.get('workflow_inputs',{})])):
                 family,path=reference;parts=path.split('.')
                 if family=='steps' and (len(parts)<3 or parts[0] not in deps or parts[1]!='result'):errors.append(f'{s["id"]}: action result bindings must reference ancestor results.')
                 if family=='input' and (len(parts)!=1 or parts[0] not in inputs):errors.append(f'{s["id"]}: unknown action input binding.')
@@ -162,6 +164,13 @@ def assert_valid(workflow):
     errors=validate(workflow)
     if errors:raise ValueError('\n'.join(errors))
     return workflow
+
+def workspace_root(config_root,workflow):
+    value=workflow.get('workspace','.')
+    if Path(value).is_absolute():raise ValueError('Workspace must be relative to the workflow YAML file.')
+    root=(Path(config_root)/value).resolve()
+    if not root.is_dir():raise ValueError('Workflow workspace directory does not exist: '+str(root))
+    return root
 
 def checked_path(root,value):
     path=(root/value).resolve()
