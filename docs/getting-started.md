@@ -40,7 +40,7 @@ Command execution defaults to a program plus arguments. Quotes group arguments; 
 
 Connect one node to two others to create parallel branches. Connect both branches to a later node to form a join. Use the plus button on a connection to insert a step. Deleting a step reconnects its dependents to its prerequisites, after an in-page confirmation. The dependency settings also provide checkboxes, so graph manipulation is never required.
 
-Select **Add manual gate** when a person must inspect evidence or prepare devices. Record a meaningful note in Run view; manual gates do not execute commands. After recording, waiting dependents can continue automatically. A disabled prerequisite blocks downstream work; it never becomes a pass.
+Select **Add manual gate** when a person must inspect evidence or prepare devices. When a gate becomes ready, the browser opens an **Action required** dialog with its instructions. Record a meaningful evidence note to complete it; manual gates do not execute commands. **Not now** closes the dialog without completing the gate. A **Respond** reminder stays visible in Run view and on the Home page until the gate is completed. After recording, waiting dependents can continue automatically. A disabled prerequisite blocks downstream work; it never becomes a pass.
 
 Expand **Advanced settings** for platform commands, resources, timeouts, input requirements, progress parsing and reports. Workflow settings contains input definitions, environment references, profiles and detection hooks. Complex fields use labelled JSON controls; the YAML tab is the complete configuration view, not a second configuration store.
 
@@ -62,3 +62,11 @@ release-workbench run --resume RUN_ID --non-interactive
 ```
 
 Source, platform and workflow fingerprints must match. Changed source/configuration starts a new run; old HTML/JSON reports remain available. Non-Git projects should declare `source_paths` to fingerprint application source. Git projects fingerprint HEAD and changed/untracked files, excluding the configured evidence output directory.
+
+## Required inputs before running
+
+When you choose Run all, Run selected or Save and run, the browser checks the inputs needed by that selection and its prerequisites. Missing or invalid values open an **Inputs required** dialog before commands start. Fill the labelled fields, or use **Auto-detect inputs** when the workflow defines a detection command, then choose **Save inputs and start**. Dismissing the dialog leaves an **Enter required inputs** reminder. Saving configuration alone never executes commands.
+
+Inputs produced by a selected prerequisite through declared JSON outputs are collected during execution instead of being requested beforehand. If a step later needs input, its **Review** action opens the fields or the step details. Changing inputs after attempts or manual evidence have been recorded requires an explicitly labelled new run; previous evidence remains in its historical run.
+
+Commands should consume configured workflow inputs or environment references. An arbitrary command-line stdin prompt does not become a browser form automatically; model human preparation as a manual gate and values as workflow inputs.

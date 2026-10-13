@@ -58,3 +58,7 @@ class ServerTests(unittest.TestCase):
   catalog=json.load(self.request('/api/library'));created=json.load(self.request('/api/library/create',{'project':catalog['projects'][0]['id'],'name':'Other','filename':'release-workbench-other.yaml'}))
   state=json.load(self.request('/api/state?workflow='+created['id']));relative=state['directory']+'/report.html'
   response=self.request('/files/'+relative+'?workflow='+created['id']);self.assertTrue(response.read())
+
+ def test_input_requirement_api_never_starts_commands(self):
+  result=json.load(self.request('/api/requirements',{'profile':'all','inputs':{}}))
+  self.assertEqual(result,{'fields':[]});self.assertFalse(self.app.engine.state['steps']['test']['attempts'])

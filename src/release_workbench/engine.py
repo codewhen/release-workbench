@@ -185,6 +185,29 @@ class Engine:
             values[key]=input_value(key,values.get(key,''),{**self.workflow['inputs'][key],'required':True})
         merged={**step,'env':{**self.workflow.get('env',{}),**step.get('env',{})}}
         return resolved_commands(merged,self.root,values)
+    def input_requirements(self,profile='all',step=None,values=None):
+        """Describe required user fields without running or changing evidence.
+
+        A selected ancestor may provide an input through a validated JSON output;
+        those generated values need not be entered before that producer runs.
+        """
+        with self.lock:
+            selected=self.selection(profile,step);specs=self.workflow.get('inputs',{})
+            values=values or {}
+            if set(values)-set(specs):raise ValueError('Unknown input field.')
+            available={**self.inputs(),**values};missing={}
+            for current in self.workflow['steps']:
+                if current['id'] not in selected or not current.get('enabled',True):continue
+                ancestors=self.ancestors(current['id'])-{current['id']}
+                produced={out['input'] for parent in self.workflow['steps'] if parent['id'] in selected&ancestors for out in parent.get('outputs',[])}
+                settings=dict(commands=current.get('platform_commands',{}).get(PLATFORM,current.get('commands',[])),env={**self.workflow.get('env',{}),**current.get('env',{})},cwd=current.get('cwd','.'),resources=current.get('resources',[]))
+                references=set(re.findall(r'\$\{input\.([^}]+)\}',json.dumps(settings)))&set(specs)
+                needed=set(current.get('requires_inputs',[]))|references|{key for key,spec in specs.items() if spec.get('required')}
+                for key in sorted(needed-produced):
+                    try:input_value(key,available.get(key,''),{**specs[key],'required':True})
+                    except ValueError as error:missing[key]=dict(key=key,spec=specs[key],message=str(error))
+            return self.masker.object(dict(fields=list(missing.values())))
+
     def resources(self,step):
         values=self.inputs()
         result={re.sub(r'\$\{input\.([^}]+)\}',lambda m:str(values.get(m[1],'')),r) for r in step.get('resources',[])}

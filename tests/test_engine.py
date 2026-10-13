@@ -118,6 +118,20 @@ class EngineTests(unittest.TestCase):
   self.assertEqual(e.exit_code(),1);self.assertTrue(s['steps']['a']['attempts'][0]['reports'])
  def test_workflow_and_step_environment_overrides_are_merged(self):
   e=self.engine([command('a','import os;assert os.environ["WB_SETTING"]=="step";assert os.environ["WB_GLOBAL"]=="global"',env={'WB_SETTING':'step'})],env={'WB_SETTING':'workflow','WB_GLOBAL':'global'});e.start();self.wait(e);self.assertEqual(e.exit_code(),0)
+ def test_input_prompt_requirements_are_scoped_and_do_not_execute(self):
+  e=self.engine([command('a',requires_inputs=['device']),command('other',requires_inputs=['host'])],inputs={'device':{'label':'USB phone','type':'usb_serial'},'host':{'label':'Host','type':'ipv4'}})
+  requirements=e.input_requirements(step='a');self.assertEqual([f['key'] for f in requirements['fields']],['device']);self.assertFalse(e.state['steps']['a']['attempts'])
+  self.assertFalse(e.input_requirements(step='a',values={'device':'synthetic-device'})['fields'])
+ def test_input_prompts_skip_outputs_only_when_producer_is_a_selected_ancestor(self):
+  e=self.engine([command('producer',outputs=[dict(path='out.json',key='pid',input='pid')]),command('consumer',needs=['producer'],requires_inputs=['pid']),command('independent',requires_inputs=['pid'])],inputs={'pid':{'label':'PID','type':'pid'}})
+  self.assertFalse(e.input_requirements(step='consumer')['fields']);self.assertEqual(e.input_requirements(step='independent')['fields'][0]['key'],'pid')
+ def test_input_prompts_validate_values_and_global_required_fields(self):
+  e=self.engine([command('a')],inputs={'host':{'label':'Host','type':'ipv4','required':True}})
+  self.assertEqual(e.input_requirements(values={'host':'invalid'})['fields'][0]['key'],'host');self.assertFalse(e.input_requirements(values={'host':'192.0.2.10'})['fields'])
+ def test_input_prompt_includes_command_references_without_explicit_requires(self):
+  step=command('a');step['commands'][0]['argv'].append('${input.message}')
+  e=self.engine([step],inputs={'message':{'label':'Message','type':'string'}})
+  self.assertEqual(e.input_requirements()['fields'][0]['key'],'message')
  def test_resume_requires_matching_workflow_and_source(self):
   e=self.engine([command('a')]);e.start();self.wait(e);resumed=Engine(self.root,e.workflow,resume=e.run_id);self.assertEqual(resumed.state['steps']['a']['status'],'passed')
   with self.assertRaises(ValueError):Engine(self.root,workflow([command('b')]),resume=e.run_id)

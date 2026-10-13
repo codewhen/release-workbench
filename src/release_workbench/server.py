@@ -111,6 +111,7 @@ def make_server(app,port=3103):
                     if route=='/api/new-run':return self.send(app.fresh())
                     if route=='/api/detect':return self.send(app.detect())
                     if route=='/api/inputs':app.engine.set_inputs(data['inputs'])
+                    elif route=='/api/requirements':return self.send(app.engine.input_requirements(data.get('profile','all'),data.get('step'),data.get('inputs')))
                     elif route=='/api/preview':return self.send(app.engine.preview(data.get('step'),data.get('profile','all')))
                     elif route=='/api/run':
                         if app.store.read()['workflow']!=app.engine.workflow:raise ValueError('Workflow changed on disk. Reload and start a new run.')
