@@ -3,7 +3,7 @@
 A local visual workflow builder and parallel test/release runner with a multi-project workflow home page. Configure steps in the browser canvas, YAML, or a terminal starter wizard. Runs stay on your own machine. MIT licensed; no subscriptions or hosted service required.
 
 ```bash
-python -m pip install https://github.com/codewhen/release-workbench/releases/download/v0.4.1/release_workbench-0.4.1-py3-none-any.whl
+python -m pip install https://github.com/codewhen/release-workbench/releases/download/v0.5.0/release_workbench-0.5.0-py3-none-any.whl
 release-workbench init
 release-workbench serve
 ```
@@ -15,3 +15,5 @@ Commands configured in a workflow execute with your user account. Open trusted p
 Engine and browser checks ran on macOS. Windows command plans are tested; native Windows and Linux execution still require verification on those hosts. See the execution guide for cancellation limitations.
 
 Use it for data pipelines, backups, project checks and release workflows. See [general workflows and conditional branching](docs/general-workflows.md). The `workflow-workbench` CLI alias uses the same engine and schema as `release-workbench`.
+
+Right-click the canvas to add visually distinct cards. Use Run tests, Run script, value, calculation and file cards to build automation through forms. See [no-code automation](docs/no-code-automation.md).

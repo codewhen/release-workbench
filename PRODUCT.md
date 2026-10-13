@@ -9,10 +9,10 @@ web
 Python package with bundled React/React Flow frontend; selected in the approved implementation plan.
 
 ## Users
-Developers configuring tests and release checklists for their own projects, including teams maintaining private applications.
+Developers configuring test workflows, local task automation and release checklists, including teams maintaining private applications.
 
 ## Product Purpose
-Create a ten-step workflow without writing YAML, run parallel branches safely, and inspect progress, failures and saved evidence without terminal scrolling.
+Build local automation through cards and forms, connect parallel and conditional paths, and inspect progress, failures and saved evidence without terminal scrolling. Built-in test, script, value, calculation and file actions avoid command authoring for common tasks; this is task automation, not an application-building language.
 
 ## Operating Context
 Local browser UI and CLI/CI execution on macOS, Linux and Windows. Workflows live in version-controlled YAML. Consuming projects pin the package while retaining their own application commands.

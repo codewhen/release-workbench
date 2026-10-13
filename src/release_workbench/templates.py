@@ -1,5 +1,6 @@
 """Small, local starters shared by browser and CLI; no paid or hosted tools."""
 TEMPLATES={
+ 'no-code':'No-code data and file automation', 'no-code-tests':'No-code Python test workflow',
  'blank':'Blank workflow', 'tests':'Test starter', 'release':'Release with approval',
  'branching':'If / Else with a branch join', 'data-pipeline':'CSV processing pipeline',
  'backup':'Safe demonstration file backup', 'project-checks':'Project inventory and conditional checks',
@@ -16,6 +17,16 @@ def branching(name='If / Else starter',probe=None):
  ])
 def _make_template(name,template):
  if template not in TEMPLATES:raise ValueError('Choose a supported starter template.')
+ if template=='no-code-tests':
+  return dict(version=1,name=name,concurrency=4,inputs={},steps=[dict(id='tests',name='Run Python tests',kind='action',action={'type':'run_tests','runner':'unittest','target':'.'})])
+ if template=='no-code':
+  return dict(version=1,name=name,concurrency=4,inputs={},steps=[
+   dict(id='values',name='Set starting values',kind='action',action={'type':'set_values','values':{'amount':3,'message':'Sample automation'}}),
+   dict(id='calculate',name='Calculate double',kind='action',needs=['values'],action={'type':'calculate','left':'${steps.values.result.json.amount}','right':2,'operator':'multiply'}),
+   dict(id='choose',name='If the result is positive',kind='condition',needs=['calculate'],condition={'source':'steps.calculate.result.json.value','operator':'greater_than','value':0}),
+   dict(id='save',name='True: save sample JSON',kind='action',needs=['choose'],when={'step':'choose','equals':True},action={'type':'write_file','path':'.workbench/demo/no-code.json','content':'${steps.calculate.result.json}','format':'json','create_directories':True,'overwrite':True}),
+   dict(id='review',name='False: review values',kind='manual',needs=['choose'],when={'step':'choose','equals':False},description='Inspect the result and record why it is not positive.'),
+   dict(id='read',name='Read the saved result',kind='action',needs=['save'],action={'type':'read_json','path':'.workbench/demo/no-code.json'})])
  if template=='branching':return branching(name)
  if template=='project-checks':
   w=branching(name,'import json,pathlib;p=list(pathlib.Path(".").glob("*.py"));print(json.dumps({"ready":bool(p),"python_files":len(p)}))')

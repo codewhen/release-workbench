@@ -200,7 +200,8 @@
               "command",
               "manual",
               "condition",
-              "workflow"
+              "workflow",
+              "action"
             ]
           },
           "commands": {
@@ -536,6 +537,183 @@
           "workflow": {
             "type": "string",
             "minLength": 1
+          },
+          "action": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "type": {
+                    "const": "set_values"
+                  },
+                  "values": {
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "type",
+                  "values"
+                ]
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "type": {
+                    "const": "calculate"
+                  },
+                  "left": {
+                    "type": [
+                      "number",
+                      "string"
+                    ]
+                  },
+                  "right": {
+                    "type": [
+                      "number",
+                      "string"
+                    ]
+                  },
+                  "operator": {
+                    "enum": [
+                      "add",
+                      "subtract",
+                      "multiply",
+                      "divide"
+                    ]
+                  }
+                },
+                "required": [
+                  "type",
+                  "left",
+                  "right",
+                  "operator"
+                ]
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "type": {
+                    "const": "read_json"
+                  },
+                  "path": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "type",
+                  "path"
+                ]
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "type": {
+                    "const": "write_file"
+                  },
+                  "path": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "content": {},
+                  "format": {
+                    "enum": [
+                      "text",
+                      "json"
+                    ]
+                  },
+                  "overwrite": {
+                    "type": "boolean"
+                  },
+                  "create_directories": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "type",
+                  "path",
+                  "content"
+                ]
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "type": {
+                    "const": "run_tests"
+                  },
+                  "runner": {
+                    "enum": [
+                      "unittest",
+                      "pytest",
+                      "go",
+                      "flutter",
+                      "npm",
+                      "gradle"
+                    ]
+                  },
+                  "target": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "type",
+                  "runner"
+                ]
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "type": {
+                    "const": "file_exists"
+                  },
+                  "path": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "type",
+                  "path"
+                ]
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "type": {
+                    "const": "run_script"
+                  },
+                  "language": {
+                    "enum": [
+                      "python",
+                      "bash",
+                      "powershell"
+                    ]
+                  },
+                  "path": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "arguments": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "type",
+                  "language",
+                  "path"
+                ]
+              }
+            ]
           }
         },
         "required": [
@@ -574,7 +752,8 @@
             "command",
             "manual",
             "condition",
-            "workflow"
+            "workflow",
+            "action"
           ]
         },
         "commands": {
@@ -910,6 +1089,183 @@
         "workflow": {
           "type": "string",
           "minLength": 1
+        },
+        "action": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "type": {
+                  "const": "set_values"
+                },
+                "values": {
+                  "type": "object"
+                }
+              },
+              "required": [
+                "type",
+                "values"
+              ]
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "type": {
+                  "const": "calculate"
+                },
+                "left": {
+                  "type": [
+                    "number",
+                    "string"
+                  ]
+                },
+                "right": {
+                  "type": [
+                    "number",
+                    "string"
+                  ]
+                },
+                "operator": {
+                  "enum": [
+                    "add",
+                    "subtract",
+                    "multiply",
+                    "divide"
+                  ]
+                }
+              },
+              "required": [
+                "type",
+                "left",
+                "right",
+                "operator"
+              ]
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "type": {
+                  "const": "read_json"
+                },
+                "path": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "type",
+                "path"
+              ]
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "type": {
+                  "const": "write_file"
+                },
+                "path": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "content": {},
+                "format": {
+                  "enum": [
+                    "text",
+                    "json"
+                  ]
+                },
+                "overwrite": {
+                  "type": "boolean"
+                },
+                "create_directories": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "type",
+                "path",
+                "content"
+              ]
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "type": {
+                  "const": "run_tests"
+                },
+                "runner": {
+                  "enum": [
+                    "unittest",
+                    "pytest",
+                    "go",
+                    "flutter",
+                    "npm",
+                    "gradle"
+                  ]
+                },
+                "target": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "type",
+                "runner"
+              ]
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "type": {
+                  "const": "file_exists"
+                },
+                "path": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "type",
+                "path"
+              ]
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "type": {
+                  "const": "run_script"
+                },
+                "language": {
+                  "enum": [
+                    "python",
+                    "bash",
+                    "powershell"
+                  ]
+                },
+                "path": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "arguments": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "type",
+                "language",
+                "path"
+              ]
+            }
+          ]
         }
       },
       "required": [

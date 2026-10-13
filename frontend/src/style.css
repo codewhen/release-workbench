@@ -40,3 +40,18 @@ dialog::backdrop{background:rgba(24,42,48,.45)}
 .react-flow__edge-path{cursor:pointer}
 .connection-settings{border-top:1px solid var(--line);margin-top:24px;padding-top:8px}
 .connection-settings button{margin:8px 8px 0 0}
+
+.card-menu{position:fixed;z-index:30;width:280px;padding:8px;background:var(--surface);box-shadow:0 8px 28px rgba(24,42,48,.22);border-radius:8px;overflow:auto;overscroll-behavior:contain}
+.card-menu h3{margin:8px 12px 12px;font-size:16px}.card-menu button{width:100%;justify-content:flex-start;text-align:left;border:0;gap:12px;padding:10px 12px;min-height:54px}.card-menu button>svg{flex:none;color:var(--accent)}.card-menu strong{font-size:14px;display:block}.card-menu small{font-size:12px}.card-menu button:focus-visible{outline-offset:-3px;background:#e0eaee}
+.node-type{display:flex;gap:7px;align-items:center}.node-type svg{flex:none;color:var(--accent)}
+.step-node.kind-command{border-radius:4px}.step-node.kind-workflow{border:3px double #75929d;border-radius:8px}
+.step-node.kind-manual{border-radius:28px;background:#f5f8f9}
+.step-node.kind-action{border-radius:12px;background:#f5f8f9}.step-node.kind-action .node-type{padding-bottom:10px;border-bottom:1px solid var(--line)}
+.step-node.kind-condition{min-height:230px;padding:48px 35px 30px;text-align:center;border:0;background:transparent;border-radius:0;position:relative}
+.step-node.kind-condition::before{content:"";position:absolute;z-index:-1;left:33px;top:34px;width:162px;height:162px;background:#edf3f5;border:1px solid #75929d;transform:rotate(45deg);border-radius:8px}
+.step-node.kind-condition .node-type{justify-content:center}.step-node.kind-condition .node-add{font-size:12px;min-height:36px;padding:4px;margin-top:8px}.step-node.kind-condition .branch-label.true{right:14px;top:50%;transform:translateY(-50%)}.step-node.kind-condition .branch-label.false{right:auto;left:50%;top:auto;bottom:18px;transform:translateX(-50%)}.step-node.kind-condition.chosen{outline:0}.step-node.kind-condition.chosen::before{border:2px solid var(--accent)}
+.named-value{border-top:1px solid var(--line);margin-top:20px;padding-top:8px}.named-value>button{margin-bottom:16px}.value-field{padding:4px 12px;background:#edf3f5;border-radius:6px;margin:16px 0}.value-field label{margin:10px 0}
+
+.step-node.kind-condition strong{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.step-node.kind-condition.passed::before,.step-node.kind-condition.recorded::before{border-color:#146040}.step-node.kind-condition.failed::before{border-color:#a12424}.step-node.kind-condition.running{border-left:0}
+
+.graph .react-flow__controls{display:flex;flex-direction:row;bottom:12px;left:16px}.graph .react-flow__minimap{bottom:16px;right:16px}.graph .canvas-hint{left:24px;right:180px;bottom:60px}

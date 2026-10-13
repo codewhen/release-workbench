@@ -92,6 +92,13 @@ def validate(workflow):
             errors.append(f'{s["id"]}: add a command before running.')
         if s['kind']=='manual' and (s.get('commands') or s.get('platform_commands')):errors.append(f'{s["id"]}: manual gates cannot execute commands.')
         if s.get('approval') and s['kind']!='manual':errors.append(f'{s["id"]}: approval must be a manual gate.')
+        if s['kind']=='action':
+            if not s.get('action'):errors.append(f'{s["id"]}: configure a built-in action.')
+            if s.get('commands') or s.get('platform_commands'):errors.append(f'{s["id"]}: built-in action cards cannot execute commands.')
+            if s.get('action',{}).get('type')=='run_tests' and any(code!=0 for code in s.get('success_codes',[0])):errors.append(f'{s["id"]}: test cards require exit code 0; nonzero test results cannot pass.')
+            path=s.get('action',{}).get('path','')
+            if path and (Path(path).is_absolute() or '..' in Path(path).parts):errors.append(f'{s["id"]}: action files must stay in the workspace.')
+        elif 'action' in s:errors.append(f'{s["id"]}: action configuration belongs on an action card.')
         if s['kind']=='workflow':
             if not s.get('workflow'):errors.append(f'{s["id"]}: select a child workflow YAML file.')
             elif Path(s['workflow']).is_absolute() or '..' in Path(s['workflow']).parts:errors.append(f'{s["id"]}: child workflow must stay within the workspace.')
@@ -123,7 +130,12 @@ def validate(workflow):
     try:
         for s in steps:
             deps=ancestors(s['id'])
+            for reference in re.findall(r'\$\{(steps|input|env)\.([^}]+)\}',json.dumps(s.get('action',{}))):
+                family,path=reference;parts=path.split('.')
+                if family=='steps' and (len(parts)<3 or parts[0] not in deps or parts[1]!='result'):errors.append(f'{s["id"]}: action result bindings must reference ancestor results.')
+                if family=='input' and (len(parts)!=1 or parts[0] not in inputs):errors.append(f'{s["id"]}: unknown action input binding.')
             if s['kind']=='condition' and s.get('condition'):
+
                 source=s['condition']['source'];parts=source.split('.')
                 if parts[0]=='inputs':
                     if len(parts)!=2 or parts[1] not in inputs:errors.append(f'{s["id"]}: unknown condition input.')

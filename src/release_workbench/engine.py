@@ -163,7 +163,7 @@ class Engine:
         if step:return self.ancestors(step)
         if profile=='all':return {s['id'] for s in self.workflow['steps']}
         if profile=='background':
-            background={s['id'] for s in self.workflow['steps'] if s['kind'] in ('command','condition','workflow') and s.get('mode','background')=='background'}
+            background={s['id'] for s in self.workflow['steps'] if s['kind'] in ('command','condition','workflow','action') and s.get('mode','background')=='background'}
             completed={key for key,value in self.state['steps'].items() if value['status'] in PASSED}
             return {key for key in background if self.ancestors(key)<=background|completed}
         if profile not in self.workflow.get('profiles',{}):raise ValueError('Unknown profile '+profile)
@@ -188,13 +188,24 @@ class Engine:
             if child['kind']=='workflow':self.check_child_workflow(checked_path(path.parent,child['workflow']),(*seen,path))
         return path
     def prepare(self,step):
+        if step.get('action',{}).get('type')=='run_tests':
+            from .actions import test_command
+            step={**step,'commands':[{'argv':test_command(step['action'],self.root,step.get('cwd','.'))}]}
         if step['kind']=='workflow':
             path=self.check_child_workflow(step['workflow'])
             if path.parent!=self.root:raise ValueError('Run workflow cards currently require a YAML file in this project root. Use a command for another project.')
             step={**step,'commands':[{'argv':[sys.executable,'-m','release_workbench.cli','run','--config',str(path),'--output',str(self.directory/'children'/step['id']),'--non-interactive']}]}
         values=self.inputs()
-        for key in set(step.get('requires_inputs',[]))|{k for k,v in self.workflow.get('inputs',{}).items() if v.get('required')}:
+        references=set(re.findall(r'\$\{input\.([^}]+)\}',json.dumps(step)))&set(self.workflow.get('inputs',{}))
+        for key in set(step.get('requires_inputs',[]))|references|{k for k,v in self.workflow.get('inputs',{}).items() if v.get('required')}:
             values[key]=input_value(key,values.get(key,''),{**self.workflow['inputs'][key],'required':True})
+        if step.get('action',{}).get('type')=='run_script':
+            action=self.resolve_action(step['action'],os.environ)
+            if not isinstance(action['path'],str):raise ValueError('Script path must be text.')
+            file=checked_path(self.root,action['path'])
+            if not file.is_file():raise ValueError('Script file not found: '+action['path'])
+            program=[sys.executable] if action['language']=='python' else ['bash'] if action['language']=='bash' else ['powershell' if os.name=='nt' else 'pwsh','-NoProfile','-File']
+            step={**step,'commands':[{'argv':[*program,str(file),*(str(v) for v in action.get('arguments',[]))]}]}
         merged={**step,'env':{**self.workflow.get('env',{}),**step.get('env',{})}}
         return resolved_commands(merged,self.root,values)
     def input_requirements(self,profile='all',step=None,values=None):
@@ -212,7 +223,7 @@ class Engine:
                 if current['id'] not in selected or not current.get('enabled',True):continue
                 ancestors=self.ancestors(current['id'])-{current['id']}
                 produced={out['input'] for parent in self.workflow['steps'] if parent['id'] in selected&ancestors for out in parent.get('outputs',[])}
-                settings=dict(commands=current.get('platform_commands',{}).get(PLATFORM,current.get('commands',[])),env={**self.workflow.get('env',{}),**current.get('env',{})},cwd=current.get('cwd','.'),resources=current.get('resources',[]))
+                settings=dict(action=current.get('action',{}),commands=current.get('platform_commands',{}).get(PLATFORM,current.get('commands',[])),env={**self.workflow.get('env',{}),**current.get('env',{})},cwd=current.get('cwd','.'),resources=current.get('resources',[]))
                 references=set(re.findall(r'\$\{input\.([^}]+)\}',json.dumps(settings)))&set(specs)
                 if current.get('when') and self.state['steps'][current['when']['step']]['status'] not in PASSED:continue
                 if current.get('when') and self.state['steps'][current['when']['step']].get('result',{}).get('decision') is not current['when']['equals']:continue
@@ -313,7 +324,7 @@ class Engine:
                     cancel=threading.Event();self.events[key]=cancel
                     self.running[key]=dict(resources=resources,exclusive=s.get('exclusive',False),started=time.monotonic())
                     value.update(status='running',error='',seconds=0,progress=None,stage='Starting')
-                    self.save();threading.Thread(target=self.execute,args=(s,commands,cwd,env,cancel),daemon=True).start()
+                    self.save();threading.Thread(target=self.execute_action if s['kind']=='action' and s['action']['type'] not in ('run_tests','run_script') else self.execute,args=(s,commands,cwd,env,cancel),daemon=True).start()
                     held|=resources;progressed=True
                     if s.get('exclusive'):break
                 if progressed:self.save()
@@ -321,6 +332,48 @@ class Engine:
                     # A paused scheduler stays alive; manual gates return control.
                     if (not self.paused or self.stopped) and not progressed:return
             time.sleep(.05)
+    def resolve_action(self,value,env):
+        if isinstance(value,dict):return {key:self.resolve_action(item,env) for key,item in value.items()}
+        if isinstance(value,list):return [self.resolve_action(item,env) for item in value]
+        if not isinstance(value,str):return value
+        def reference(match):
+            family,path=match.group(1),match.group(2);parts=path.split('.')
+            data=self.state['steps'] if family=='steps' else self.inputs() if family=='input' else env
+            try:
+                for part in parts:data=data[int(part)] if isinstance(data,list) else data[part]
+                return data
+            except (KeyError,IndexError,TypeError,ValueError):raise ValueError('Missing action value: '+match.group(0))
+        pattern=r'\$\{(steps|input|env)\.([^}]+)\}'
+        full=re.fullmatch(pattern,value)
+        if full:return reference(full)
+        return re.sub(pattern,lambda match:str(reference(match)),value)
+    def execute_action(self,step,commands,cwd,extra_env,cancel):
+        from .actions import run_action
+        key=step['id'];start=time.monotonic();wall=time.time();error='';status='passed';reports=[]
+        with self.lock:
+            self.masker.add([extra_env.get(name,'') for name in self.secret_names]);value=self.state['steps'][key]
+            attempt=dict(started=stamp(),status='running',seconds=0,commands=[],log=f'{key}-{len(value["attempts"])+1}.log',reports=[])
+            value['attempts'].append(attempt);value['stage']='Action: '+step['action']['type'];self.save()
+        try:
+            if cancel.is_set():raise InterruptedError('Action cancelled before starting.')
+            env={**os.environ,**extra_env}
+            data,files=run_action(step['action'],self.root,lambda item:self.resolve_action(item,env))
+            reports=[dict(path=file.relative_to(self.root).as_posix(),sha256=self.file_hash(file)) for file in files]+self.collect(step,wall)
+            self.collect_outputs(step,wall)
+            if cancel.is_set():raise InterruptedError('Action cancelled; inspect partial file evidence.')
+            if time.monotonic()-start>step.get('timeout',3600):raise ValueError('Configured timeout exceeded.')
+            result={'exit_code':0,'json':data}
+            with self.lock:value['result']=result;attempt['result']=self.masker.object(result)
+        except InterruptedError as exc:status='cancelled';error=str(exc)
+        except Exception as exc:status='failed';error=self.masker.text(str(exc))
+        with self.lock:
+            elapsed=round(time.monotonic()-start,3)
+            (self.directory/attempt['log']).write_text(self.masker.text(json.dumps({'action':step['action'],'result':value.get('result'),'error':error},indent=2)))
+            value.update(status=status,seconds=elapsed,error=error,exit_code=0 if status=='passed' else 130 if status=='cancelled' else 1)
+            attempt.update(status=status,seconds=elapsed,error=error,exit_code=value['exit_code'],reports=reports)
+            if status=='passed':self.history.setdefault(key,[]).append(elapsed)
+            self.running.pop(key,None);self.events.pop(key,None);self.save()
+
     def execute(self,step,commands,cwd,extra_env,cancel):
         key=step['id'];start=time.monotonic();wall=time.time();code=0;error='';process=None
         with self.lock:
@@ -383,13 +436,7 @@ class Engine:
                     with self.lock:value['result']=result;attempt['result']=self.masker.object(result)
                     reports=self.collect(step,wall)
                     attempt['reports']=reports
-                    for output in step.get('outputs',[]):
-                        matches=self.matches(output['path'],wall if output.get('fresh',True) else None)
-                        if not matches:raise ValueError('Missing output: '+output['path'])
-                        data=json.loads(max(matches,key=lambda p:p.stat().st_mtime).read_text())
-                        for part in output['key'].split('.'):data=data[int(part)] if isinstance(data,list) else data[part]
-                        target=output['input'];data=input_value(target,data,{**self.workflow['inputs'][target],'required':True})
-                        with self.lock:self.outputs[target]=data;self.state['outputs']=self.outputs
+                    self.collect_outputs(step,wall)
                     write('SUMMARY: '+str(self.directory/'summary.json')+'\n')
         except Exception as exc:
             code=1;error=self.masker.text(str(exc))
@@ -407,6 +454,15 @@ class Engine:
             attempt.update(status=status,seconds=elapsed,exit_code=code,error=error)
             if status=='passed':self.history.setdefault(key,[]).append(elapsed)
             self.running.pop(key,None);self.events.pop(key,None);self.save()
+    def collect_outputs(self,step,wall):
+        for output in step.get('outputs',[]):
+            matches=self.matches(output['path'],wall if output.get('fresh',True) else None)
+            if not matches:raise ValueError('Missing output: '+output['path'])
+            data=json.loads(max(matches,key=lambda p:p.stat().st_mtime).read_text())
+            for part in output['key'].split('.'):data=data[int(part)] if isinstance(data,list) else data[part]
+            target=output['input'];data=input_value(target,data,{**self.workflow['inputs'][target],'required':True})
+            with self.lock:self.outputs[target]=data;self.state['outputs']=self.outputs
+
     def consume(self,key,step,line):
         with self.lock:
             value=self.state['steps'][key]

@@ -136,3 +136,9 @@ Workflow Home uses border-separated rows rather than raised cards: name and desc
 - Do use tonal separation and borders for working surfaces.
 - Don't treat all headings as a 24–32px scale; panel titles are 22px.
 - Don't apply modal shadows to ordinary working surfaces.
+
+## Automation card vocabulary
+
+Command nodes use a rectangular body and terminal icon. If nodes use a diamond, with True at the right tip and False at the bottom tip. Manual checks use rounded gate bodies; reusable workflows use a double outline. Built-in actions use a labelled header and an action-specific icon. Type is visible without relying on outcome color. Selection and written outcome labels remain distinct from the type treatment.
+
+The right-click Add a card menu is a fixed, scrollable overlay using existing surface, ink and accent tokens. The toolbar and List view expose the same picker. Arrow keys, Home/End and Escape support keyboard use; items include a short task description. Ordinary action forms select earlier values and typed constants; opaque references live in Reference details.

@@ -1,3 +1,4 @@
+import {resultSources} from './cardSources.js';
 import test from 'node:test';import assert from 'node:assert/strict';import {appendStep,createsCycle,insertStep,autoLayout,parseCommand,formatCommand,nextExecutionSelection,clampPanelWidth,appendBranch,appendCard,connectCards,disconnectCards} from './model.js';
 test('ten steps append as a chain with stable IDs',()=>{let w={steps:[]};for(let i=0;i<10;i++)w=appendStep(w,w.steps.at(-1)?.id);assert.equal(w.steps.length,10);assert.deepEqual(w.steps[9].needs,['step-9']);assert.equal(new Set(w.steps.map(s=>s.id)).size,10);});
 test('branches reject cycles and edge insertion preserves the join',()=>{let w=appendStep({steps:[]});w=appendStep(w,'step-1');assert(createsCycle(w.steps,'step-2','step-1'));assert(!createsCycle(w.steps,'step-1','step-2'));w=insertStep(w,'step-1','step-2');assert.deepEqual(w.steps.find(s=>s.id==='step-2').needs,['step-3']);});
@@ -50,4 +51,13 @@ test('connecting and disconnecting If outputs controls their route',()=>{
  w=connectCards(w,'step-1','step-2','true');w=connectCards(w,'step-1','step-3','false');
  assert.deepEqual(w.steps[2].when,{step:'step-1',equals:false});
  w=disconnectCards(w,'step-1','step-3');assert.deepEqual(w.steps[2].needs,[]);assert.equal(w.steps[2].when,undefined);
+});
+
+test('no-code result picker exposes ancestor values without requiring reference text',()=>{
+ const workflow={inputs:{folder:{label:'Test folder'}},steps:[{id:'values',kind:'action',name:'Set values',action:{type:'set_values',values:{ready:true}}},{id:'unrelated',kind:'action',name:'Other'},{id:'choose',kind:'condition',needs:['values']}]};
+ const choices=resultSources(workflow,workflow.steps[2],{});assert(choices.some(s=>s.value==='steps.values.result.json.ready'));assert(choices.some(s=>s.value==='inputs.folder'));assert(!choices.some(s=>s.value.includes('unrelated')));
+});
+test('test cards expose their exit code without advertising absent JSON data',()=>{
+ const w={steps:[{id:'test',kind:'action',name:'Tests',action:{type:'run_tests'}},{id:'if',kind:'condition',needs:['test']}]};const choices=resultSources(w,w.steps[1],{});
+ assert.deepEqual(choices.map(c=>c.value),['steps.test.result.exit_code']);
 });
