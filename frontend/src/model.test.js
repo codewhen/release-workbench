@@ -1,5 +1,5 @@
 import {resultSources} from './cardSources.js';
-import test from 'node:test';import assert from 'node:assert/strict';import {appendStep,createsCycle,insertStep,autoLayout,parseCommand,formatCommand,nextExecutionSelection,clampPanelWidth,appendBranch,appendCard,connectCards,disconnectCards} from './model.js';
+import test from 'node:test';import assert from 'node:assert/strict';import {appendStep,createsCycle,insertStep,autoLayout,parseCommand,formatCommand,nextExecutionSelection,clampPanelWidth,appendBranch,appendCard,connectCards,disconnectCards,disconnectNode} from './model.js';
 test('ten steps append as a chain with stable IDs',()=>{let w={steps:[]};for(let i=0;i<10;i++)w=appendStep(w,w.steps.at(-1)?.id);assert.equal(w.steps.length,10);assert.deepEqual(w.steps[9].needs,['step-9']);assert.equal(new Set(w.steps.map(s=>s.id)).size,10);});
 test('branches reject cycles and edge insertion preserves the join',()=>{let w=appendStep({steps:[]});w=appendStep(w,'step-1');assert(createsCycle(w.steps,'step-2','step-1'));assert(!createsCycle(w.steps,'step-1','step-2'));w=insertStep(w,'step-1','step-2');assert.deepEqual(w.steps.find(s=>s.id==='step-2').needs,['step-3']);});
 test('layout separates parallel nodes and keeps dependencies to the right',()=>{const steps=autoLayout([{id:'a'},{id:'b',needs:['a']},{id:'c',needs:['a']}]);assert(steps[1].position.x>steps[0].position.x);assert.notEqual(steps[1].position.y,steps[2].position.y);});
@@ -61,3 +61,5 @@ test('test cards expose their exit code without advertising absent JSON data',()
  const w={steps:[{id:'test',kind:'action',name:'Tests',action:{type:'run_tests'}},{id:'if',kind:'condition',needs:['test']}]};const choices=resultSources(w,w.steps[1],{});
  assert.deepEqual(choices.map(c=>c.value),['steps.test.result.exit_code']);
 });
+
+test('disconnecting a node removes only its incoming/outgoing edges and branch routes',()=>{const w={steps:[{id:'a',kind:'condition'},{id:'b',needs:['a'],when:{step:'a',equals:false}},{id:'c',needs:['b','a'],when:{step:'a',equals:true}},{id:'d',needs:['c']}]};const n=disconnectNode(w,'a');assert.deepEqual(n.steps[1].needs,[]);assert.equal(n.steps[1].when,undefined);assert.deepEqual(n.steps[2].needs,['b']);assert.equal(n.steps[2].when,undefined);assert.deepEqual(n.steps[3].needs,['c']);assert.deepEqual(w.steps[1].needs,['a']);});

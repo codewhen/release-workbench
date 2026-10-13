@@ -30,3 +30,5 @@ export function connectCards(workflow,source,target,handle=null){
  return {...workflow,steps:workflow.steps.map(s=>s.id===target?{...s,needs:[...new Set([...(s.needs||[]),source])],...(parent.kind==='condition'?{when:{step:source,equals:handle!=='false'}}:{})}:s)};
 }
 export function disconnectCards(workflow,source,target){return {...workflow,steps:workflow.steps.map(s=>{if(s.id!==target)return s;const next={...s,needs:(s.needs||[]).filter(id=>id!==source)};if(next.when?.step===source)delete next.when;return next})};}
+
+export function disconnectNode(workflow,id){return {...workflow,steps:workflow.steps.map(s=>{if(s.id===id){const next={...s,needs:[]};delete next.when;return next;}if(!(s.needs||[]).includes(id))return s;const next={...s,needs:s.needs.filter(dep=>dep!==id)};if(next.when?.step===id)delete next.when;return next;})};}

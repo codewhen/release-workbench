@@ -131,3 +131,7 @@ Install the SSH client, configure key authentication and verify/add the server's
 Expand **Platform-specific computation** for separate macos/windows/linux command arrays. A platform entry overrides the default commands. Existing If comparisons still work under **Compare an earlier value**.
 
 Home → New workflow → Start with → **If(a) with a computed Boolean** creates a runnable computation, True/False branches and their join. CLI: `workflow-workbench init --template computed-if`.
+
+### Disconnect and delete cards
+
+In Edit view, click a card’s three-dot **Actions** button or right-click the card. Choose a specific incoming/outgoing connection to disconnect, **Disconnect all**, or **Delete card**. Deletion opens a confirmation; existing dependent cards reconnect to its prerequisites as described there. Removing an If connection clears its branch route. Undo restores draft changes; Save persists them. Disconnecting a prerequisite can make a card run independently, so review the workflow before running. These actions are unavailable during execution. Right-click empty canvas to add cards.
