@@ -1,4 +1,4 @@
-import test from 'node:test';import assert from 'node:assert/strict';import {appendStep,createsCycle,insertStep,autoLayout,parseCommand,formatCommand,nextExecutionSelection,clampPanelWidth,appendBranch} from './model.js';
+import test from 'node:test';import assert from 'node:assert/strict';import {appendStep,createsCycle,insertStep,autoLayout,parseCommand,formatCommand,nextExecutionSelection,clampPanelWidth,appendBranch,appendCard,connectCards,disconnectCards} from './model.js';
 test('ten steps append as a chain with stable IDs',()=>{let w={steps:[]};for(let i=0;i<10;i++)w=appendStep(w,w.steps.at(-1)?.id);assert.equal(w.steps.length,10);assert.deepEqual(w.steps[9].needs,['step-9']);assert.equal(new Set(w.steps.map(s=>s.id)).size,10);});
 test('branches reject cycles and edge insertion preserves the join',()=>{let w=appendStep({steps:[]});w=appendStep(w,'step-1');assert(createsCycle(w.steps,'step-2','step-1'));assert(!createsCycle(w.steps,'step-1','step-2'));w=insertStep(w,'step-1','step-2');assert.deepEqual(w.steps.find(s=>s.id==='step-2').needs,['step-3']);});
 test('layout separates parallel nodes and keeps dependencies to the right',()=>{const steps=autoLayout([{id:'a'},{id:'b',needs:['a']},{id:'c',needs:['a']}]);assert(steps[1].position.x>steps[0].position.x);assert.notEqual(steps[1].position.y,steps[2].position.y);});
@@ -36,4 +36,18 @@ test('inserting into a False branch preserves its routing',()=>{
  let w=appendStep({steps:[]},null,'condition');w=appendBranch(w,w.steps[0].id,false);
  const parent=w.steps[0].id,target=w.steps[1].id;w=insertStep(w,parent,target);
  assert.deepEqual(w.steps.at(-1).when,{step:parent,equals:false});assert.equal(w.steps.find(s=>s.id===target).when,undefined);
+});
+
+test('new cards stay independent until connected and never overlap',()=>{
+ let w={steps:[]};for(let i=0;i<10;i++)w=appendCard(w);
+ assert(w.steps.every(s=>s.needs.length===0));assert.equal(new Set(w.steps.map(s=>JSON.stringify(s.position))).size,10);
+ w=connectCards(w,'step-1','step-2');w=connectCards(w,'step-1','step-3');
+ assert.deepEqual(w.steps[1].needs,['step-1']);assert.deepEqual(w.steps[2].needs,['step-1']);assert.deepEqual(w.steps[3].needs,[]);
+ assert.throws(()=>connectCards(w,'step-2','step-1'),/cycle/);
+});
+test('connecting and disconnecting If outputs controls their route',()=>{
+ let w=appendCard({steps:[]},'condition');w=appendCard(w);w=appendCard(w);
+ w=connectCards(w,'step-1','step-2','true');w=connectCards(w,'step-1','step-3','false');
+ assert.deepEqual(w.steps[2].when,{step:'step-1',equals:false});
+ w=disconnectCards(w,'step-1','step-3');assert.deepEqual(w.steps[2].needs,[]);assert.equal(w.steps[2].when,undefined);
 });

@@ -6,7 +6,7 @@ The workbench runs trusted local programs and shell scripts, connects their resu
 
 1. Open Home and register your project folder.
 2. Choose **New workflow**, enter a name, then choose a starter.
-3. Edit commands and connections. Save does not run anything.
+3. Choose **Add card** (or a typed card button) to add an independent card. Drag or click its output and another card’s input to connect them. Connect one output to several cards for parallel work. **Add next** remains a shortcut for a connected step. Click a connection and choose **Disconnect** to remove it; Undo/Redo restores changes. Save does not run anything.
 4. Choose Run, inspect results and respond to manual gates when prompted.
 
 The starters are shared with the CLI:
