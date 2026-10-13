@@ -97,9 +97,9 @@ Use the system sans stack for interface text and the monospace stack for YAML an
 
 ## Layout
 
-The desktop app is a viewport-height flex column (100dvh, minimum 560px). Header, toolbar, banners, footer and run inputs keep their own height; the workspace fills the remaining space with a minimum height of 320px. The flexible graph pairs with a 370px independently scrolling settings panel; the panel narrows to 330px at 1000px. Header and toolbar wrap as needed.
+The desktop app is a viewport-height flex column (100dvh, minimum 560px). Header, toolbar, banners, footer and run inputs keep their own height; the workspace fills the remaining space with a minimum height of 320px. Its grid row uses minmax(0, 1fr), with zero-minimum-height children so the list and settings scroll independently instead of growing to fit their content. The flexible graph pairs with a 370px independently scrolling settings panel; the panel narrows to 330px at 1000px. Header and toolbar wrap as needed.
 
-At 700px the app uses document scrolling, the workspace stacks and the settings panel becomes full width. The mobile list occupies a bounded, scrolling 360px graph region, keeping settings reachable regardless of workflow length; YAML uses a 480px region. Initial representation is List at widths up to 1000px; entering the 700px breakpoint automatically switches Canvas to List. The narrow Canvas fallback directs users to List.
+At 700px the app uses document scrolling, the workspace stacks and the settings panel becomes full width with an independently scrolling maximum height of 70dvh. The mobile list occupies a bounded, scrolling 360px graph region, keeping settings reachable regardless of workflow length; YAML uses a 480px region. Initial representation is List at widths up to 1000px; entering the 700px breakpoint automatically switches Canvas to List. The narrow Canvas fallback directs users to List.
 
 Workflow Home follows document flow within a centered container capped at 1180px, with 40px 28px 48px desktop padding and 28px 20px padding at 700px. Directory rows use a flexible identity column, 180px evidence column and action column, with 28px gaps and 24px vertical padding. At 850px evidence moves below identity; at 700px rows stack and Open actions become full width. Search and project filters stack, and two-column inline forms become one column at 700px.
 
