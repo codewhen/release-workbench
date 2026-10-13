@@ -10,6 +10,54 @@ class ConditionalWorkflowTests(unittest.TestCase):
   deadline=time.monotonic()+15
   while e.busy() and time.monotonic()<deadline:time.sleep(.02)
   self.assertFalse(e.busy());return e
+ def computed(self,code):
+  w=make_template('computed','branching');w['steps'][1]['condition']={'compute':{'commands':[{'argv':['${python}','-c',code]}]}};return w
+ def test_computed_boolean_routes_and_logs_stderr(self):
+  for value in (True,False):
+   e=self.run_workflow(self.computed('import json,sys; print("diagnostic",file=sys.stderr); print(json.dumps('+str(value)+'))'))
+   self.assertEqual(e.exit_code(),0);self.assertIs(e.state['steps']['choose']['result']['decision'],value)
+   self.assertEqual(e.state['steps']['ready']['status'],'passed' if value else 'skipped')
+   self.assertEqual(e.state['steps']['waiting']['status'],'skipped' if value else 'passed')
+   self.assertIn('diagnostic',(e.directory/e.state['steps']['choose']['attempts'][0]['log']).read_text())
+ def test_computed_invalid_values_and_failure_block_both_branches(self):
+  for code in ['print("1")','print("null")','print("{}")','print('"true"')','print("not boolean")','print("false");raise SystemExit(1)']:
+   with self.subTest(code=code):
+    e=self.run_workflow(self.computed(code));self.assertEqual(e.exit_code(),1)
+    for key in ['ready','waiting']:self.assertEqual(e.state['steps'][key]['status'],'blocked')
+ def test_computed_ancestor_value_binding(self):
+  w=self.computed('import json,sys;print(json.dumps(sys.argv[1]=="True"))');w['steps'][1]['condition']['compute']['commands'][0]['argv'].append('${steps.probe.result.json.ready}')
+  e=self.run_workflow(w);self.assertTrue(e.state['steps']['choose']['result']['decision'])
+  w['steps'][1]['condition']['compute']['commands'][0]['argv'][-1]='${steps.finish.result.json.ready}';self.assertTrue(validate(w))
+ def test_computed_input_prompt_and_nonzero_rejection(self):
+  w=self.computed('print("true")');w['inputs']={'flag':{'type':'string','label':'Flag'}};w['steps'][1]['condition']['compute']['commands'][0]['argv'].append('${input.flag}')
+  with tempfile.TemporaryDirectory() as directory:
+   e=Engine(Path(directory),w);self.assertEqual(e.input_requirements()['fields'][0]['key'],'flag')
+  w['steps'][1]['success_codes']=[0,1];self.assertTrue(validate(w))
+ def test_computed_timeout(self):
+  w=self.computed('import time;time.sleep(20);print("true")');w['steps'][1]['timeout']=.2
+  e=self.run_workflow(w);self.assertEqual(e.state['steps']['choose']['status'],'failed');self.assertIn('timeout',e.state['steps']['choose']['error'])
+ def test_computed_cancel_blocks_both_branches(self):
+  w=self.computed('import time;time.sleep(20);print("true")')
+  with tempfile.TemporaryDirectory() as directory:
+   e=Engine(Path(directory),w);e.start();deadline=time.monotonic()+5
+   while e.state['steps']['choose']['status']!='running' and time.monotonic()<deadline:time.sleep(.02)
+   self.assertEqual(e.state['steps']['choose']['status'],'running');e.stop('choose')
+   while e.busy() and time.monotonic()<deadline:time.sleep(.02)
+   self.assertEqual(e.state['steps']['choose']['status'],'cancelled')
+   for key in ['ready','waiting']:self.assertEqual(e.state['steps'][key]['status'],'blocked')
+ def test_computed_ssh_arguments_and_resource_lock(self):
+  w=self.computed('');s=w['steps'][1];s['condition']['compute']['commands']=[{'argv':['ssh','-o','BatchMode=yes','-o','StrictHostKeyChecking=yes','host-alias','echo true']}];s['mode']='interactive';s['resources']=['remote-server']
+  with tempfile.TemporaryDirectory() as directory:
+   e=Engine(Path(directory),w);commands,_,_=e.prepare(s)
+   self.assertEqual(commands[0],s['condition']['compute']['commands'][0]['argv']);self.assertEqual(e.resources(s),{'desktop','remote-server'})
+ def test_computed_shell_does_not_interpolate_untrusted_results(self):
+  w=self.computed('');w['steps'][1]['condition']['compute']['commands']=[{'shell':'sh','script':'echo ${steps.probe.result.json.ready}'}]
+  e=self.run_workflow(w);self.assertEqual(e.state['steps']['choose']['status'],'blocked');self.assertIn('argv',e.state['steps']['choose']['error'])
+ def test_computed_shell(self):
+  import os
+  if os.name=='nt':self.skipTest('Native Windows remains unverified')
+  w=self.computed('');w['steps'][1]['condition']['compute']['commands']=[{'shell':'sh','script':'echo false'}]
+  e=self.run_workflow(w);self.assertFalse(e.state['steps']['choose']['result']['decision'])
  def test_true_false_and_join(self):
   for value in (True,False):
    w=make_template('branch','branching');w['steps'][0]['commands'][0]['argv'][-1]='import json;print(json.dumps({"ready":'+str(value)+'}))'

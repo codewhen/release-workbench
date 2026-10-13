@@ -206,6 +206,15 @@ class Engine:
             if not file.is_file():raise ValueError('Script file not found: '+action['path'])
             program=[sys.executable] if action['language']=='python' else ['bash'] if action['language']=='bash' else ['powershell' if os.name=='nt' else 'pwsh','-NoProfile','-File']
             step={**step,'commands':[{'argv':[*program,str(file),*(str(v) for v in action.get('arguments',[]))]}]}
+        if step.get('condition',{}).get('compute'):
+            computation=copy.deepcopy(step['condition']['compute'])
+            chosen=computation.get('platform_commands',{}).get(PLATFORM,computation.get('commands',[]))
+            if not chosen:raise ValueError('Compute a needs commands for '+PLATFORM+'.')
+            for commands in [chosen]:
+                for command in commands:
+                    if 'argv' in command:command['argv']=[str(v) for v in self.resolve_action(command['argv'],{**os.environ,**self.workflow.get('env',{}),**step.get('env',{})})]
+                    elif re.search(r'\$\{(?:steps|input)\.',command['script']):raise ValueError('Pass computed inputs and earlier results as argv, not shell interpolation.')
+            step={**step,'commands':chosen};step.pop('platform_commands',None)
         merged={**step,'env':{**self.workflow.get('env',{}),**step.get('env',{})}}
         return resolved_commands(merged,self.root,values)
     def input_requirements(self,profile='all',step=None,values=None):
@@ -223,7 +232,7 @@ class Engine:
                 if current['id'] not in selected or not current.get('enabled',True):continue
                 ancestors=self.ancestors(current['id'])-{current['id']}
                 produced={out['input'] for parent in self.workflow['steps'] if parent['id'] in selected&ancestors for out in parent.get('outputs',[])}
-                settings=dict(action=current.get('action',{}),commands=current.get('platform_commands',{}).get(PLATFORM,current.get('commands',[])),env={**self.workflow.get('env',{}),**current.get('env',{})},cwd=current.get('cwd','.'),resources=current.get('resources',[]))
+                settings=dict(condition=current.get('condition',{}),action=current.get('action',{}),commands=current.get('platform_commands',{}).get(PLATFORM,current.get('commands',[])),env={**self.workflow.get('env',{}),**current.get('env',{})},cwd=current.get('cwd','.'),resources=current.get('resources',[]))
                 references=set(re.findall(r'\$\{input\.([^}]+)\}',json.dumps(settings)))&set(specs)
                 if current.get('when') and self.state['steps'][current['when']['step']]['status'] not in PASSED:continue
                 if current.get('when') and self.state['steps'][current['when']['step']].get('result',{}).get('decision') is not current['when']['equals']:continue
@@ -310,7 +319,7 @@ class Engine:
                     if dependency=='waiting':continue
                     if dependency=='skipped':
                         value.update(status='blocked' if s.get('approval') else 'skipped',error='Approval cannot be skipped; use an explicit branch join.' if s.get('approval') else '',stage='Branch not selected');progressed=True;continue
-                    if s['kind']=='condition':
+                    if s['kind']=='condition' and not s.get('condition',{}).get('compute'):
                         if self.paused or exclusive_running or s.get('exclusive') and self.running:continue
                         self.record_condition(s);progressed=True;continue
                     if s['kind']=='manual':value.update(status='manual',error='Record evidence to continue.');progressed=True;continue
@@ -376,6 +385,7 @@ class Engine:
 
     def execute(self,step,commands,cwd,extra_env,cancel):
         key=step['id'];start=time.monotonic();wall=time.time();code=0;error='';process=None
+        computed=bool(step.get('condition',{}).get('compute'))
         with self.lock:
             self.masker.add([extra_env.get(name,'') for name in self.secret_names])
             value=self.state['steps'][key];attempt=dict(started=stamp(),status='running',seconds=0,commands=self.masker.object(commands),log=f'{key}-{len(value["attempts"])+1}.log',reports=[])
@@ -389,17 +399,18 @@ class Engine:
                     with self.lock:value['stage']=f'Command {n}/{len(commands)}: '+self.masker.text(shlex.join(command))[:500]
                     write(f'STAGE {n}/{len(commands)}: {step["name"]}\nCOMMAND: {shlex.join(command)}\nDIRECTORY: {cwd}\n')
                     env={**os.environ,'PYTHONUNBUFFERED':'1',**self.workflow.get('env',{}),**extra_env}
-                    process=subprocess.Popen(command,cwd=cwd,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,stdin=subprocess.DEVNULL,start_new_session=os.name!='nt')
+                    process=subprocess.Popen(command,cwd=cwd,env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE if computed else subprocess.STDOUT,stdin=subprocess.DEVNULL,start_new_session=os.name!='nt')
                     captured=bytearray();capture_overflow=False
                     # Read lines on a separate thread so cancellation/timeouts never depend on output.
-                    def read_output():
+                    def read_output(stream,capture=True):
                         nonlocal capture_overflow
                         buffer=b''
                         while True:
-                            chunk=process.stdout.read1(8192)
+                            chunk=stream.read1(8192)
                             if not chunk:break
-                            if len(captured)+len(chunk)<=1048576:captured.extend(chunk)
-                            else:capture_overflow=True
+                            if capture:
+                                if len(captured)+len(chunk)<=1048576:captured.extend(chunk)
+                                else:capture_overflow=True
                             buffer+=chunk
                             while b'\n' in buffer:
                                 line,buffer=buffer.split(b'\n',1);text=line.decode('utf-8',errors='replace')+'\n';write(text);self.consume(key,step,text)
@@ -410,7 +421,9 @@ class Engine:
                                     safe=self.masker.text(buffer.decode('utf-8',errors='replace')).encode()
                                     write(safe[:-keep].decode('utf-8',errors='replace'));buffer=safe[-keep:]
                         if buffer:write(buffer.decode('utf-8',errors='replace'))
-                    reader=threading.Thread(target=read_output,daemon=True);reader.start()
+                    reader=threading.Thread(target=read_output,args=(process.stdout,),daemon=True);reader.start()
+                    stderr_reader=threading.Thread(target=read_output,args=(process.stderr,False),daemon=True) if computed else None
+                    if stderr_reader:stderr_reader.start()
                     deadline=start+step.get('timeout',3600);heartbeat=time.monotonic()+30
                     while process.poll() is None:
                         if cancel.wait(.1):
@@ -421,6 +434,9 @@ class Engine:
                     else:code=process.returncode
                     reader.join(timeout=35)
                     process.stdout.close()
+                    if stderr_reader:
+                        stderr_reader.join(timeout=35);process.stderr.close()
+                        if stderr_reader.is_alive():raise RuntimeError('Diagnostic reader did not finish after process exit.')
                     if reader.is_alive():raise RuntimeError('Output reader did not finish after process exit.')
                     if code not in step.get('success_codes',[0]) or error:
                         if not error:error=f'Command exited {code}. Inspect the saved attempt log.'
@@ -429,10 +445,15 @@ class Engine:
                 accepted=code in step.get('success_codes',[0]) and not error and not cancel.is_set()
                 if accepted:
                     result={'exit_code':code}
-                    if step.get('capture'):
+                    if step.get('capture') or computed:
                         if capture_overflow:raise ValueError('Captured result exceeds 1 MiB. Write larger data to a report file.')
                         result['stdout']=captured.decode('utf-8',errors='replace').strip()
-                        if step['capture']=='json':result['json']=json.loads(result['stdout'],parse_constant=lambda value:(_ for _ in ()).throw(ValueError('Invalid JSON constant: '+value)))
+                        if step.get('capture')=='json' or computed:result['json']=json.loads(result['stdout'],parse_constant=lambda value:(_ for _ in ()).throw(ValueError('Invalid JSON constant: '+value)))
+                    if computed:
+                        if type(result['json']) is not bool:raise ValueError('Compute a must print JSON true or false to stdout, not a string, number or object.')
+                        result['decision']=result['json']
+                        write('IF(a): '+str(result['decision']).lower()+'; selected '+('True' if result['decision'] else 'False')+' branch\n')
+                        with self.lock:value['stage']='If: '+str(result['decision'])
                     with self.lock:value['result']=result;attempt['result']=self.masker.object(result)
                     reports=self.collect(step,wall)
                     attempt['reports']=reports

@@ -504,34 +504,198 @@
             ]
           },
           "condition": {
-            "type": "object",
-            "additionalProperties": false,
-            "properties": {
-              "source": {
-                "type": "string"
-              },
-              "operator": {
-                "enum": [
-                  "equals",
-                  "not_equals",
-                  "greater_than",
-                  "less_than",
-                  "contains",
-                  "is_true"
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "source": {
+                    "type": "string"
+                  },
+                  "operator": {
+                    "enum": [
+                      "equals",
+                      "not_equals",
+                      "greater_than",
+                      "less_than",
+                      "contains",
+                      "is_true"
+                    ]
+                  },
+                  "value": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "source",
+                  "operator"
                 ]
               },
-              "value": {
-                "type": [
-                  "string",
-                  "number",
-                  "boolean",
-                  "null"
-                ]
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "compute"
+                ],
+                "properties": {
+                  "compute": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "commands": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "argv": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              },
+                              "minItems": 1
+                            },
+                            "shell": {
+                              "enum": [
+                                "bash",
+                                "sh",
+                                "powershell",
+                                "cmd"
+                              ]
+                            },
+                            "script": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [],
+                          "oneOf": [
+                            {
+                              "required": [
+                                "argv"
+                              ],
+                              "not": {
+                                "anyOf": [
+                                  {
+                                    "required": [
+                                      "script"
+                                    ]
+                                  },
+                                  {
+                                    "required": [
+                                      "shell"
+                                    ]
+                                  }
+                                ]
+                              }
+                            },
+                            {
+                              "required": [
+                                "shell",
+                                "script"
+                              ],
+                              "not": {
+                                "required": [
+                                  "argv"
+                                ]
+                              }
+                            }
+                          ]
+                        },
+                        "minItems": 1
+                      },
+                      "platform_commands": {
+                        "type": "object",
+                        "propertyNames": {
+                          "enum": [
+                            "macos",
+                            "windows",
+                            "linux"
+                          ]
+                        },
+                        "additionalProperties": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                              "argv": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                },
+                                "minItems": 1
+                              },
+                              "shell": {
+                                "enum": [
+                                  "bash",
+                                  "sh",
+                                  "powershell",
+                                  "cmd"
+                                ]
+                              },
+                              "script": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [],
+                            "oneOf": [
+                              {
+                                "required": [
+                                  "argv"
+                                ],
+                                "not": {
+                                  "anyOf": [
+                                    {
+                                      "required": [
+                                        "script"
+                                      ]
+                                    },
+                                    {
+                                      "required": [
+                                        "shell"
+                                      ]
+                                    }
+                                  ]
+                                }
+                              },
+                              {
+                                "required": [
+                                  "shell",
+                                  "script"
+                                ],
+                                "not": {
+                                  "required": [
+                                    "argv"
+                                  ]
+                                }
+                              }
+                            ]
+                          },
+                          "minItems": 1
+                        },
+                        "minProperties": 1
+                      }
+                    },
+                    "anyOf": [
+                      {
+                        "required": [
+                          "commands"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "platform_commands"
+                        ]
+                      }
+                    ]
+                  }
+                }
               }
-            },
-            "required": [
-              "source",
-              "operator"
             ]
           },
           "workflow": {
@@ -1056,34 +1220,198 @@
           ]
         },
         "condition": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "source": {
-              "type": "string"
-            },
-            "operator": {
-              "enum": [
-                "equals",
-                "not_equals",
-                "greater_than",
-                "less_than",
-                "contains",
-                "is_true"
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "source": {
+                  "type": "string"
+                },
+                "operator": {
+                  "enum": [
+                    "equals",
+                    "not_equals",
+                    "greater_than",
+                    "less_than",
+                    "contains",
+                    "is_true"
+                  ]
+                },
+                "value": {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "source",
+                "operator"
               ]
             },
-            "value": {
-              "type": [
-                "string",
-                "number",
-                "boolean",
-                "null"
-              ]
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "compute"
+              ],
+              "properties": {
+                "compute": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "commands": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                          "argv": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "minItems": 1
+                          },
+                          "shell": {
+                            "enum": [
+                              "bash",
+                              "sh",
+                              "powershell",
+                              "cmd"
+                            ]
+                          },
+                          "script": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [],
+                        "oneOf": [
+                          {
+                            "required": [
+                              "argv"
+                            ],
+                            "not": {
+                              "anyOf": [
+                                {
+                                  "required": [
+                                    "script"
+                                  ]
+                                },
+                                {
+                                  "required": [
+                                    "shell"
+                                  ]
+                                }
+                              ]
+                            }
+                          },
+                          {
+                            "required": [
+                              "shell",
+                              "script"
+                            ],
+                            "not": {
+                              "required": [
+                                "argv"
+                              ]
+                            }
+                          }
+                        ]
+                      },
+                      "minItems": 1
+                    },
+                    "platform_commands": {
+                      "type": "object",
+                      "propertyNames": {
+                        "enum": [
+                          "macos",
+                          "windows",
+                          "linux"
+                        ]
+                      },
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "argv": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              },
+                              "minItems": 1
+                            },
+                            "shell": {
+                              "enum": [
+                                "bash",
+                                "sh",
+                                "powershell",
+                                "cmd"
+                              ]
+                            },
+                            "script": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [],
+                          "oneOf": [
+                            {
+                              "required": [
+                                "argv"
+                              ],
+                              "not": {
+                                "anyOf": [
+                                  {
+                                    "required": [
+                                      "script"
+                                    ]
+                                  },
+                                  {
+                                    "required": [
+                                      "shell"
+                                    ]
+                                  }
+                                ]
+                              }
+                            },
+                            {
+                              "required": [
+                                "shell",
+                                "script"
+                              ],
+                              "not": {
+                                "required": [
+                                  "argv"
+                                ]
+                              }
+                            }
+                          ]
+                        },
+                        "minItems": 1
+                      },
+                      "minProperties": 1
+                    }
+                  },
+                  "anyOf": [
+                    {
+                      "required": [
+                        "commands"
+                      ]
+                    },
+                    {
+                      "required": [
+                        "platform_commands"
+                      ]
+                    }
+                  ]
+                }
+              }
             }
-          },
-          "required": [
-            "source",
-            "operator"
           ]
         },
         "workflow": {

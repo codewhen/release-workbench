@@ -1,5 +1,6 @@
 """Small, local starters shared by browser and CLI; no paid or hosted tools."""
 TEMPLATES={
+ 'computed-if':'If(a) with a computed Boolean',
  'no-code':'No-code data and file automation', 'no-code-tests':'No-code Python test workflow',
  'blank':'Blank workflow', 'tests':'Test starter', 'release':'Release with approval',
  'branching':'If / Else with a branch join', 'data-pipeline':'CSV processing pipeline',
@@ -27,6 +28,8 @@ def _make_template(name,template):
    dict(id='save',name='True: save sample JSON',kind='action',needs=['choose'],when={'step':'choose','equals':True},action={'type':'write_file','path':'.workbench/demo/no-code.json','content':'${steps.calculate.result.json}','format':'json','create_directories':True,'overwrite':True}),
    dict(id='review',name='False: review values',kind='manual',needs=['choose'],when={'step':'choose','equals':False},description='Inspect the result and record why it is not positive.'),
    dict(id='read',name='Read the saved result',kind='action',needs=['save'],action={'type':'read_json','path':'.workbench/demo/no-code.json'})])
+ if template=='computed-if':
+  w=branching(name);w['steps'].pop(0);w['steps'][0].update(name='If(a): compute readiness',needs=[],condition={'compute':{'commands':[{'argv':['${python}','-c','import json; print(json.dumps(2 + 2 == 4))']}]}});return w
  if template=='branching':return branching(name)
  if template=='project-checks':
   w=branching(name,'import json,pathlib;p=list(pathlib.Path(".").glob("*.py"));print(json.dumps({"ready":bool(p),"python_files":len(p)}))')

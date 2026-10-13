@@ -106,7 +106,8 @@ def validate(workflow):
         elif 'workflow' in s:errors.append(f'{s["id"]}: workflow path belongs on a Run workflow card.')
         if s['kind']=='condition':
             if not s.get('condition'):errors.append(f'{s["id"]}: configure an If condition.')
-            if s.get('commands') or s.get('platform_commands'):errors.append(f'{s["id"]}: If cards evaluate data; they cannot run commands.')
+            if s.get('commands') or s.get('platform_commands'):errors.append(f'{s["id"]}: put If commands inside condition.compute.')
+            if s.get('condition',{}).get('compute') and any(code!=0 for code in s.get('success_codes',[0])):errors.append(f'{s["id"]}: computed If requires exit code 0 and a Boolean result.')
         elif 'condition' in s:errors.append(f'{s["id"]}: condition belongs on an If card.')
         when=s.get('when')
         if when and (when['step'] not in s.get('needs',[]) or by_id.get(when['step'],{}).get('kind')!='condition'):errors.append(f'{s["id"]}: branch must directly depend on its If card.')
@@ -130,11 +131,11 @@ def validate(workflow):
     try:
         for s in steps:
             deps=ancestors(s['id'])
-            for reference in re.findall(r'\$\{(steps|input|env)\.([^}]+)\}',json.dumps(s.get('action',{}))):
+            for reference in re.findall(r'\$\{(steps|input|env)\.([^}]+)\}',json.dumps([s.get('action',{}),s.get('condition',{}).get('compute',{})])):
                 family,path=reference;parts=path.split('.')
                 if family=='steps' and (len(parts)<3 or parts[0] not in deps or parts[1]!='result'):errors.append(f'{s["id"]}: action result bindings must reference ancestor results.')
                 if family=='input' and (len(parts)!=1 or parts[0] not in inputs):errors.append(f'{s["id"]}: unknown action input binding.')
-            if s['kind']=='condition' and s.get('condition'):
+            if s['kind']=='condition' and s.get('condition') and not s['condition'].get('compute'):
 
                 source=s['condition']['source'];parts=source.split('.')
                 if parts[0]=='inputs':

@@ -66,3 +66,68 @@ workflow-workbench init --template no-code-tests --name "Project tests" --config
 - Built-in actions use the same dependencies, resources, exclusive scheduling, cancellation, timeouts and reports as other cards. Tiny local file/value operations check cancellation before and after work; they are not interruptible halfway through an atomic write.
 - Captured script JSON expects one valid JSON value in the final command's combined stdout/stderr; use a separate diagnostic file when necessary.
 - Loops, retries, schedulers, API/database connectors and general-purpose expression programming are not included in this version. Use an existing script for specialized work; see the general-workflow roadmap for future additions.
+
+## If(a): compute any Boolean logic
+
+Select an If card → **How to calculate a → Run a computation**. The card runs its compute commands, reads the final command's Boolean, then follows the True or False connection. You can use Python, shell scripts, SSH, or any installed executable. **Python example**, **Shell example** and **SSH example** fill editable starting commands; they never execute until you save and run.
+
+The output contract is deliberately small:
+
+- Every command must exit **0**. The final command must print exactly the JSON value `true` or `false` to stdout (whitespace is allowed).
+- `"true"`, `1`, objects, extra stdout messages, empty output and nonzero exits are errors. They fail the If card and block both branches.
+- Send diagnostics to stderr; they appear in live/saved logs without changing the Boolean. Captured stdout is limited to 1 MiB.
+- The decision is saved as `steps.ID.result.decision`; the command result, logs and timing remain in the attempt evidence.
+- Timeout, Stop, concurrency, resource locks, exclusive mode and secret masking work like command cards. Use their normal advanced settings.
+
+### Python and existing scripts
+
+Choose Program + arguments and use `${python} check_ready.py`. The file can contain any application-specific checks:
+
+```python
+import json
+from pathlib import Path
+ready = Path("build/app").exists()
+print(json.dumps(ready))
+```
+
+An inline Python computation can use `${python} -c 'import json; print(json.dumps(2 + 2 == 4))'`. Python's `print(True)` is not JSON: use `json.dumps`.
+
+Arguments can use `${input.NAME}` or an ancestor result such as `${steps.check.result.json.ready}`. Connect the prerequisite first. Arguments remain individual values; do not interpolate inputs or earlier results into shell source. Define workspace inputs through Project settings so missing values prompt before execution.
+
+### Shell computation
+
+Choose sh or bash and write:
+
+```sh
+if test -f README.md; then
+  echo true
+else
+  echo false
+fi
+```
+
+This returns False for the expected missing-file case, while the shell itself exits successfully. Explicitly handle unexpected errors instead of converting every error to False.
+
+### SSH computation
+
+Choose **SSH example**, replace `user@host` and the remote check, or configure your own `ssh` argv:
+
+```yaml
+condition:
+  compute:
+    commands:
+      - argv:
+          - ssh
+          - -o
+          - BatchMode=yes
+          - -o
+          - StrictHostKeyChecking=yes
+          - user@host
+          - 'if test -f /srv/app/ready; then echo true; else echo false; fi'
+```
+
+Install the SSH client, configure key authentication and verify/add the server's known-host entry outside Workbench first. SSH aliases, ports and other options can be set through your local SSH configuration or explicit arguments. Batch mode prevents a password prompt from hanging the job. Connection/authentication failures are failures, not False results. Stop terminates the local SSH process; it cannot guarantee cleanup of detached processes on the remote host. Native remote SSH execution and native Windows execution have not been verified in this release.
+
+Expand **Platform-specific computation** for separate macos/windows/linux command arrays. A platform entry overrides the default commands. Existing If comparisons still work under **Compare an earlier value**.
+
+Home → New workflow → Start with → **If(a) with a computed Boolean** creates a runnable computation, True/False branches and their join. CLI: `workflow-workbench init --template computed-if`.
