@@ -5,3 +5,10 @@ export function insertStep(workflow,source,target){const added=appendStep(workfl
 export function autoLayout(steps){const depth=new Map();function level(s,seen=new Set()){if(depth.has(s.id))return depth.get(s.id);if(seen.has(s.id))return 0;seen.add(s.id);const result=Math.max(-1,...(s.needs||[]).map(id=>{const parent=steps.find(p=>p.id===id);return parent?level(parent,new Set(seen)):0}))+1;depth.set(s.id,result);return result;}const rows=new Map();return steps.map(s=>{const x=level(s),row=rows.get(x)||0;rows.set(x,row+1);return {...s,position:{x:x*310,y:row*155}}});}
 export function parseCommand(text){const args=[];let token='',quote=null,started=false;for(let i=0;i<text.length;i++){const c=text[i];if(quote){if(c===quote)quote=null;else if(c==='\\'&&quote==='"'&&['"','\\'].includes(text[i+1]))token+=text[++i];else token+=c;started=true;}else if(c==='"'||c==="'"){quote=c;started=true;}else if(/\s/.test(c)){if(started){args.push(token);token='';started=false;}}else if(c==='\\'&&text[i+1]&&/[\s"'\\]/.test(text[i+1])){token+=text[++i];started=true;}else{token+=c;started=true;}}if(quote)throw Error('Close the quotation mark in the command.');if(started)args.push(token);if(!args.length)throw Error('Enter a command.');return args;}
 export function formatCommand(argv){return argv.map(a=>/^[\w./:${}\-]+$/.test(a)?a:'"'+a.replace(/\\/g,'\\\\').replace(/"/g,'\\"')+'"').join(' ');}
+
+// Advance only when the step being inspected has just completed successfully.
+export function nextExecutionSelection(steps,selected,previous,current){
+ if(!['running','manual'].includes(previous?.steps?.[selected]?.status)||!['passed','recorded'].includes(current?.steps?.[selected]?.status))return null;
+ const eligible=steps.filter(s=>s.enabled!==false&&['running','manual','queued'].includes(current?.steps?.[s.id]?.status)&&(s.needs||[]).every(id=>['passed','recorded'].includes(current?.steps?.[id]?.status)));
+ return (eligible.find(s=>(s.needs||[]).includes(selected))||eligible.find(s=>current.steps[s.id].status==='running')||eligible[0])?.id||null;
+}

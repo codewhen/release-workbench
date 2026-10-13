@@ -205,7 +205,7 @@ class Engine:
                 needed=set(current.get('requires_inputs',[]))|references|{key for key,spec in specs.items() if spec.get('required')}
                 for key in sorted(needed-produced):
                     try:input_value(key,available.get(key,''),{**specs[key],'required':True})
-                    except ValueError as error:missing[key]=dict(key=key,spec=specs[key],message=str(error))
+                    except ValueError as error:missing.setdefault(key,dict(key=key,spec=specs[key],message=str(error),step=current['id']))
             return self.masker.object(dict(fields=list(missing.values())))
 
     def resources(self,step):
