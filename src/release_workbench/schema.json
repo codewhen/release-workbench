@@ -198,7 +198,9 @@
           "kind": {
             "enum": [
               "command",
-              "manual"
+              "manual",
+              "condition",
+              "workflow"
             ]
           },
           "commands": {
@@ -461,6 +463,79 @@
               "x",
               "y"
             ]
+          },
+          "capture": {
+            "enum": [
+              "text",
+              "json"
+            ]
+          },
+          "success_codes": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 125
+            }
+          },
+          "join": {
+            "enum": [
+              "all",
+              "any"
+            ]
+          },
+          "when": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "step": {
+                "type": "string"
+              },
+              "equals": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "step",
+              "equals"
+            ]
+          },
+          "condition": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "source": {
+                "type": "string"
+              },
+              "operator": {
+                "enum": [
+                  "equals",
+                  "not_equals",
+                  "greater_than",
+                  "less_than",
+                  "contains",
+                  "is_true"
+                ]
+              },
+              "value": {
+                "type": [
+                  "string",
+                  "number",
+                  "boolean",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "source",
+              "operator"
+            ]
+          },
+          "workflow": {
+            "type": "string",
+            "minLength": 1
           }
         },
         "required": [
@@ -497,7 +572,9 @@
         "kind": {
           "enum": [
             "command",
-            "manual"
+            "manual",
+            "condition",
+            "workflow"
           ]
         },
         "commands": {
@@ -760,6 +837,79 @@
             "x",
             "y"
           ]
+        },
+        "capture": {
+          "enum": [
+            "text",
+            "json"
+          ]
+        },
+        "success_codes": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 125
+          }
+        },
+        "join": {
+          "enum": [
+            "all",
+            "any"
+          ]
+        },
+        "when": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "step": {
+              "type": "string"
+            },
+            "equals": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "step",
+            "equals"
+          ]
+        },
+        "condition": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "source": {
+              "type": "string"
+            },
+            "operator": {
+              "enum": [
+                "equals",
+                "not_equals",
+                "greater_than",
+                "less_than",
+                "contains",
+                "is_true"
+              ]
+            },
+            "value": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "source",
+            "operator"
+          ]
+        },
+        "workflow": {
+          "type": "string",
+          "minLength": 1
         }
       },
       "required": [

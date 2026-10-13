@@ -18,9 +18,10 @@ import threading
 import time
 import uuid
 import psutil
-from .config import assert_valid,checked_path,input_value
+from .config import assert_valid,checked_path,input_value,Store
 
 PASSED={'passed','recorded'}
+SKIPPED={'skipped'}
 FAILED={'failed','cancelled','blocked','disabled'}
 PLATFORM={'Darwin':'macos','Windows':'windows','Linux':'linux'}.get(platform.system(),platform.system().lower())
 EVENT_PREFIX='::workbench::'
@@ -162,7 +163,7 @@ class Engine:
         if step:return self.ancestors(step)
         if profile=='all':return {s['id'] for s in self.workflow['steps']}
         if profile=='background':
-            background={s['id'] for s in self.workflow['steps'] if s['kind']=='command' and s.get('mode','background')=='background'}
+            background={s['id'] for s in self.workflow['steps'] if s['kind'] in ('command','condition','workflow') and s.get('mode','background')=='background'}
             completed={key for key,value in self.state['steps'].items() if value['status'] in PASSED}
             return {key for key in background if self.ancestors(key)<=background|completed}
         if profile not in self.workflow.get('profiles',{}):raise ValueError('Unknown profile '+profile)
@@ -179,7 +180,18 @@ class Engine:
             except ValueError as error:record['error']=str(error)
             result.append(record)
         return result
+    def check_child_workflow(self,path,seen=()):
+        path=checked_path(self.root,str(path))
+        if path in seen or len(seen)>=16:raise ValueError('Child workflows contain a cycle or exceed 16 levels.')
+        workflow=Store(path).read()['workflow']
+        for child in workflow['steps']:
+            if child['kind']=='workflow':self.check_child_workflow(checked_path(path.parent,child['workflow']),(*seen,path))
+        return path
     def prepare(self,step):
+        if step['kind']=='workflow':
+            path=self.check_child_workflow(step['workflow'])
+            if path.parent!=self.root:raise ValueError('Run workflow cards currently require a YAML file in this project root. Use a command for another project.')
+            step={**step,'commands':[{'argv':[sys.executable,'-m','release_workbench.cli','run','--config',str(path),'--output',str(self.directory/'children'/step['id']),'--non-interactive']}]}
         values=self.inputs()
         for key in set(step.get('requires_inputs',[]))|{k for k,v in self.workflow.get('inputs',{}).items() if v.get('required')}:
             values[key]=input_value(key,values.get(key,''),{**self.workflow['inputs'][key],'required':True})
@@ -202,6 +214,10 @@ class Engine:
                 produced={out['input'] for parent in self.workflow['steps'] if parent['id'] in selected&ancestors for out in parent.get('outputs',[])}
                 settings=dict(commands=current.get('platform_commands',{}).get(PLATFORM,current.get('commands',[])),env={**self.workflow.get('env',{}),**current.get('env',{})},cwd=current.get('cwd','.'),resources=current.get('resources',[]))
                 references=set(re.findall(r'\$\{input\.([^}]+)\}',json.dumps(settings)))&set(specs)
+                if current.get('when') and self.state['steps'][current['when']['step']]['status'] not in PASSED:continue
+                if current.get('when') and self.state['steps'][current['when']['step']].get('result',{}).get('decision') is not current['when']['equals']:continue
+                if current.get('condition',{}).get('source','').startswith('inputs.'):
+                    references.add(current['condition']['source'].split('.')[1])
                 needed=set(current.get('requires_inputs',[]))|references|{key for key,spec in specs.items() if spec.get('required')}
                 for key in sorted(needed-produced):
                     try:input_value(key,available.get(key,''),{**specs[key],'required':True})
@@ -221,12 +237,51 @@ class Engine:
             self.selected=self.selection(profile,step);self.paused=False;self.stopped=False
             if rerun:
                 downstream={s['id'] for s in self.workflow['steps'] if step in self.ancestors(s['id'])} if step else set(self.selected)
-                for key in downstream:self.state['steps'][key].update(status='pending',note='',error='')
+                for key in downstream:
+                    self.state['steps'][key].update(status='pending',note='',error='');self.state['steps'][key].pop('result',None)
             for key in self.selected:
                 value=self.state['steps'][key]
                 if value['status'] not in PASSED:value.update(status='queued',error='')
             self.state['selection']=sorted(self.selected);self.save()
             self.thread=threading.Thread(target=self.schedule,daemon=True);self.thread.start()
+    def dependency_state(self,step):
+        deps=[self.state['steps'][d]['status'] for d in step.get('needs',[])]
+        if any(d in FAILED for d in deps):return 'blocked'
+        if not all(d in PASSED|SKIPPED for d in deps):return 'waiting'
+        when=step.get('when')
+        if when:
+            parent=self.state['steps'][when['step']]
+            if parent['status']=='skipped' or parent.get('result',{}).get('decision') is not when['equals']:return 'skipped'
+        if step.get('join','all')=='any':return 'ready' if any(d in PASSED for d in deps) else 'skipped'
+        return 'skipped' if any(d in SKIPPED for d in deps) else 'ready'
+    def evaluate_condition(self,step):
+        condition=step['condition'];parts=condition['source'].split('.')
+        value=self.inputs() if parts[0]=='inputs' else self.state['steps']
+        try:
+            for part in parts[1:]:value=value[int(part)] if isinstance(value,list) else value[part]
+        except (KeyError,IndexError,TypeError,ValueError):raise ValueError('Condition source is missing: '+condition['source'])
+        op=condition['operator'];expected=condition.get('value')
+        if op=='is_true':return value is True
+        if op in ('equals','not_equals'):
+            same=type(value)==type(expected) or isinstance(value,(int,float)) and not isinstance(value,bool) and isinstance(expected,(int,float)) and not isinstance(expected,bool)
+            equal=same and value==expected
+            return equal if op=='equals' else not equal
+        if op in ('greater_than','less_than'):
+            if any(isinstance(v,bool) or not isinstance(v,(int,float)) for v in (value,expected)):raise ValueError('Numeric comparison requires numbers.')
+            return value>expected if op=='greater_than' else value<expected
+        if op=='contains':
+            if not isinstance(value,(str,list,dict)) or isinstance(value,str) and not isinstance(expected,str):raise ValueError('Contains requires compatible text, array or object values.')
+            return expected in value
+        raise ValueError('Unknown condition operator.')
+    def record_condition(self,step):
+        key=step['id'];value=self.state['steps'][key]
+        try:decision=self.evaluate_condition(step);status='passed';error=''
+        except ValueError as exc:decision=None;status='failed';error=str(exc)
+        value.update(status=status,result={'decision':decision},error=error,stage='If: '+str(decision))
+        log=f'{key}-{len(value["attempts"])+1}.log'
+        (self.directory/log).write_text(self.masker.text(json.dumps({'condition':step['condition'],'decision':decision,'error':error},indent=2)))
+        value['attempts'].append(dict(status=status,seconds=0,started=stamp(),commands=[],reports=[],log=log))
+
     def schedule(self):
         steps=self.workflow['steps']
         while True:
@@ -238,9 +293,15 @@ class Engine:
                     if key not in self.selected or value['status']!='queued':continue
                     deps=[self.state['steps'][d]['status'] for d in s.get('needs',[])]
                     if not s.get('enabled',True):value.update(status='disabled',error='Disabled steps do not count as passing.');progressed=True;continue
-                    if any(d in FAILED for d in deps):value.update(status='blocked',error='A prerequisite failed, was disabled or cancelled.');progressed=True;continue
+                    dependency=self.dependency_state(s)
+                    if dependency=='blocked':value.update(status='blocked',error='A prerequisite failed, was disabled or cancelled.');progressed=True;continue
                     if self.stopped:value.update(status='cancelled',error='Scheduling stopped.');progressed=True;continue
-                    if not all(d in PASSED for d in deps):continue
+                    if dependency=='waiting':continue
+                    if dependency=='skipped':
+                        value.update(status='blocked' if s.get('approval') else 'skipped',error='Approval cannot be skipped; use an explicit branch join.' if s.get('approval') else '',stage='Branch not selected');progressed=True;continue
+                    if s['kind']=='condition':
+                        if self.paused or exclusive_running or s.get('exclusive') and self.running:continue
+                        self.record_condition(s);progressed=True;continue
                     if s['kind']=='manual':value.update(status='manual',error='Record evidence to continue.');progressed=True;continue
                     if self.paused or exclusive_running:continue
                     if len(self.running)>=self.workflow.get('concurrency',4):break
@@ -258,7 +319,7 @@ class Engine:
                 if progressed:self.save()
                 if not self.running:
                     # A paused scheduler stays alive; manual gates return control.
-                    if not self.paused or self.stopped:return
+                    if (not self.paused or self.stopped) and not progressed:return
             time.sleep(.05)
     def execute(self,step,commands,cwd,extra_env,cancel):
         key=step['id'];start=time.monotonic();wall=time.time();code=0;error='';process=None
@@ -276,12 +337,16 @@ class Engine:
                     write(f'STAGE {n}/{len(commands)}: {step["name"]}\nCOMMAND: {shlex.join(command)}\nDIRECTORY: {cwd}\n')
                     env={**os.environ,'PYTHONUNBUFFERED':'1',**self.workflow.get('env',{}),**extra_env}
                     process=subprocess.Popen(command,cwd=cwd,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,stdin=subprocess.DEVNULL,start_new_session=os.name!='nt')
+                    captured=bytearray();capture_overflow=False
                     # Read lines on a separate thread so cancellation/timeouts never depend on output.
                     def read_output():
+                        nonlocal capture_overflow
                         buffer=b''
                         while True:
                             chunk=process.stdout.read1(8192)
                             if not chunk:break
+                            if len(captured)+len(chunk)<=1048576:captured.extend(chunk)
+                            else:capture_overflow=True
                             buffer+=chunk
                             while b'\n' in buffer:
                                 line,buffer=buffer.split(b'\n',1);text=line.decode('utf-8',errors='replace')+'\n';write(text);self.consume(key,step,text)
@@ -304,11 +369,18 @@ class Engine:
                     reader.join(timeout=35)
                     process.stdout.close()
                     if reader.is_alive():raise RuntimeError('Output reader did not finish after process exit.')
-                    if code:
+                    if code not in step.get('success_codes',[0]) or error:
                         if not error:error=f'Command exited {code}. Inspect the saved attempt log.'
                         break
                     write(f'DONE {n}/{len(commands)}; remaining: {len(commands)-n}\n')
-                if code==0:
+                accepted=code in step.get('success_codes',[0]) and not error and not cancel.is_set()
+                if accepted:
+                    result={'exit_code':code}
+                    if step.get('capture'):
+                        if capture_overflow:raise ValueError('Captured result exceeds 1 MiB. Write larger data to a report file.')
+                        result['stdout']=captured.decode('utf-8',errors='replace').strip()
+                        if step['capture']=='json':result['json']=json.loads(result['stdout'],parse_constant=lambda value:(_ for _ in ()).throw(ValueError('Invalid JSON constant: '+value)))
+                    with self.lock:value['result']=result;attempt['result']=self.masker.object(result)
                     reports=self.collect(step,wall)
                     attempt['reports']=reports
                     for output in step.get('outputs',[]):
@@ -330,7 +402,7 @@ class Engine:
             except Exception as exc:
                 with (self.directory/attempt['log']).open('a') as log:log.write('REPORT COLLECTION: '+self.masker.text(str(exc))+'\n')
         with self.lock:
-            status='cancelled' if cancel.is_set() or code==130 else 'passed' if code==0 else 'failed'
+            status='cancelled' if cancel.is_set() or code==130 else 'passed' if code in step.get('success_codes',[0]) and not error else 'failed'
             elapsed=round(time.monotonic()-start,3);value.update(status=status,seconds=elapsed,error=error,exit_code=code)
             attempt.update(status=status,seconds=elapsed,exit_code=code,error=error)
             if status=='passed':self.history.setdefault(key,[]).append(elapsed)
@@ -376,7 +448,7 @@ class Engine:
             if not s or s['kind']!='manual':raise ValueError('Select a manual gate.')
             if not note.strip():raise ValueError('Record evidence before completing this gate.')
             if not s.get('enabled',True):raise ValueError('Disabled gates cannot pass.')
-            if any(self.state['steps'][dep]['status'] not in PASSED for dep in s.get('needs',[])):raise ValueError('Complete prerequisites before recording this gate.')
+            if self.dependency_state(s)!='ready':raise ValueError('Complete prerequisites before recording this gate.')
             value=self.state['steps'][key];evidence=self.masker.text(note[:10000])
             attempt=dict(started=stamp(),status='recorded',seconds=0,commands=[],reports=[],log=f'{key}-{len(value["attempts"])+1}.log')
             (self.directory/attempt['log']).write_text('Manual attestation '+stamp()+'\n'+evidence+'\n')
@@ -409,7 +481,7 @@ class Engine:
             for s in self.workflow['steps']:
                 value=result['steps'][s['id']];elapsed=time.monotonic()-self.running[s['id']]['started'] if s['id'] in self.running else value['seconds']
                 expected=statistics.median(self.history.get(s['id'],[])[-10:]) if self.history.get(s['id']) else s.get('expected_seconds',60)
-                actual=value.get('progress');finished=value['status'] in PASSED|FAILED
+                actual=value.get('progress');finished=value['status'] in PASSED|FAILED|SKIPPED
                 percent=100 if finished else min(99,round(100*actual['done']/actual['total'])) if actual else min(95,round(100*elapsed/expected)) if s['id'] in self.running else 0
                 value['timing']=dict(percent=percent,estimated=not actual and not finished and value['status'] in ('running','stopping'),elapsed=round(elapsed,1),eta=None if s['kind']=='manual' or value['status']=='stopping' or elapsed>=expected and not finished else 0 if finished else round(expected-elapsed),expected=expected)
                 attempts=value['attempts']
@@ -417,11 +489,11 @@ class Engine:
                     log=self.directory/attempts[-1]['log']
                     if log.exists():
                         with log.open('rb') as f:f.seek(max(0,log.stat().st_size-20000));value['tail']=f.read().decode(errors='replace')
-            done=sum(v['status'] in PASSED for v in result['steps'].values());result['completion']=dict(done=done,total=len(self.workflow['steps']),percent=round(100*done/max(1,len(self.workflow['steps']))))
+            done=sum(v['status'] in PASSED|SKIPPED for v in result['steps'].values());result['completion']=dict(done=done,total=len(self.workflow['steps']),percent=round(100*done/max(1,len(self.workflow['steps']))))
             return self.masker.object(result)
     def exit_code(self):
         values=[self.state['steps'][key]['status'] for key in self.selected]
         if any(v=='cancelled' for v in values):return 130
         if any(v=='failed' for v in values):return 1
-        if any(v not in PASSED for v in values):return 2
+        if any(v not in PASSED|SKIPPED for v in values):return 2
         return 0

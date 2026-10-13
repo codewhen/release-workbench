@@ -69,6 +69,9 @@ def make_server(app,port=3103):
             route=unquote(urlparse(self.path).path)
             try:
                 if route=='/api/schema':return self.send(SCHEMA)
+                if route=='/api/templates':
+                    from .templates import TEMPLATES
+                    return self.send(TEMPLATES)
                 if route=='/api/library':
                     with library.lock:return self.send(library.catalog())
                 if route.startswith(('/api/','/files/')):

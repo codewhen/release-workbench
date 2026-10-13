@@ -45,7 +45,7 @@ class Library:
         for project in self.projects:
             root=Path(project)
             if root.is_dir():
-                for pattern in ('release-workbench*.yaml','release-workbench*.yml'):
+                for pattern in ('release-workbench*.yaml','release-workbench*.yml','workflow-workbench*.yaml','workflow-workbench*.yml'):
                     # Explicitly registered folders grant access; discovery never follows
                     # a configuration symlink to a different, unregistered folder.
                     paths.update(p for p in root.glob(pattern) if p.is_file() and not p.is_symlink())
@@ -67,16 +67,14 @@ class Library:
         return self.catalog()
 
     def create(self,project_id,name,filename,template='blank'):
-        from .cli import starter
+        from .templates import make_template
         roots={self.identity(p):Path(p) for p in self.projects}
         if project_id not in roots:raise ValueError('Select a registered project.')
         root=roots[project_id]
         if not root.is_dir():raise ValueError('Project folder is unavailable.')
         if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]*\.ya?ml',filename):raise ValueError('Use a YAML filename without folders, such as release-workbench-tests.yaml.')
         if not isinstance(name,str) or not name.strip() or len(name)>200:raise ValueError('Enter a workflow name of 1–200 characters.')
-        if template not in ('blank','tests','release'):raise ValueError('Choose a supported starter template.')
-        value=starter(name.strip(),template=='release')
-        if template=='blank':value['steps']=[]
+        value=make_template(name.strip(),template)
         if (root/filename).exists() or (root/filename).is_symlink():raise ValueError('A file already exists with this name. Choose another filename.')
         file=checked_path(root,filename)
         # Exclusive creation prevents overwriting existing configurations or symlinks.
@@ -115,8 +113,8 @@ class Library:
                         except (ValueError,OSError):continue
                 if summaries:
                     saved=summaries[0];statuses=[s['status'] for s in saved['steps'].values()]
-                    outcome='Running' if any(s in ('running','stopping') for s in statuses) else 'Paused' if saved.get('paused') else 'Failed' if 'failed' in statuses else 'Cancelled' if 'cancelled' in statuses else 'Complete' if statuses and all(s in ('passed','recorded') for s in statuses) else 'Awaiting evidence' if 'manual' in statuses else 'Pending'
-                    item['latest']=dict(run_id=saved['run_id'],status=outcome,passed=sum(s in ('passed','recorded') for s in statuses),total=len(statuses),started=saved['started'])
+                    outcome='Running' if any(s in ('running','stopping') for s in statuses) else 'Paused' if saved.get('paused') else 'Failed' if 'failed' in statuses else 'Cancelled' if 'cancelled' in statuses else 'Complete' if statuses and all(s in ('passed','recorded','skipped') for s in statuses) else 'Awaiting evidence' if 'manual' in statuses else 'Pending'
+                    item['latest']=dict(run_id=saved['run_id'],status=outcome,passed=sum(s in ('passed','recorded','skipped') for s in statuses),total=len(statuses),started=saved['started'])
             except (ValueError,OSError,KeyError,TypeError) as error:item['error']=str(error)
             rows.append(item)
         return dict(workflows=rows,projects=[dict(id=self.identity(p),path=p,name=Path(p).name or p,available=Path(p).is_dir()) for p in sorted(self.projects)],primary=self.identity(self.primary))

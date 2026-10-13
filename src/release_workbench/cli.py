@@ -9,21 +9,19 @@ from .config import Store,assert_valid,parse_yaml,render_yaml
 from .engine import Engine
 from .server import serve
 
-def starter(name='My workflow',release=False):
-    steps=[dict(id='test',name='Run tests',kind='command',mode='background',commands=[{'argv':['${python}','-m','unittest','discover','-v']}],needs=[])]
-    if release:steps.append(dict(id='release-review',name='Review release evidence',kind='manual',description='Record the tested source, package hashes and release decision.',needs=['test'],approval=True))
-    return dict(version=1,name=name,concurrency=4,inputs={},steps=steps)
+from .templates import TEMPLATES,make_template
+
+def starter(name='My workflow',release=False):return make_template(name,'release' if release else 'tests')
 
 def wizard(path,template=None,name=None):
     if path.exists():raise ValueError('Workflow already exists. Use the browser editor or another --config path.')
     interactive=not (template and name)
     name=name or input('Workflow name [My workflow]: ').strip() or 'My workflow'
-    template=template or input('Template: tests or release [tests]: ').strip() or 'tests'
-    if template not in ('tests','release','blank'):raise ValueError('Choose tests, release or blank.')
-    workflow=starter(name,template=='release')
+    template=template or input('Template: '+', '.join(TEMPLATES)+' [tests]: ').strip() or 'tests'
+    workflow=make_template(name,template)
     if template=='blank':workflow['steps']=[]
     else:
-        if interactive:
+        if interactive and template in ('tests','release'):
             command=input('Test command [python -m unittest discover -v]: ').strip()
             if command:workflow['steps'][0]['commands']=[{'argv':shlex.split(command)}]
         print('Edit more steps and advanced settings in the browser or YAML.')
@@ -31,11 +29,11 @@ def wizard(path,template=None,name=None):
 
 def main(argv=None):
     parser=argparse.ArgumentParser(description='Visual workflows, parallel jobs and release evidence on your own machine.')
-    parser.add_argument('--version',action='version',version='0.3.2')
+    parser.add_argument('--version',action='version',version='0.4.0')
     sub=parser.add_subparsers(dest='action',required=True)
     for command in ('init','validate','serve','run','report'):
         child=sub.add_parser(command);child.add_argument('--config',default='release-workbench.yaml');child.add_argument('--output',default='.workbench')
-        if command=='init':child.add_argument('--template',choices=['tests','release','blank']);child.add_argument('--name')
+        if command=='init':child.add_argument('--template',choices=list(TEMPLATES));child.add_argument('--name')
         if command in ('serve','run'):child.add_argument('--resume');child.add_argument('--input',action='append',default=[],metavar='KEY=JSON_OR_STRING')
         if command=='serve':child.add_argument('--port',type=int,default=3103);child.add_argument('--no-open',action='store_true')
         if command=='run':child.add_argument('--profile',default='all');child.add_argument('--step');child.add_argument('--non-interactive',action='store_true');child.add_argument('--rerun',action='store_true')

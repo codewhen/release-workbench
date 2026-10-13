@@ -1,0 +1,56 @@
+%YAML 1.2
+---
+version: 1
+name: backup
+concurrency: 4
+inputs: {}
+steps:
+  - id: prepare
+    name: Create a demonstration source file
+    kind: command
+    needs: []
+    mode: background
+    commands:
+      - argv:
+          - ${python}
+          - -c
+          - from pathlib import 
+            Path;p=Path(".workbench/demo");p.mkdir(parents=True,exist_ok=True);(p/"source.txt").write_text("Example
+            backup content\n")
+    position:
+      x: 0
+      y: 0
+  - id: copy
+    name: Copy the demo file
+    kind: command
+    needs:
+      - prepare
+    mode: background
+    commands:
+      - argv:
+          - ${python}
+          - -c
+          - import 
+            shutil;shutil.copy2(".workbench/demo/source.txt",".workbench/demo/backup.txt")
+    reports:
+      - .workbench/demo/backup.txt
+    position:
+      x: 310
+      y: 0
+  - id: verify
+    name: Verify backup bytes
+    kind: command
+    needs:
+      - copy
+    mode: background
+    commands:
+      - argv:
+          - ${python}
+          - -c
+          - from pathlib import Path;import 
+            hashlib,json;a=Path(".workbench/demo/source.txt").read_bytes();b=Path(".workbench/demo/backup.txt").read_bytes();assert
+            a==b;print(json.dumps({"verified":True,"sha256":hashlib.sha256(b).hexdigest()}))
+    capture: json
+    position:
+      x: 620
+      y: 0

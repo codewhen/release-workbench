@@ -92,6 +92,18 @@ def validate(workflow):
             errors.append(f'{s["id"]}: add a command before running.')
         if s['kind']=='manual' and (s.get('commands') or s.get('platform_commands')):errors.append(f'{s["id"]}: manual gates cannot execute commands.')
         if s.get('approval') and s['kind']!='manual':errors.append(f'{s["id"]}: approval must be a manual gate.')
+        if s['kind']=='workflow':
+            if not s.get('workflow'):errors.append(f'{s["id"]}: select a child workflow YAML file.')
+            elif Path(s['workflow']).is_absolute() or '..' in Path(s['workflow']).parts:errors.append(f'{s["id"]}: child workflow must stay within the workspace.')
+            if s.get('commands') or s.get('platform_commands'):errors.append(f'{s["id"]}: workflow cards cannot also define commands.')
+        elif 'workflow' in s:errors.append(f'{s["id"]}: workflow path belongs on a Run workflow card.')
+        if s['kind']=='condition':
+            if not s.get('condition'):errors.append(f'{s["id"]}: configure an If condition.')
+            if s.get('commands') or s.get('platform_commands'):errors.append(f'{s["id"]}: If cards evaluate data; they cannot run commands.')
+        elif 'condition' in s:errors.append(f'{s["id"]}: condition belongs on an If card.')
+        when=s.get('when')
+        if when and (when['step'] not in s.get('needs',[]) or by_id.get(when['step'],{}).get('kind')!='condition'):errors.append(f'{s["id"]}: branch must directly depend on its If card.')
+        if s.get('join')=='any' and not s.get('needs'):errors.append(f'{s["id"]}: branch join needs prerequisites.')
         p=s.get('progress',{})
         if p:
             try:
@@ -111,6 +123,14 @@ def validate(workflow):
     try:
         for s in steps:
             deps=ancestors(s['id'])
+            if s['kind']=='condition' and s.get('condition'):
+                source=s['condition']['source'];parts=source.split('.')
+                if parts[0]=='inputs':
+                    if len(parts)!=2 or parts[1] not in inputs:errors.append(f'{s["id"]}: unknown condition input.')
+                elif parts[0]=='steps':
+                    if len(parts)<4 or parts[1] not in deps or parts[2]!='result' or parts[3] not in ('exit_code','stdout','json','decision'):errors.append(f'{s["id"]}: condition source must reference an ancestor result.')
+                else:errors.append(f'{s["id"]}: use inputs.NAME or steps.ID.result.FIELD for condition source.')
+                if s['condition']['operator']!='is_true' and 'value' not in s['condition']:errors.append(f'{s["id"]}: condition comparison needs a value.')
             if s.get('approval'):
                 required={v['id'] for v in steps if v.get('required',True) and not v.get('approval') and v['id']!=s['id']}
                 missing=required-deps
