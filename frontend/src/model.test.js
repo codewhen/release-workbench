@@ -68,3 +68,5 @@ test('If Entry and Compute ports replace their own connection and preserve the o
 test('moving a Compute source to Entry clears the Compute pin',()=>{let w={steps:[{id:'a'},{id:'if',kind:'condition',needs:['a'],condition:{input:{step:'a'}}}]};w=connectCards(w,'a','if',null,'entry');assert.deepEqual(w.steps[1].needs,['a']);assert.equal(w.steps[1].condition.input.step,undefined);});
 
 test('inserting into a Compute connection preserves the Compute port',()=>{const w={steps:[{id:'a',kind:'command'},{id:'if',kind:'condition',needs:['a'],condition:{input:{step:'a'}}}]};const n=insertStep(w,'a','if');assert.equal(n.steps[1].condition.input.step,n.steps.at(-1).id);});
+
+test('Loop cards are independent bodies with a bounded iteration count and can join a chain',()=>{const w=appendCard({steps:[]},'loop');assert.equal(w.steps[0].kind,'loop');assert.equal(w.steps[0].loop.iterations,3);const n=appendStep(w,w.steps[0].id);assert.deepEqual(n.steps[1].needs,[w.steps[0].id]);});

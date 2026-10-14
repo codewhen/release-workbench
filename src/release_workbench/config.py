@@ -100,12 +100,15 @@ def validate(workflow):
             path=s.get('action',{}).get('path','')
             if path and (Path(path).is_absolute() or '..' in Path(path).parts):errors.append(f'{s["id"]}: action files must stay in the workspace.')
         elif 'action' in s:errors.append(f'{s["id"]}: action configuration belongs on an action card.')
-        if s['kind']=='workflow':
+        if s['kind'] in ('workflow','loop'):
             if not s.get('workflow'):errors.append(f'{s["id"]}: select a child workflow YAML file.')
             elif Path(s['workflow']).is_absolute() or '..' in Path(s['workflow']).parts:errors.append(f'{s["id"]}: child workflow must stay within the workspace.')
             if s.get('commands') or s.get('platform_commands'):errors.append(f'{s["id"]}: workflow cards cannot also define commands.')
-        elif 'workflow_inputs' in s:errors.append(f'{s["id"]}: child inputs belong on a Run workflow card.')
-        elif 'workflow' in s:errors.append(f'{s["id"]}: workflow path belongs on a Run workflow card.')
+        if s['kind']=='loop' and any(code!=0 for code in s.get('success_codes',[0])):errors.append(f'{s["id"]}: Loop cards require exit code 0; exhaustion and body failures cannot pass.')
+        if s['kind']=='loop' and not s.get('loop'):errors.append(f'{s["id"]}: set the Loop iteration limit.')
+        if s['kind']!='loop' and 'loop' in s:errors.append(f'{s["id"]}: Loop settings belong on a Loop card.')
+        elif 'workflow_inputs' in s and s['kind'] not in ('workflow','loop'):errors.append(f'{s["id"]}: child inputs belong on a Run workflow card.')
+        elif 'workflow' in s and s['kind'] not in ('workflow','loop'):errors.append(f'{s["id"]}: workflow path belongs on a Run workflow card.')
         if s['kind']=='condition':
             if not s.get('condition'):errors.append(f'{s["id"]}: configure an If condition.')
             if s.get('commands') or s.get('platform_commands'):errors.append(f'{s["id"]}: put If commands inside condition.compute.')

@@ -1,5 +1,6 @@
 """Small, local starters shared by browser and CLI; no paid or hosted tools."""
 TEMPLATES={
+ 'loop-repeat':'Repeat a workflow three times', 'loop-until':'Loop until ready (bounded)',
  'computed-if':'If(a) with a computed Boolean',
  'no-code':'No-code data and file automation', 'no-code-tests':'No-code Python test workflow',
  'blank':'Blank workflow', 'tests':'Test starter', 'release':'Release with approval',
@@ -18,6 +19,10 @@ def branching(name='If / Else starter',probe=None):
  ])
 def _make_template(name,template):
  if template not in TEMPLATES:raise ValueError('Choose a supported starter template.')
+ if template in ('loop-repeat','loop-until'):
+  loop={'iterations':3 if template=='loop-repeat' else 5}
+  if template=='loop-until':loop['until']='steps.check.result.json.ready';loop['delay']=.1
+  return dict(version=1,name=name,steps=[dict(id='repeat',name='Repeat body workflow',kind='loop',workflow='workflow-workbench-loop-body.yaml',loop=loop,timeout=60)])
  if template=='no-code-tests':
   return dict(version=1,name=name,concurrency=4,inputs={},steps=[dict(id='tests',name='Run Python tests',kind='action',action={'type':'run_tests','runner':'unittest','target':'.'})])
  if template=='no-code':
@@ -60,3 +65,12 @@ def make_template(name,template):
  for step in steps:
   column=level(step['id']);row=rows.get(column,0);rows[column]=row+1;step['position']={'x':column*310,'y':row*180}
  return workflow
+
+def starter_documents(filename,workflow,template):
+ """Paired starter documents; callers create every file exclusively."""
+ from pathlib import Path
+ if template not in ('loop-repeat','loop-until'):return {filename:workflow}
+ body_name=Path(filename).stem+'-body.yaml'
+ workflow['steps'][0]['workflow']=body_name
+ body=dict(version=1,name=workflow['name']+' · body',steps=[command('check','Compute readiness','import json,os;iteration=int(os.environ.get("WORKBENCH_LOOP_ITERATION","1"));print(json.dumps({"iteration":iteration,"ready":iteration>=3}))',capture='json')])
+ return {filename:workflow,body_name:body}

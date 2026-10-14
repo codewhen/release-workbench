@@ -163,7 +163,7 @@ class Engine:
         if step:return self.ancestors(step)
         if profile=='all':return {s['id'] for s in self.workflow['steps']}
         if profile=='background':
-            background={s['id'] for s in self.workflow['steps'] if s['kind'] in ('command','condition','workflow','action') and s.get('mode','background')=='background'}
+            background={s['id'] for s in self.workflow['steps'] if s['kind'] in ('command','condition','workflow','loop','action') and s.get('mode','background')=='background'}
             completed={key for key,value in self.state['steps'].items() if value['status'] in PASSED}
             return {key for key in background if self.ancestors(key)<=background|completed}
         if profile not in self.workflow.get('profiles',{}):raise ValueError('Unknown profile '+profile)
@@ -186,17 +186,25 @@ class Engine:
         workflow=Store(path).read()['workflow']
         if workspace_root(path.parent,workflow)!=self.root:raise ValueError('Child workflows must declare the same workspace as their parent.')
         for child in workflow['steps']:
-            if child['kind']=='workflow':self.check_child_workflow(checked_path(self.root,child['workflow']),(*seen,path))
+            if child['kind'] in ('workflow','loop'):self.check_child_workflow(checked_path(self.root,child['workflow']),(*seen,path))
         return path
     def prepare(self,step):
         if step.get('action',{}).get('type')=='run_tests':
             from .actions import test_command
             step={**step,'commands':[{'argv':test_command(step['action'],self.root,step.get('cwd','.'))}]}
-        if step['kind']=='workflow':
+        if step['kind'] in ('workflow','loop'):
             path=self.check_child_workflow(step['workflow'])
             child=Store(path).read()['workflow'];bindings=self.resolve_action(step.get('workflow_inputs',{}),{**os.environ,**self.workflow.get('env',{}),**step.get('env',{})})
             if set(bindings)-set(child.get('inputs',{})):raise ValueError('Unknown child workflow input.')
-            command=[sys.executable,'-m','release_workbench.cli','run','--config',str(path),'--output',str(self.directory/'children'/step['id']),'--non-interactive']
+            output=self.directory/'children'/step['id']
+            if step['kind']=='loop':
+                output=output/f'attempt-{len(self.state["steps"][step["id"]]["attempts"])+1}'
+                source=step['loop'].get('until','')
+                if source and source.split('.')[1] not in {s['id'] for s in child['steps']}:raise ValueError('Loop stop result must name a card in its body workflow.')
+                command=[sys.executable,'-m','release_workbench.loop_runner','--config',str(path),'--output',str(output),'--iterations',str(step['loop']['iterations']),'--delay',str(step['loop'].get('delay',0))]
+                if source:command.extend(['--until',source])
+                for name in sorted(self.secret_names):command.extend(['--secret-env',name])
+            else:command=[sys.executable,'-m','release_workbench.cli','run','--config',str(path),'--output',str(output),'--non-interactive']
             for key,value in bindings.items():
                 input_value(key,value,child['inputs'][key]);command.extend(['--input',key+'='+json.dumps(value)])
             step={**step,'commands':[{'argv':command}]}
@@ -468,6 +476,10 @@ class Engine:
                 accepted=code in step.get('success_codes',[0]) and not error and not cancel.is_set()
                 if accepted:
                     result={'exit_code':code}
+                    if step['kind']=='loop':
+                        summary=self.directory/'children'/key/f'attempt-{len(value["attempts"])}'/'loop-summary.json'
+                        data=json.loads(summary.read_text());result['json']=data
+                        attempt['reports'].append(dict(path=summary.relative_to(self.root).as_posix(),sha256=self.file_hash(summary)))
                     if step.get('capture') or computed:
                         if capture_overflow:raise ValueError('Captured result exceeds 1 MiB. Write larger data to a report file.')
                         result['stdout']=captured.decode('utf-8',errors='replace').strip()
@@ -479,7 +491,7 @@ class Engine:
                         with self.lock:value['stage']='If: '+str(result['decision'])
                     with self.lock:value['result']=result;attempt['result']=self.masker.object(result)
                     reports=self.collect(step,wall)
-                    attempt['reports']=reports
+                    attempt['reports']+=reports
                     self.collect_outputs(step,wall)
                     write('SUMMARY: '+str(self.directory/'summary.json')+'\n')
         except Exception as exc:
@@ -488,6 +500,15 @@ class Engine:
                 try:cancel_tree(process)
                 except Exception as cleanup:error+='; cleanup: '+str(cleanup)
             with (self.directory/attempt['log']).open('a') as log:log.write('ERROR: '+error+'\n')
+        if step['kind']=='loop':
+            summary=self.directory/'children'/key/f'attempt-{len(value["attempts"])}'/'loop-summary.json'
+            if summary.is_file():
+                try:
+                    data=json.loads(summary.read_text())
+                    with self.lock:value['result']={'exit_code':code,'json':data};attempt['result']=self.masker.object(value['result'])
+                    relative=summary.relative_to(self.root).as_posix()
+                    if not any(r['path']==relative for r in attempt['reports']):attempt['reports'].append(dict(path=relative,sha256=self.file_hash(summary)))
+                except (ValueError,OSError):pass
         if code and not attempt['reports']:
             try:attempt['reports']=self.collect(step,wall)
             except Exception as exc:

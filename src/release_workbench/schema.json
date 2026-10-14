@@ -201,7 +201,8 @@
               "manual",
               "condition",
               "workflow",
-              "action"
+              "action",
+              "loop"
             ]
           },
           "commands": {
@@ -910,6 +911,29 @@
                 "boolean"
               ]
             }
+          },
+          "loop": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "iterations"
+            ],
+            "properties": {
+              "iterations": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000
+              },
+              "until": {
+                "type": "string",
+                "pattern": "^steps\\.[a-z][a-z0-9_-]*\\.result\\.(json|decision)(\\.[A-Za-z0-9_-]+)*$"
+              },
+              "delay": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 3600
+              }
+            }
           }
         },
         "required": [
@@ -954,7 +978,8 @@
             "manual",
             "condition",
             "workflow",
-            "action"
+            "action",
+            "loop"
           ]
         },
         "commands": {
@@ -1662,6 +1687,29 @@
               "number",
               "boolean"
             ]
+          }
+        },
+        "loop": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "iterations"
+          ],
+          "properties": {
+            "iterations": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000
+            },
+            "until": {
+              "type": "string",
+              "pattern": "^steps\\.[a-z][a-z0-9_-]*\\.result\\.(json|decision)(\\.[A-Za-z0-9_-]+)*$"
+            },
+            "delay": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 3600
+            }
           }
         }
       },

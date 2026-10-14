@@ -67,7 +67,7 @@ class Library:
         return self.catalog()
 
     def create(self,project_id,name,filename,template='blank'):
-        from .templates import make_template
+        from .templates import make_template,starter_documents
         roots={self.identity(p):Path(p) for p in self.projects}
         if project_id not in roots:raise ValueError('Select a registered project.')
         root=roots[project_id]
@@ -77,8 +77,15 @@ class Library:
         value=make_template(name.strip(),template)
         if (root/filename).exists() or (root/filename).is_symlink():raise ValueError('A file already exists with this name. Choose another filename.')
         file=checked_path(root,filename)
-        # Exclusive creation prevents overwriting existing configurations or symlinks.
-        with file.open('x',encoding='utf-8') as stream:stream.write(render_yaml(value))
+        documents=starter_documents(filename,value,template);created=[]
+        try:
+            for name,document in documents.items():
+                path=checked_path(root,name)
+                with path.open('x',encoding='utf-8') as stream:stream.write(render_yaml(document))
+                created.append(path)
+        except Exception:
+            for path in created:path.unlink()
+            raise
         self.files.add(str(file));self.persist()
         return dict(id=self.identity(file),path=str(file))
 

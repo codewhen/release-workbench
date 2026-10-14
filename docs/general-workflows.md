@@ -106,7 +106,7 @@ Choose **Add Run workflow** and enter an existing YAML filename in the same proj
   when: {step: decide, equals: true}
 ```
 
-Child workflow cards currently use the child's own input defaults and require a YAML file in the same root. They do not forward arbitrary parent input values or open child manual gates in the parent browser. Put human gates in the parent workflow. For other project folders or advanced argument passing, use a Command card running the CLI with explicit arguments. Each child obeys its own concurrency limit; the parent counts the child as one job, so use parent resource locks or exclusive mode to prevent unwanted overlap across children.
+Child workflow cards can live in subfolders, declare the parent's workspace and receive typed workflow_inputs bindings. They do not open child manual gates in the parent browser; put human gates in the parent workflow. For another project workspace, use an explicit Command card. Each child obeys its own concurrency limit; the parent counts the child as one job, so use parent resource locks or exclusive mode to prevent unwanted overlap across children.
 
 ## Useful workflow patterns
 
@@ -124,7 +124,7 @@ The current engine supports commands, manual gates, conditions, child workflows,
 Useful next additions, rather than features already supported:
 
 1. **Retries with backoff:** explicit transient-error rules; no automatic retry of irreversible steps.
-2. **Loops / foreach:** bounded item iteration and per-item evidence, separate from dependency cycles.
+2. **Foreach:** per-item collection iteration; fixed-count and Boolean-stop Loop cards are already supported.
 3. **Scheduling and triggers:** local schedules, file changes, webhooks; define credential and network boundaries first.
 4. **Richer data bindings:** typed step-output variables and child input mappings, beyond current conditions and JSON-to-input file outputs.
 5. **Reusable connectors:** declarative HTTP, database and notification adapters. Existing command steps can call installed tools today; dedicated UI adapters are not included.
@@ -138,3 +138,15 @@ For comparison with established engines, see the official [Kestra loop and subfl
 ## Organized child workflows
 
 Set `workspace: ../..` in YAML stored two directories beneath the project root. Commands, child workflow paths, outputs and reports resolve beneath that declared workspace; configuration remains in its own file. The declaration may include parent directories but cannot be absolute. Only open trusted local configuration. Child workflows must declare the same workspace as the parent. `workflow_inputs` maps child input names to typed values or `${input.NAME}` / `${steps.ID.result.FIELD}` bindings. Parent browser inputs should declare required fields used by children. Child runs remain noninteractive: prepare devices through a parent manual gate and pass a preparation flag when children have conditional preparation gates. Manual gates reached inside a child still block its CLI run. Home discovers conventional workflow files beneath `workflows/` as well as the project root.
+
+## Bounded Loop cards
+
+Choose **Loop** from Add card/right-click. Point **Child workflow YAML** at the saved body workflow and set an iteration limit (1–1000). With no stop result it repeats exactly that many times. Set **Stop when body result is true**, for example `steps.check.result.json.ready`, to repeat until a strict Boolean becomes true. False repeats; missing/non-Boolean data, body failures and reaching the limit while false fail the loop and block dependents. It does not retry failed commands silently.
+
+Loop is a structured alternative to Go To: the body can contain commands, scripts, tests, If branches and parallel joins without adding back-edges to ordinary cards or competing with a one-to-one If Entry port. Extract the steps to repeat into a child workflow; connect the Loop card's output to the next step. Ordinary graph cycles are still rejected.
+
+Set a delay and the total timeout as needed. Each iteration gets a fresh run and separate report under the Loop attempt's child folder; partial evidence and a loop summary survive cancellation/failure. Stop cancels the current body through normal process supervision. Repeating a write/build/remote operation repeats its real side effects; cancellation does not undo completed iterations. Manual gates in a body block its noninteractive execution, so prepare through the parent first.
+
+`WORKBENCH_LOOP_ITERATION` is a 1-based environment value available to body commands. Typed **Child workflow inputs** are passed on every iteration. The whole Loop holds its declared resource/exclusive settings; parallel body jobs use the body workflow's concurrency.
+
+Home and CLI offer **Repeat a workflow three times** and **Loop until ready (bounded)**. They create both parent and body YAML files without overwriting existing files. CLI: `workflow-workbench init --template loop-until --name "Wait until ready" --config release-workbench-wait.yaml`. The example body reports ready on iteration 3. No paid tools are involved.

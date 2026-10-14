@@ -65,7 +65,7 @@ workflow-workbench init --template no-code-tests --name "Project tests" --config
 - Values keep their types. Booleans differ from numbers and text. Missing bindings, invalid JSON and division by zero fail visibly.
 - Built-in actions use the same dependencies, resources, exclusive scheduling, cancellation, timeouts and reports as other cards. Tiny local file/value operations check cancellation before and after work; they are not interruptible halfway through an atomic write.
 - Captured script JSON expects one valid JSON value in the final command's combined stdout/stderr; use a separate diagnostic file when necessary.
-- Loops, retries, schedulers, API/database connectors and general-purpose expression programming are not included in this version. Use an existing script for specialized work; see the general-workflow roadmap for future additions.
+- Collection foreach, automatic failure retries, schedulers, API/database connectors and general-purpose expression programming are not included in this version. Use an existing script for specialized work; see the general-workflow roadmap for future additions.
 
 ## If(a): compute any Boolean logic
 
@@ -139,3 +139,5 @@ In Edit view, right-click the card (or use Shift+F10 while focused). Choose a sp
 ### If Entry and Compute ports
 
 An If card has one **Entry** input on the left and one **Compute** input on top, plus True and False outputs. Connect a command/script/SSH card that returns a Boolean to Compute. If Compute is empty, **Use connected card** reads the Entry card instead. Each input accepts one connected card; connecting another replaces that port’s previous connection. All connected prerequisites must succeed before evaluation. JSON `true` and `false` are accepted; invalid/missing values fail visibly. Enable JSON capture on the source command or script. For object output, configure the optional Boolean JSON field (for example `ready`). Connecting to Compute selects this mode automatically. Existing inline computations and comparisons remain available. Disconnecting Compute removes its prerequisite and restores Entry fallback. The decision evidence records the source card.
+
+Bounded **Loop** cards repeat a child workflow by count or until a Boolean result is true. See the [Loop guide](general-workflows.md#bounded-loop-cards). They keep existing one-to-one connections intact because repetition is contained in the body workflow.

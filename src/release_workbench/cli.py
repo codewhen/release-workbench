@@ -9,7 +9,7 @@ from .config import Store,assert_valid,parse_yaml,render_yaml
 from .engine import Engine
 from .server import serve
 
-from .templates import TEMPLATES,make_template
+from .templates import TEMPLATES,make_template,starter_documents
 
 def starter(name='My workflow',release=False):return make_template(name,'release' if release else 'tests')
 
@@ -25,11 +25,19 @@ def wizard(path,template=None,name=None):
             command=input('Test command [python -m unittest discover -v]: ').strip()
             if command:workflow['steps'][0]['commands']=[{'argv':shlex.split(command)}]
         print('Edit more steps and advanced settings in the browser or YAML.')
-    path.write_text(render_yaml(workflow));print(f'Created {path}. Next: release-workbench serve --config {path}')
+    documents=starter_documents(path.name,workflow,template);created=[]
+    try:
+        for name,value in documents.items():
+            file=path.parent/name
+            with file.open('x',encoding='utf-8') as stream:stream.write(render_yaml(value))
+            created.append(file)
+    except Exception:
+        for file in created:file.unlink()
+        raise;print(f'Created {path}. Next: release-workbench serve --config {path}')
 
 def main(argv=None):
     parser=argparse.ArgumentParser(description='Visual workflows, parallel jobs and release evidence on your own machine.')
-    parser.add_argument('--version',action='version',version='0.8.1')
+    parser.add_argument('--version',action='version',version='0.9.0')
     sub=parser.add_subparsers(dest='action',required=True)
     for command in ('init','validate','serve','run','report'):
         child=sub.add_parser(command);child.add_argument('--config',default='release-workbench.yaml');child.add_argument('--output',default='.workbench')

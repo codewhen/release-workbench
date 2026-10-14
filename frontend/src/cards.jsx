@@ -1,7 +1,7 @@
 import React,{useEffect,useRef,useState,useContext,useId} from 'react';
 import {resultSources} from './cardSources.js';
 import {createPortal} from 'react-dom';
-import {Terminal,GitBranch,Layers,Hand,Braces,Calculator,FileInput,FileOutput,FileCheck,FileCode2,Play} from 'lucide-react';
+import {Terminal,GitBranch,Layers,Hand,Braces,Calculator,FileInput,FileOutput,FileCheck,FileCode2,Play,Repeat} from 'lucide-react';
 export const FieldValidation=React.createContext(()=>{});
 function FieldError({error}){const register=useContext(FieldValidation),id=useId();useEffect(()=>{register(id,error);return()=>register(id,'')},[id,error,register]);return error?<small className="error" role="alert">{error}</small>:null}
 function NumberValue({label,value,onChange,disabled}){const [text,setText]=useState(String(value)),[error,setError]=useState('');useEffect(()=>{setText(String(value));setError('')},[value]);return <label>{label}<input disabled={disabled} type="number" value={text} onChange={e=>{setText(e.target.value);const number=Number(e.target.value);if(!e.target.value.trim()||!Number.isFinite(number)){setError('Enter a finite number.');return}setError('');onChange(number)}}/><FieldError error={error}/></label>}
@@ -11,6 +11,7 @@ export const CARD_TYPES=[
  {id:'command',kind:'command',label:'Command',icon:Terminal,description:'Run a program or shell script'},
  {id:'condition',kind:'condition',label:'If condition',icon:GitBranch,description:'Choose a True or False path'},
  {id:'manual',kind:'manual',label:'Manual check',icon:Hand,description:'Wait for human evidence'},
+ {id:'loop',kind:'loop',label:'Loop',icon:Repeat,description:'Repeat a workflow with an iteration limit'},
  {id:'workflow',kind:'workflow',label:'Run workflow',icon:Layers,description:'Call another local workflow'},
  {id:'set_values',kind:'action',label:'Set values',icon:Braces,description:'Create named text, numbers or flags'},
  {id:'calculate',kind:'action',label:'Calculate',icon:Calculator,description:'Add, subtract, multiply or divide'},
