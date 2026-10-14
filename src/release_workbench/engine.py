@@ -59,23 +59,58 @@ class Masker:
         if isinstance(value,dict):return {self.text(str(k)):self.object(v) for k,v in value.items()}
         return value
 
-def cancel_tree(process,grace=30):
-    try:root=psutil.Process(process.pid);children=root.children(recursive=True)
-    except psutil.NoSuchProcess:process.wait();return
-    targets=[*children,root]
+def process_children(process):
+    try:return psutil.Process(process.pid).children(recursive=True)
+    except (psutil.NoSuchProcess,psutil.AccessDenied):return []
+
+def cancel_tree(process,grace=30,known=(),force=None,on_stage=None):
+    """Reap managed subprocesses even after the original parent has exited."""
+    targets={child.pid:child for child in known}
+    for child in process_children(process):targets[child.pid]=child
+    try:targets[process.pid]=psutil.Process(process.pid)
+    except psutil.NoSuchProcess:pass
     if os.name=='nt':
         subprocess.run(['taskkill','/PID',str(process.pid),'/T','/F'],capture_output=True,timeout=15)
-    else:
-        # Descendants may have created separate sessions; signal each process,
-        # leaf first, so Python runners get a chance to restore device settings.
-        for child in targets:
+        for child in targets.values():
+            try:
+                if child.is_running():child.kill()
+            except psutil.NoSuchProcess:pass
+        process.wait(timeout=15);return
+    # A shell can exit before its pipe-owning child. Its isolated process group
+    # remains identifiable after reparenting; never signal the server's group.
+    for child in psutil.process_iter(['pid']):
+        try:
+            if os.getpgid(child.pid)==process.pid:targets[child.pid]=child
+        except (ProcessLookupError,PermissionError,psutil.NoSuchProcess):pass
+    def alive():
+        process.poll()  # Reap our own child; zombies are already stopped.
+        result=[]
+        for child in targets.values():
+            try:
+                if child.is_running() and child.status()!=psutil.STATUS_ZOMBIE:result.append(child)
+            except psutil.NoSuchProcess:pass
+        return result
+    if not force or not force.is_set():
+        for child in [p for p in targets.values() if p.pid!=process.pid]+([targets[process.pid]] if process.pid in targets else []):
             try:child.send_signal(signal.SIGINT)
             except psutil.NoSuchProcess:pass
-        _,alive=psutil.wait_procs(targets,timeout=grace)
-        for child in alive:
-            try:child.kill()
-            except psutil.NoSuchProcess:pass
-    process.wait(timeout=15)
+    deadline=time.monotonic()+grace;last=-1
+    while remaining:=alive():
+        seconds=max(0,int(deadline-time.monotonic()+.999))
+        if on_stage and seconds!=last:on_stage(f'Stopping: allowing cleanup · force termination in {seconds}s');last=seconds
+        if time.monotonic()>=deadline or force and force.is_set():break
+        time.sleep(.05)
+    else:process.wait(timeout=5);return
+    if on_stage:on_stage('Stopping: force terminating remaining processes')
+    try:os.killpg(process.pid,signal.SIGKILL)
+    except ProcessLookupError:pass
+    for child in remaining:
+        try:child.kill()
+        except psutil.NoSuchProcess:pass
+    process.wait(timeout=5)
+    deadline=time.monotonic()+5
+    while alive() and time.monotonic()<deadline:time.sleep(.05)
+    if alive():raise RuntimeError('Process cleanup did not finish after force termination.')
 
 def resolved_commands(step,root,inputs):
     values={'python':sys.executable,'workspace':str(root),'platform':PLATFORM}
@@ -362,7 +397,7 @@ class Engine:
                     try:commands,cwd,env=self.prepare(s)
                     except ValueError as error:value.update(status='blocked',error=str(error));progressed=True;continue
                     cancel=threading.Event();self.events[key]=cancel
-                    self.running[key]=dict(resources=resources,exclusive=s.get('exclusive',False),started=time.monotonic())
+                    self.running[key]=dict(resources=resources,exclusive=s.get('exclusive',False),started=time.monotonic(),force=threading.Event())
                     value.update(status='running',error='',seconds=0,progress=None,stage='Starting')
                     self.save();threading.Thread(target=self.execute_action if s['kind']=='action' and s['action']['type'] not in ('run_tests','run_script') else self.execute,args=(s,commands,cwd,env,cancel),daemon=True).start()
                     held|=resources;progressed=True
@@ -415,7 +450,7 @@ class Engine:
             self.running.pop(key,None);self.events.pop(key,None);self.save()
 
     def execute(self,step,commands,cwd,extra_env,cancel):
-        key=step['id'];start=time.monotonic();wall=time.time();code=0;error='';process=None
+        key=step['id'];start=time.monotonic();wall=time.time();code=0;error='';process=None;known={}
         computed=bool(step.get('condition',{}).get('compute'))
         with self.lock:
             self.masker.add([extra_env.get(name,'') for name in self.secret_names])
@@ -456,19 +491,24 @@ class Engine:
                     stderr_reader=threading.Thread(target=read_output,args=(process.stderr,False),daemon=True) if computed else None
                     if stderr_reader:stderr_reader.start()
                     deadline=start+step.get('timeout',3600);heartbeat=time.monotonic()+30
-                    while process.poll() is None:
-                        if cancel.wait(.1):
-                            write('STOP: waiting for process/device cleanup.\n');cancel_tree(process);code=130;break
+                    def stopping_stage(stage):
+                        with self.lock:value['stage']=stage
+                    force=self.running[key]['force']
+                    while process.poll() is None or reader.is_alive() or stderr_reader and stderr_reader.is_alive():
+                        for child in process_children(process):known[child.pid]=child
+                        if cancel.wait(.05):
+                            write('STOP: waiting for process/device cleanup.\n');cancel_tree(process,known=known.values(),force=force,on_stage=stopping_stage);code=130;break
                         if time.monotonic()>=deadline:
-                            write('TIMEOUT: waiting for cleanup.\n');cancel_tree(process);code=1;error='Configured timeout exceeded.';break
+                            write('TIMEOUT: waiting for cleanup.\n');cancel_tree(process,known=known.values(),force=force,on_stage=stopping_stage);code=1;error='Configured timeout exceeded.';break
                         if time.monotonic()>=heartbeat:write('STILL RUNNING: '+step['name']+'\n');heartbeat=time.monotonic()+30
                     else:code=process.returncode
-                    reader.join(timeout=35)
+                    reader.join(timeout=2)
+                    if reader.is_alive():raise RuntimeError('Output reader did not finish after process cleanup.')
                     process.stdout.close()
                     if stderr_reader:
-                        stderr_reader.join(timeout=35);process.stderr.close()
-                        if stderr_reader.is_alive():raise RuntimeError('Diagnostic reader did not finish after process exit.')
-                    if reader.is_alive():raise RuntimeError('Output reader did not finish after process exit.')
+                        stderr_reader.join(timeout=2)
+                        if stderr_reader.is_alive():raise RuntimeError('Diagnostic reader did not finish after process cleanup.')
+                        process.stderr.close()
                     if code not in step.get('success_codes',[0]) or error:
                         if not error:error=f'Command exited {code}. Inspect the saved attempt log.'
                         break
@@ -497,7 +537,7 @@ class Engine:
         except Exception as exc:
             code=1;error=self.masker.text(str(exc))
             if process and process.poll() is None:
-                try:cancel_tree(process)
+                try:cancel_tree(process,known=known.values(),force=self.running[key]['force'])
                 except Exception as cleanup:error+='; cleanup: '+str(cleanup)
             with (self.directory/attempt['log']).open('a') as log:log.write('ERROR: '+error+'\n')
         if step['kind']=='loop':
@@ -515,6 +555,9 @@ class Engine:
                 with (self.directory/attempt['log']).open('a') as log:log.write('REPORT COLLECTION: '+self.masker.text(str(exc))+'\n')
         with self.lock:
             status='cancelled' if cancel.is_set() or code==130 else 'passed' if code in step.get('success_codes',[0]) and not error else 'failed'
+            if status=='cancelled':
+                if error.startswith('Command exited 130.'):error='Stopped by user.' if cancel.is_set() else 'Command reported cancellation.'
+                value['stage']='Cancelled; inspect cleanup error' if 'did not finish' in error else 'Cancelled; process cleanup finished'
             elapsed=round(time.monotonic()-start,3);value.update(status=status,seconds=elapsed,error=error,exit_code=code)
             attempt.update(status=status,seconds=elapsed,exit_code=code,error=error)
             if status=='passed':self.history.setdefault(key,[]).append(elapsed)
@@ -577,12 +620,14 @@ class Engine:
             value.update(status='recorded',note=evidence,error='');self.save()
             if self.selected and not self.busy() and not self.stopped:
                 self.thread=threading.Thread(target=self.schedule,daemon=True);self.thread.start()
-    def stop(self,key=None):
+    def stop(self,key=None,force=False):
         with self.lock:
             if key is None:self.stopped=True;self.paused=False
             elif key not in self.state['steps']:raise ValueError('Unknown step.')
             for current,event in self.events.items():
-                if key is None or key==current:event.set();self.state['steps'][current]['status']='stopping'
+                if key is None or key==current:
+                    event.set();self.state['steps'][current].update(status='stopping',stage='Stop requested; waiting for process cleanup')
+                    if force:self.running[current]['force'].set()
             if key and key not in self.running and self.state['steps'][key]['status']=='queued':self.state['steps'][key].update(status='cancelled',error='Stopped before starting.')
             self.save()
     def pause(self,paused=True):

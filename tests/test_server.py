@@ -96,3 +96,10 @@ class ServerTests(unittest.TestCase):
  def test_input_requirement_api_never_starts_commands(self):
   result=json.load(self.request('/api/requirements',{'profile':'all','inputs':{}}))
   self.assertEqual(result,{'fields':[]});self.assertFalse(self.app.engine.state['steps']['test']['attempts'])
+
+ def test_force_stop_is_forwarded_and_rejects_non_boolean_values(self):
+  from unittest.mock import patch
+  with patch.object(self.app.engine,'stop') as stop:
+   self.request('/api/stop',{'step':'test','force':True}).close();stop.assert_called_once_with('test',force=True)
+   with self.assertRaises(HTTPError) as error:self.request('/api/stop',{'force':'yes'})
+   error.exception.close();self.assertEqual(stop.call_count,1)

@@ -3,7 +3,7 @@
 A local visual workflow builder and parallel test/release runner with a multi-project workflow home page. Configure steps in the browser canvas, YAML, or a terminal starter wizard. Runs stay on your own machine. MIT licensed; no subscriptions or hosted service required.
 
 ```bash
-python -m pip install https://github.com/codewhen/release-workbench/releases/download/v0.12.0/release_workbench-0.12.0-py3-none-any.whl
+python -m pip install https://github.com/codewhen/release-workbench/releases/download/v0.12.1/release_workbench-0.12.1-py3-none-any.whl
 release-workbench init
 release-workbench serve
 ```
@@ -31,3 +31,9 @@ Home has local folders that can contain workflows from multiple registered proje
 This organization is stored atomically in the launcher’s local `library.json`, alongside project registration. It does not rename or move YAML files, modify workflow configuration or run commands. Existing libraries load with all entries Unfiled.
 
 While viewing Overall, panning the canvas or scrolling the list opens the currently running card and pauses automatic navigation, including after that card finishes. Returning to **Overall run** resumes list following and canvas centering/zoom. In parallel runs, inspection chooses the followed card if still running, otherwise another active card.
+
+### Stopping jobs
+
+**Stop all** or **Stop selected job** requests cancellation and gives processes up to 30 seconds for device restoration and cleanup. The running panel shows a countdown. While stopping, the button changes to **Force stop**; this terminates remaining processes without waiting for graceful cleanup. If the grace period expires, termination happens automatically. Logs and partial evidence remain saved, and cancelled work is distinct from failed work.
+
+Process supervision remains active while output pipes drain, including when a shell exits before a child process. On POSIX, cancellation tracks descendants and the managed command’s isolated process group; it does not target other independent workflow jobs. Windows uses targeted process-tree termination and retained descendant handles. Windows native verification remains outstanding.
