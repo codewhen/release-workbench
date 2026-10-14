@@ -160,3 +160,5 @@ Arrow keys navigate enabled options; Home/End jump, typing searches by prefix, E
 Canvas zoom and fit controls use fixed 20px Lucide icons centered in 44px buttons. Their SVG fill is disabled, and keyboard focus remains visible outside the control group.
 
 Canvas controls reset the React Flow panel margin and sit 16px above the canvas bottom. The hint ends 72px above the bottom, preserving a 12px gap above the 44px controls even when its text wraps.
+
+The default If diamond uses the white surface fill to separate it from the pale canvas. Execution fills override it with running/passed green, failed red and skipped grey.

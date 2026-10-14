@@ -48,7 +48,7 @@ dialog::backdrop{background:rgba(24,42,48,.45)}
 .step-node.kind-manual{border-radius:28px;background:#f5f8f9}
 .step-node.kind-action{border-radius:12px;background:#f5f8f9}.step-node.kind-action .node-type{padding-bottom:10px;border-bottom:1px solid var(--line)}
 .step-node.kind-condition{height:230px;min-height:230px;padding:0;text-align:center;border:0;background:transparent;border-radius:0;position:relative}
-.step-node.kind-condition::before{content:"";position:absolute;z-index:-1;left:33px;top:34px;width:162px;height:162px;background:#edf3f5;border:1px solid #75929d;transform:rotate(45deg);border-radius:8px}
+.step-node.kind-condition::before{content:"";position:absolute;z-index:-1;left:33px;top:34px;width:162px;height:162px;background:var(--surface);border:1px solid #75929d;transform:rotate(45deg);border-radius:8px}
 .step-node.kind-condition .node-content{position:absolute;left:42px;right:42px;top:60px;bottom:60px;display:flex;flex-direction:column;justify-content:center;gap:6px}
 .step-node.kind-condition .node-type{justify-content:center;color:var(--accent);font-size:13px;font-weight:600}.step-node.kind-condition strong{margin:0;font-size:15px;line-height:1.35}.step-node.kind-condition .node-state{font-size:12px;line-height:1.4}
 .step-node.kind-condition .branch-label.true{right:auto;left:calc(100% + 18px);top:50%;transform:translateY(-50%)}.step-node.kind-condition .branch-label.false{right:auto;left:50%;top:calc(100% + 16px);bottom:auto;transform:translateX(-50%)}
