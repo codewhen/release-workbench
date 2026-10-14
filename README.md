@@ -3,7 +3,7 @@
 A local visual workflow builder and parallel test/release runner with a multi-project workflow home page. Configure steps in the browser canvas, YAML, or a terminal starter wizard. Runs stay on your own machine. MIT licensed; no subscriptions or hosted service required.
 
 ```bash
-python -m pip install https://github.com/codewhen/release-workbench/releases/download/v0.14.3/release_workbench-0.14.3-py3-none-any.whl
+python -m pip install https://github.com/codewhen/release-workbench/releases/download/v0.15.0/release_workbench-0.15.0-py3-none-any.whl
 release-workbench init
 release-workbench serve
 ```
@@ -43,3 +43,7 @@ Process supervision remains active while output pipes drain, including when a sh
 On phones, expand **Folders** to browse Home; press and hold a folder or workflow entry for organization actions. The workflow toolbar keeps its primary actions visible and puts secondary actions under **More controls**. List, YAML and the details panel remain available with independent scrolling. Blank workflows offer **Start editing**.
 
 HTML reports include **Jump to a step**, written outcome counts, attempts and artifact checksums. They work without JavaScript and preserve project context when opened through the server. Historical report files remain unchanged; new runs use the updated report layout. See [the interface review](docs/ui-review.md) for coverage and verification limits.
+
+## Visual control flow
+
+Schema v2 adds on-canvas While/Until/Repeat/For each groups, scoped variables, Switch, Break/Continue, Try/Catch/Finally, retries, Wait and Poll. Start with `release-workbench init --template visual-while --name "While demo"`. See the [control-flow guide](docs/control-flow.md) for browser steps, semantics, compatibility and evidence. Existing v1 files stay supported.

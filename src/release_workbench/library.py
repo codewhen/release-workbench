@@ -159,7 +159,7 @@ class Library:
                             if saved.get('signature',{}).get('workflow')==fingerprint(value):summaries=[saved];break
                         except (ValueError,OSError):continue
                 if summaries:
-                    saved=summaries[0];statuses=[s['status'] for s in saved['steps'].values()]
+                    saved=summaries[0];root_ids={s['id'] for s in value['steps'] if not s.get('scope')} if value['version']==2 else set(saved['steps']);statuses=[s['status'] for k,s in saved['steps'].items() if k in root_ids]
                     outcome='Running' if any(s in ('running','stopping') for s in statuses) else 'Paused' if saved.get('paused') else 'Failed' if 'failed' in statuses else 'Cancelled' if 'cancelled' in statuses else 'Complete' if statuses and all(s in ('passed','recorded','skipped') for s in statuses) else 'Awaiting evidence' if 'manual' in statuses else 'Pending'
                     item['latest']=dict(run_id=saved['run_id'],status=outcome,passed=sum(s in ('passed','recorded','skipped') for s in statuses),total=len(statuses),started=saved['started'])
             except (ValueError,OSError,KeyError,TypeError) as error:item['error']=str(error)

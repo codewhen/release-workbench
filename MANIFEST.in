@@ -9,3 +9,5 @@ include src/release_workbench/NOTICE.txt
 include src/release_workbench/schema.json
 
 recursive-include .impeccable/surfaces *.md
+
+include src/release_workbench/schema-v2.json

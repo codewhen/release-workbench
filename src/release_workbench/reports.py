@@ -1,3 +1,4 @@
+import json
 """Portable, accessible HTML evidence; no JavaScript or external dependencies."""
 import html
 import os
@@ -26,6 +27,11 @@ def render_report(data,root,directory):
             attempts.append(f'<li><a class="evidence-link" href="{escape(quote(attempt['log'],safe='/'))}">Attempt {index}: {escape(attempt["status"])} · {attempt.get("seconds",0):g}s</a>{reports}</li>')
         links='<h4>Attempts and files</h4><ul class="attempts">'+''.join(attempts)+'</ul>' if attempts else '<p class="muted">No attempt recorded.</p>'
         sections.append(f'<section id="{escape(anchor)}"><h3>{name}</h3><p class="step-status"><span class="badge {status}">{status}</span><span>{value.get("seconds",0):g}s elapsed</span></p>{notes}{links}</section>')
+    if data.get('executions'):
+        entries=[]
+        for path,execution in data['executions'].items():
+            entries.append('<li><strong>'+escape(path)+'</strong> · '+escape(execution.get('status','pending'))+'<pre>'+escape(json.dumps(execution,indent=2))+'</pre></li>')
+        sections.append('<section><h2>Scoped executions and iterations</h2><p>Handled failures remain evidence; the enclosing scope determines continuation.</p><ul>'+''.join(entries)+'</ul></section>')
     counts=Counter(value['status'] for value in data['steps'].values())
     outcomes=''.join(f'<div><dt>{escape(status)}</dt><dd>{count}</dd></div>' for status,count in sorted(counts.items()))
     return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+escape(data['name'])+' · Workflow report</title><style>'+STYLE+'</style></head><body><main id="top"><header><h1>'+escape(data['name'])+'</h1><p class="metadata">Run '+escape(data['run_id'])+' · '+escape(data['platform'])+'</p><p>Results apply to the recorded source, workflow and selection. Pending, disabled and blocked work is not passing evidence. Manual records are operator attestations.</p><a class="evidence-link" href="summary.json">Open JSON evidence</a><dl class="outcomes" aria-label="Recorded step outcomes">'+outcomes+'</dl></header><details><summary>Jump to a step</summary><nav aria-label="Step navigation"><ul>'+''.join(navigation)+'</ul></nav></details><h2>Step results</h2>'+''.join(sections)+'<footer>Saved evidence · Workflow Workbench<a class="top-link" href="#top">Back to top</a></footer></main></body></html>'

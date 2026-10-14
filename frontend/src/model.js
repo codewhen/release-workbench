@@ -26,6 +26,7 @@ export function connectCards(workflow,source,target,handle=null,targetHandle=nul
  if(!workflow.steps.some(s=>s.id===source)||!workflow.steps.some(s=>s.id===target))throw Error('Select existing cards to connect.');
  if(createsCycle(workflow.steps,source,target))throw Error('This connection would create a dependency cycle.');
  const parent=workflow.steps.find(s=>s.id===source),child=workflow.steps.find(s=>s.id===target);
+ if((parent.scope||null)!==(child.scope||null)||(parent.region||'body')!==(child.region||'body'))throw Error('Connect through the group Input or Done port, not across its boundary.');
  if(targetHandle==='compute'&&child.kind!=='condition')throw Error('Compute input belongs on an If card.');
  return {...workflow,steps:workflow.steps.map(s=>{
   if(s.id!==target)return s;
@@ -37,6 +38,7 @@ export function connectCards(workflow,source,target,handle=null,targetHandle=nul
   }
   next.needs=[...needs.filter(id=>id!==source),source];
   if(next.when&&!next.needs.includes(next.when.step))delete next.when;
+  if(parent.kind==='switch'){next.when={step:source,equals:handle||'default'};}
   if(parent.kind==='condition'){
    if(next.when&&next.when.step!==source)throw Error('A card can follow one If route. Add another If card to combine decisions.');
    next.when={step:source,equals:handle!=='false'};

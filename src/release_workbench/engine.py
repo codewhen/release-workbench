@@ -138,6 +138,11 @@ def resolved_commands(step,root,inputs):
     return result,cwd,env
 
 class Engine:
+    def __new__(cls,root,workflow,*args,**kwargs):
+        if cls is Engine and workflow.get("version")==2:
+            from .flow_engine import FlowEngine
+            return object.__new__(FlowEngine)
+        return object.__new__(cls)
     def __init__(self,root,workflow,output='.workbench',resume=None,inputs=None):
         self.root=workspace_root(root,workflow);self.workflow=copy.deepcopy(assert_valid(workflow))
         self.output=checked_path(self.root,output);self.output.mkdir(parents=True,exist_ok=True)

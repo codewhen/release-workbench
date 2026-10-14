@@ -1,5 +1,6 @@
 """Small, local starters shared by browser and CLI; no paid or hosted tools."""
 TEMPLATES={
+ 'visual-while':'While group with scoped counter', 'visual-foreach':'Process an array of items', 'visual-poll':'Poll until ready', 'visual-retry':'Retry a transient check', 'visual-recovery':'Recover from failure and clean up',
  'loop-repeat':'Repeat a workflow three times', 'loop-until':'Loop until ready (bounded)',
  'computed-if':'If(a) with a computed Boolean',
  'no-code':'No-code data and file automation', 'no-code-tests':'No-code Python test workflow',
@@ -19,6 +20,9 @@ def branching(name='If / Else starter',probe=None):
  ])
 def _make_template(name,template):
  if template not in TEMPLATES:raise ValueError('Choose a supported starter template.')
+ if template.startswith('visual-'):
+  from .flow_templates import make
+  return make(name,template)
  if template in ('loop-repeat','loop-until'):
   loop={'iterations':3 if template=='loop-repeat' else 5}
   if template=='loop-until':loop['until']='steps.check.result.json.ready';loop['delay']=.1
@@ -58,7 +62,9 @@ def _make_template(name,template):
  return dict(version=1,name=name,concurrency=4,inputs={},steps=steps)
 
 def make_template(name,template):
- workflow=_make_template(name,template);steps=workflow['steps'];by_id={s['id']:s for s in steps};depth={};rows={}
+ workflow=_make_template(name,template)
+ if workflow['version']==2:return workflow
+ steps=workflow['steps'];by_id={s['id']:s for s in steps};depth={};rows={}
  def level(id):
   if id not in depth:depth[id]=max([-1]+[level(parent) for parent in by_id[id].get('needs',[])])+1
   return depth[id]

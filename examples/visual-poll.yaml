@@ -1,0 +1,25 @@
+%YAML 1.2
+---
+version: 2
+name: Visual Poll
+concurrency: 4
+inputs: {}
+steps:
+  - id: ready
+    name: Ready
+    kind: poll
+    needs: []
+    control:
+      test:
+        compute:
+          commands:
+            - argv:
+                - ${python}
+                - -c
+                - print("true")
+      delay: 1
+      limit: 100
+      timeout: 1800
+    position:
+      x: 0
+      y: 0

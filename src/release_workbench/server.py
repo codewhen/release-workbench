@@ -31,7 +31,9 @@ def report_with_context(content,key):
 class App:
     def __init__(self,config,output='.workbench',resume=None):
         self.store=Store(config);self.output=output;self.lock=threading.RLock();self.engine=Engine(self.store.root,self.store.read()['workflow'],output,resume)
-    def config(self):return self.store.read()
+    def config(self):
+        self.engine.interactive=True
+        return self.store.read()
     def idle(self):
         if self.engine.busy():raise ValueError('Stop the workflow and wait for cleanup before editing configuration.')
     def save(self,value,revision):
@@ -131,6 +133,10 @@ def make_server(app,port=3103):
                     if route=='/api/library/register':return self.send(library.register(data.get('project'),data.get('config')))
                     if route=='/api/library/create':return self.send(library.create(data['project'],data['name'],data['filename'],data.get('template','blank')))
                     app=library.get(parse_qs(urlparse(self.path).query).get('workflow',[None])[0])
+                    if route=='/api/convert-loop':
+                        app.idle()
+                        from .flow_conversion import convert_loop
+                        return self.send({'workflow':convert_loop(app.engine.root,data['workflow'],data['step'])})
                     if route=='/api/render':return self.send({'yaml':render_yaml(data['workflow'],app.config()['yaml'])})
                     if route=='/api/validate':
                         value=parse_yaml(data['yaml']) if 'yaml' in data else data['workflow'];assert_valid(value)
@@ -145,6 +151,7 @@ def make_server(app,port=3103):
                     elif route=='/api/run':
                         if app.store.read()['workflow']!=app.engine.workflow:raise ValueError('Workflow changed on disk. Reload and start a new run.')
                         library.ensure_can_run(app)
+                        app.engine.interactive=True
                         app.engine.start(data.get('profile','all'),data.get('step'),data.get('rerun',False))
                     elif route=='/api/record':
                         library.ensure_can_run(app);app.engine.record(data['step'],data['note'])

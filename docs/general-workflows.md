@@ -121,12 +121,12 @@ Child workflow cards can live in subfolders, declare the parent's workspace and 
 
 The current engine supports commands, manual gates, conditions, child workflows, parallel jobs, input forms, resources, timeouts, cancellation, progress and reports. It remains a local, explicitly started DAG runner.
 
-Useful next additions, rather than features already supported:
+The v2 [visual control-flow guide](control-flow.md) now covers retries, collection iteration, scoped variables and error handling. The remaining roadmap is:
 
-1. **Retries with backoff:** explicit transient-error rules; no automatic retry of irreversible steps.
-2. **Foreach:** per-item collection iteration; fixed-count and Boolean-stop Loop cards are already supported.
+1. **Execution debugging:** pause before a card and inspect a scope.
+2. **Reusable data adapters:** typed HTTP and database actions.
 3. **Scheduling and triggers:** local schedules, file changes, webhooks; define credential and network boundaries first.
-4. **Richer data bindings:** typed step-output variables and child input mappings, beyond current conditions and JSON-to-input file outputs.
+4. **History comparison:** compare scoped results and timing across runs.
 5. **Reusable connectors:** declarative HTTP, database and notification adapters. Existing command steps can call installed tools today; dedicated UI adapters are not included.
 6. **History comparison and retention:** compare results and timing across runs, then explicitly manage archived evidence.
 7. **Native Windows verification:** required before claiming parity for execution, cancellation and shell behavior.

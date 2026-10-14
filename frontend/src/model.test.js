@@ -99,3 +99,22 @@ test('dropdown keyboard navigation wraps and skips disabled choices',()=>{
 test('dropdown typeahead finds later enabled prefixes and wraps to earlier matches',()=>{
  const options=[{label:'Python'},{label:'PowerShell',disabled:true},{label:'Power tools'},{label:'Go'}];assert.equal(matchingOption(options,'po',0),2);assert.equal(matchingOption(options,'P',2),0);assert.equal(matchingOption(options,'missing'),-1);
 });
+
+import {wrapGroup,defaultControl,visibleSteps,nestedList} from './controlModel.js';
+test('wrapping preserves internal dependencies and routes external work through group',()=>{
+ const w={version:1,steps:[{id:'a',name:'a',kind:'command',position:{x:0,y:0}},{id:'b',name:'b',kind:'command',needs:['a'],position:{x:300,y:0}},{id:'c',name:'c',kind:'command',needs:['b'],position:{x:600,y:0}}]};
+ const n=wrapGroup(w,['a','b'],'repeat'),group=n.steps.at(-1);
+ assert.equal(n.version,2);assert.equal(n.steps[1].scope,group.id);assert.deepEqual(n.steps[1].needs,['a']);assert.deepEqual(n.steps[2].needs,[group.id]);assert.equal(group.control.outputs.b,'${steps.b.result}');assert.equal(w.version,1);
+});
+test('wrapping rejects multiple external exits without mutating the graph',()=>{
+ const w={steps:[{id:'a'},{id:'b'},{id:'x',needs:['a']},{id:'y',needs:['b']}]};assert.throws(()=>wrapGroup(w,['a','b']),/multiple external exits/);assert.equal(w.steps.length,4);
+});
+test('collapsed groups hide their descendants and retain nested list ordering',()=>{
+ const steps=[{id:'child',scope:'outer'},{id:'outer',kind:'while',collapsed:true},{id:'next'}];assert.deepEqual(visibleSteps(steps).map(s=>s.id),['outer','next']);assert.deepEqual(nestedList(steps).map(s=>s.id),['outer','next']);
+});
+test('new loops have safe defaults with explicit unlimited settings supported',()=>{assert.equal(defaultControl('while').limit,100);assert.equal(defaultControl('while').timeout,1800);assert.equal(defaultControl('foreach').parallel,1)});
+test('ordinary connections cannot bypass a group boundary',()=>{const w={steps:[{id:'a',kind:'command'},{id:'b',kind:'command',scope:'g'}]};assert.throws(()=>connectCards(w,'a','b'),/group/)});
+import {fitGroupBounds,duplicateScope,absolutePosition} from './controlModel.js';
+test('nested group growth preserves visible regions and child bounds',()=>{const steps=[{id:'outer',kind:'while',size:{width:840,height:720}},{id:'inner',kind:'repeat',scope:'outer',region:'body',position:{x:40,y:370},size:{width:840,height:720}}];const n=fitGroupBounds(steps),outer=n.find(s=>s.id==='outer'),inner=n.find(s=>s.id==='inner');assert.ok(outer.size.width>=inner.position.x+inner.size.width);assert.ok(outer.size.height>=inner.position.y+inner.size.height);assert.equal(steps[0].size.width,840)});
+test('duplicate group carries children and rewrites its published references',()=>{const w={version:2,steps:[{id:'g',name:'G',kind:'repeat',control:{outputs:{x:'${steps.child.result.json}'}}},{id:'child',name:'Child',kind:'wait',scope:'g'}]};const n=duplicateScope(w,'g'),copy=n.steps[2],child=n.steps[3];assert.equal(child.scope,copy.id);assert.equal(copy.control.outputs.x,'${steps.'+child.id+'.result.json}');assert.equal(w.steps.length,2)});
+test('created-card focus accounts for ancestor positions',()=>{assert.deepEqual(absolutePosition([{id:'g',position:{x:300,y:200}},{id:'c',scope:'g',position:{x:40,y:70}}],{id:'c',scope:'g',position:{x:40,y:70}}),{x:340,y:270})});

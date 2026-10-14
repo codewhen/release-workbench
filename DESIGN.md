@@ -162,3 +162,7 @@ Canvas zoom and fit controls use fixed 20px Lucide icons centered in 44px button
 Canvas controls reset the React Flow panel margin and sit 16px above the canvas bottom. The hint ends 72px above the bottom, preserving a 12px gap above the 44px controls even when its text wraps.
 
 The default If diamond uses the white surface fill to separate it from the pale canvas. Execution fills override it with running/passed green, failed red and skipped grey.
+
+## Structured control flow
+
+V2 groups are visible, resizable canvas containers with a white header and quiet named regions. The same hierarchy is represented in List, where scope and region are selectable fields. Controls and labels sit above the card placement area. While checks its condition before the body; Until checks afterward. Bound and unlimited settings are explicit. Active scopes expose iteration and elapsed time without fabricated percentages. Legacy Loop also uses the white surface fill.

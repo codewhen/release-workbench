@@ -1,0 +1,22 @@
+%YAML 1.2
+---
+version: 2
+name: Visual Retry
+concurrency: 4
+inputs: {}
+steps:
+  - id: probe
+    name: Retry an executable check
+    kind: command
+    commands:
+      - argv:
+          - ${python}
+          - -c
+          - print("Check passed")
+    retry:
+      attempts: 3
+      delay: 1
+      backoff: 2
+    position:
+      x: 0
+      y: 0

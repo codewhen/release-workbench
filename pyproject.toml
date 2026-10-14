@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "release-workbench"
-version = "0.14.3"
+version = "0.15.0"
 description = "Local workflow canvas, parallel test runner and release evidence workbench"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -21,4 +21,4 @@ release-workbench = "release_workbench.cli:main"
 workflow-workbench = "release_workbench.cli:main"
 
 [tool.setuptools.package-data]
-release_workbench = ["schema.json", "NOTICE.txt", "static/**/*", "static/*"]
+release_workbench = ["schema.json", "schema-v2.json", "NOTICE.txt", "static/**/*", "static/*"]

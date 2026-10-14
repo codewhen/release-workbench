@@ -64,8 +64,11 @@ def render_yaml(value,original=''):
     result=merge(previous,value);stream=io.StringIO();codec.dump(result,stream);return stream.getvalue()
 
 def validate(workflow):
+    if isinstance(workflow,dict) and workflow.get("version")==2:
+        from .flow_validation import validate_flow
+        return validate_flow(workflow,SCHEMA)
     errors=[]
-    for error in sorted(Draft202012Validator(SCHEMA).iter_errors(workflow),key=lambda e:str(list(e.path))):
+    for error in sorted(Draft202012Validator(SCHEMA["oneOf"][0]).iter_errors(workflow),key=lambda e:str(list(e.path))):
         errors.append(f'{".".join(map(str,error.path)) or "workflow"}: {error.message}')
     if errors:return errors
     for field in ('report_paths','source_paths'):
