@@ -3,7 +3,7 @@
 A local visual workflow builder and parallel test/release runner with a multi-project workflow home page. Configure steps in the browser canvas, YAML, or a terminal starter wizard. Runs stay on your own machine. MIT licensed; no subscriptions or hosted service required.
 
 ```bash
-python -m pip install https://github.com/codewhen/release-workbench/releases/download/v0.12.1/release_workbench-0.12.1-py3-none-any.whl
+python -m pip install https://github.com/codewhen/release-workbench/releases/download/v0.13.0/release_workbench-0.13.0-py3-none-any.whl
 release-workbench init
 release-workbench serve
 ```
@@ -37,3 +37,9 @@ While viewing Overall, panning the canvas or scrolling the list opens the curren
 **Stop all** or **Stop selected job** requests cancellation and gives processes up to 30 seconds for device restoration and cleanup. The running panel shows a countdown. While stopping, the button changes to **Force stop**; this terminates remaining processes without waiting for graceful cleanup. If the grace period expires, termination happens automatically. Logs and partial evidence remain saved, and cancelled work is distinct from failed work.
 
 Process supervision remains active while output pipes drain, including when a shell exits before a child process. On POSIX, cancellation tracks descendants and the managed command’s isolated process group; it does not target other independent workflow jobs. Windows uses targeted process-tree termination and retained descendant handles. Windows native verification remains outstanding.
+
+### Small screens and saved reports
+
+On phones, expand **Folders** to browse Home; press and hold a folder or workflow entry for organization actions. The workflow toolbar keeps its primary actions visible and puts secondary actions under **More controls**. List, YAML and the details panel remain available with independent scrolling. Blank workflows offer **Start editing**.
+
+HTML reports include **Jump to a step**, written outcome counts, attempts and artifact checksums. They work without JavaScript and preserve project context when opened through the server. Historical report files remain unchanged; new runs use the updated report layout. See [the interface review](docs/ui-review.md) for coverage and verification limits.

@@ -103,3 +103,19 @@ class ServerTests(unittest.TestCase):
    self.request('/api/stop',{'step':'test','force':True}).close();stop.assert_called_once_with('test',force=True)
    with self.assertRaises(HTTPError) as error:self.request('/api/stop',{'force':'yes'})
    error.exception.close();self.assertEqual(stop.call_count,1)
+
+ def test_report_links_open_evidence_from_another_registered_project(self):
+  import time
+  from urllib.parse import urlsplit
+  from test_reports import Links
+  with tempfile.TemporaryDirectory() as directory:
+   file=Path(directory)/'release-workbench.yaml';file.write_text(render_yaml(workflow([command('other')])));library=self.server.library
+   with library.lock:library.register(config=str(file));key=library.identity(file);other=library.get(key)
+   other.engine.start();deadline=time.monotonic()+5
+   while other.engine.busy() and time.monotonic()<deadline:time.sleep(.02)
+   self.assertFalse(other.engine.busy())
+   report=other.engine.directory.relative_to(other.engine.root).as_posix()+'/report.html'
+   parser=Links();parser.feed(self.request('/files/'+report+'?workflow='+key).read().decode())
+   href=next(link for link in parser.links if link.startswith('summary.json'))
+   evidence=json.load(self.request('/files/'+report.rsplit('/',1)[0]+'/'+href))
+   self.assertEqual(evidence['run_id'],other.engine.run_id);self.assertEqual(evidence['steps']['other']['status'],'passed')

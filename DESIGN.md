@@ -97,9 +97,9 @@ Use the system sans stack for interface text and the monospace stack for YAML an
 
 ## Layout
 
-The desktop app is a viewport-height flex column (100dvh, minimum 560px). Header, toolbar, banners, footer and run inputs keep their own height; the workspace fills the remaining space with a minimum height of 320px. Its grid row uses minmax(0, 1fr), with zero-minimum-height children so the list and settings scroll independently instead of growing to fit their content. The flexible graph pairs with a 370px independently scrolling settings panel; the panel narrows to 330px at 1000px. Header and toolbar wrap as needed.
+The desktop app is a viewport-height flex column (100dvh, minimum 560px; 480px on short desktop screens). Header, toolbar, banners, footer and run inputs keep their own height; the workspace fills the remaining space with a minimum height of 180px (160px on short desktop screens). Its grid row uses minmax(0, 1fr), with zero-minimum-height children so the list and settings scroll independently instead of growing to fit their content. The flexible graph pairs with a 370px independently scrolling settings panel; the panel narrows to 330px at 1000px. Header and toolbar wrap as needed.
 
-At 700px the app uses document scrolling, the workspace stacks and the settings panel becomes full width with an independently scrolling maximum height of 70dvh. The mobile list occupies a bounded, scrolling 360px graph region, keeping settings reachable regardless of workflow length; YAML uses a 480px region. Initial representation is List at widths up to 1000px; entering the 700px breakpoint automatically switches Canvas to List. The narrow Canvas fallback directs users to List.
+At 700px secondary toolbar controls move behind More controls, inputs retain a readable 16px font, and the app uses document scrolling, the workspace stacks and the settings panel becomes full width with an independently scrolling maximum height of 55dvh. The mobile list occupies a bounded, scrolling 320px graph region, keeping settings reachable regardless of workflow length; YAML uses a 480px region. Initial representation is List at widths up to 1000px; entering the 700px breakpoint automatically switches Canvas to List. The narrow Canvas fallback directs users to List.
 
 Workflow Home follows document flow within a centered container capped at 1180px, with 40px 28px 48px desktop padding and 28px 20px padding at 700px. Directory rows use a flexible identity column, 180px evidence column and action column, with 28px gaps and 24px vertical padding. At 850px evidence moves below identity; at 700px rows stack and Open actions become full width. Search and project filters stack, and two-column inline forms become one column at 700px.
 
@@ -107,7 +107,7 @@ Use the documented spacing scale for repeated rhythm. The implementation also us
 
 ## Elevation & Depth
 
-Working surfaces are flat, separated by borders and background tones. The modal alone uses a broad structural shadow and dimmed backdrop, recorded in the sidecar. No interface motion is currently prescribed; reduced-motion preferences disable animations and transitions.
+Working surfaces are flat, separated by borders and background tones. The modal alone uses a broad structural shadow and dimmed backdrop, recorded in the sidecar. A moving green border identifies executing cards. Reduced-motion preferences replace the motion with a steady border and disable camera transition animation.
 
 ## Shapes
 
@@ -142,3 +142,11 @@ Workflow Home uses border-separated rows rather than raised cards: name and desc
 Command nodes use a rectangular body and terminal icon. If nodes use a diamond, with True at the right tip and False at the bottom tip. Manual checks use rounded gate bodies; reusable workflows use a double outline. Built-in actions use a labelled header and an action-specific icon. Type is visible without relying on outcome color. Selection and written outcome labels remain distinct from the type treatment.
 
 The right-click Add a card menu is a fixed, scrollable overlay using existing surface, ink and accent tokens. The toolbar and List view expose the same picker. Arrow keys, Home/End and Escape support keyboard use; items include a short task description. Ordinary action forms select earlier values and typed constants; opaque references live in Reference details.
+
+## Responsive review refinements
+
+Home’s folder navigation collapses on phones; its toggle and New folder action remain visible. Choose a folder to collapse navigation again. Right-click, Shift+F10 and touch press-and-hold expose the same organization actions. Forms stay inline and use a single column on narrow screens.
+
+Run, Stop, Add card and Save remain directly reachable on mobile. More controls reveals secondary tools; desktop keeps all tools visible. Alerts wrap long workflow names without horizontal clipping. Empty workflows offer Start editing. The run toolbar identifies the whole-workflow passed/skipped count separately from selected-work execution progress. YAML uses a flexible editing region; settings and steps keep independent scrolling.
+
+Saved HTML reports use the same restrained palette, responsive headings, written status badges, a native Jump to a step disclosure, evidence links and readable checksums. Relative evidence links retain their selected project when served. Reports have no scripts or external asset dependencies and remain readable when exported.

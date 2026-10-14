@@ -3,7 +3,6 @@ from __future__ import annotations
 from datetime import datetime,timezone
 import copy
 import hashlib
-import html
 import json
 import os
 from pathlib import Path
@@ -635,12 +634,10 @@ class Engine:
     def save(self):
         data=self.masker.object(self.state)
         target=self.directory/'summary.json';temp=target.with_suffix('.tmp');temp.write_text(json.dumps(data,indent=2)+'\n');os.replace(temp,target)
-        sections=[]
-        for s in self.workflow['steps']:
-            value=data['steps'][s['id']];links=''.join(f'<li>{html.escape(a["status"])}: <a href="{a["log"]}">Attempt {n+1}</a></li>' for n,a in enumerate(value['attempts']))
-            sections.append(f'<section><h2>{html.escape(s["name"])}</h2><p>{value["status"]} · {value["seconds"]}s</p><pre>{html.escape(value.get("error","")+"\n"+value["note"])}</pre><ul>{links}</ul></section>')
-        report='<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Workflow report</title><style>body{font:16px/1.6 system-ui;max-width:900px;margin:40px auto;padding:20px;color:#182a30}section{border-top:1px solid #cad5d8;padding:20px 0}pre{white-space:pre-wrap;overflow-wrap:anywhere}a{color:#165c73}</style><h1>'+html.escape(data['name'])+'</h1><p>'+html.escape(self.run_id)+' · '+PLATFORM+'</p><p>Results apply to the recorded source, workflow and selection. Pending, disabled and blocked work is not passing evidence. Manual records are operator attestations.</p><a href="summary.json">JSON evidence</a>'+''.join(sections)+'</html>'
-        (self.directory/'report.html').write_text(report)
+        from .reports import render_report
+        report_data=copy.deepcopy(data)
+        for step in self.workflow['steps']:report_data['steps'][step['id']]['name']=self.masker.text(step['name'])
+        (self.directory/'report.html').write_text(render_report(report_data,self.root,self.directory))
     def snapshot(self):
         with self.lock:
             result=copy.deepcopy(self.state);result.update(active=list(self.running),busy=self.busy(),paused=self.paused)

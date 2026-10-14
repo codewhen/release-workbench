@@ -2,6 +2,8 @@
 from __future__ import annotations
 import difflib
 import json
+import html
+import re
 import mimetypes
 from pathlib import Path
 import secrets
@@ -9,12 +11,22 @@ import subprocess
 import threading
 import time
 from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
-from urllib.parse import unquote,urlparse,parse_qs
+from urllib.parse import unquote,urlparse,parse_qs,parse_qsl,urlsplit,urlunsplit,urlencode
 import webbrowser
 from .config import SCHEMA,Store,assert_valid,checked_path,parse_yaml,render_yaml
 from .engine import Engine,resolved_commands
 from .file_picker import choose_workflow
 from .library import Library
+
+def report_with_context(content,key):
+    """Relative evidence links keep the registered workflow's workspace."""
+    def link(match):
+        value=html.unescape(match.group(2).decode());url=urlsplit(value)
+        if url.scheme or url.netloc or not url.path:return match.group(0)
+        query=[(name,item) for name,item in parse_qsl(url.query,keep_blank_values=True) if name!='workflow']
+        query.append(('workflow',key));target=urlunsplit((url.scheme,url.netloc,url.path,urlencode(query),url.fragment))
+        return match.group(1)+html.escape(target,quote=True).encode()+match.group(3)
+    return re.sub(rb"(href=[\"'])([^\"']+)([\"'])",link,content)
 
 class App:
     def __init__(self,config,output='.workbench',resume=None):
@@ -85,7 +97,9 @@ def make_server(app,port=3103):
                     file=app.allowed_file(route[7:])
                     if not file.is_file():return self.send({'error':'File not found.'},404)
                     # Report HTML renders inside an opaque sandbox with scripts disabled.
-                    self.send_response(200);self.send_header('Content-Type',('text/html' if file.suffix=='.html' else 'text/plain')+'; charset=utf-8');self.send_header('Content-Length',str(file.stat().st_size));self.send_header('Content-Security-Policy',"sandbox");self.send_header('X-Content-Type-Options','nosniff');self.end_headers();self.wfile.write(file.read_bytes());return
+                    content=file.read_bytes()
+                    if file.name=='report.html':content=report_with_context(content,library.identity(app.store.path))
+                    self.send_response(200);self.send_header('Content-Type',('text/html' if file.suffix=='.html' else 'text/plain')+'; charset=utf-8');self.send_header('Content-Length',str(len(content)));self.send_header('Content-Security-Policy',"sandbox");self.send_header('X-Content-Type-Options','nosniff');self.end_headers();self.wfile.write(content);return
                 file=checked_path(static,'index.html' if route=='/' else route.lstrip('/'))
                 if not file.is_file():return self.send({'error':'Not found.'},404)
                 content=file.read_bytes()
