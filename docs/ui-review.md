@@ -33,3 +33,7 @@ Browser checks used desktop 1280×720, short desktop 1024×600, tablet 768×1024
 Backend regression tests cover report escaping, real evidence paths, anchors, HTTP project context, execution and cancellation. Frontend model tests and the production Vite build remain required. Browser checks confirm the main desktop/mobile flows and reduced layout overflow. This is not a formal WCAG certification or a test of native Windows, iOS or Android browsers. Touch gesture handlers are implemented; physical touchscreen verification remains outstanding.
 
 The existing light theme is intentional. There is no new dark-mode claim. The frontend bundle remains roughly 165 KB compressed; Vite’s existing large-chunk advisory remains, with no build failure.
+
+## Custom dropdown review (0.14.0)
+
+Native select controls have been replaced throughout the application with one shared combobox/listbox. Desktop checks covered selected values, keyboard prefix search, Escape inside a modal, required validation and boolean false input followed by a successful harmless run. Browser layout checks at 390 and 320 pixels confirmed menus stay inside the viewport; the chevron center matched its trigger center. Model tests cover nested option declarations, empty and numeric values, disabled navigation and prefix search. These checks do not claim physical touchscreen or native Windows browser verification.

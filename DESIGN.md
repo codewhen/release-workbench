@@ -150,3 +150,9 @@ Home’s folder navigation collapses on phones; its toggle and New folder action
 Run, Stop, Add card and Save remain directly reachable on mobile. More controls reveals secondary tools; desktop keeps all tools visible. Alerts wrap long workflow names without horizontal clipping. Empty workflows offer Start editing. The run toolbar identifies the whole-workflow passed/skipped count separately from selected-work execution progress. YAML uses a flexible editing region; settings and steps keep independent scrolling.
 
 Saved HTML reports use the same restrained palette, responsive headings, written status badges, a native Jump to a step disclosure, evidence links and readable checksums. Relative evidence links retain their selected project when served. Reports have no scripts or external asset dependencies and remain readable when exported.
+
+## Dropdown menus
+
+All single-value choices use the shared Select component, including Home filters, folder destinations, card settings and required-input dialogs. The trigger keeps a fixed-size chevron vertically centered beside an ellipsized value. Options appear in a constrained, scrollable surface with a selected checkmark and explicit focus treatment. Modal menus belong to their dialog so they remain above the modal backdrop.
+
+Arrow keys navigate enabled options; Home/End jump, typing searches by prefix, Enter selects, Escape cancels the menu, and Tab accepts the active option before moving focus. Required choices show an inline error and focus the first invalid control. Disabled controls and options remain unavailable. Menu bounds adapt to viewport width and available space above or below the trigger.

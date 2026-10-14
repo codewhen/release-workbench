@@ -84,3 +84,18 @@ test('overall progress respects selected scope and distinguishes failures from p
 test('overall progress counts skipped and blocked results while manual gates remain unfinished',()=>{
  const workflow={steps:[{id:'a'},{id:'b'},{id:'c'}]};const result=runSummary(workflow,{steps:{a:{status:'skipped'},b:{status:'blocked'},c:{status:'manual'}}});assert.equal(result.done,2);assert.equal(result.counts.manual,1);assert.equal(result.partial,false);
 });
+
+
+import React from 'react';
+import {selectOptions,nextOption,matchingOption} from './selectModel.js';
+test('custom select reads mapped and fragment options without losing empty or numeric values',()=>{
+ const option=(props,...text)=>React.createElement('option',props,...text);
+ const children=[option({value:''},'Choose…'),React.createElement(React.Fragment,null,option({value:0},'Zero'),option({value:'python'},'Python')),option({disabled:true},'Unavailable'),option({},'Default',' label')];
+ assert.deepEqual(selectOptions(children),[{value:'',label:'Choose…',disabled:false},{value:'0',label:'Zero',disabled:false},{value:'python',label:'Python',disabled:false},{value:'Unavailable',label:'Unavailable',disabled:true},{value:'Default label',label:'Default label',disabled:false}]);
+});
+test('dropdown keyboard navigation wraps and skips disabled choices',()=>{
+ const options=[{label:'A',disabled:true},{label:'B'},{label:'C',disabled:true},{label:'D'}];assert.equal(nextOption(options,-1,1),1);assert.equal(nextOption(options,3,1),1);assert.equal(nextOption(options,1,-1),3);assert.equal(nextOption([],0,1),-1);assert.equal(nextOption([{disabled:true}],0,1),-1);
+});
+test('dropdown typeahead finds later enabled prefixes and wraps to earlier matches',()=>{
+ const options=[{label:'Python'},{label:'PowerShell',disabled:true},{label:'Power tools'},{label:'Go'}];assert.equal(matchingOption(options,'po',0),2);assert.equal(matchingOption(options,'P',2),0);assert.equal(matchingOption(options,'missing'),-1);
+});
