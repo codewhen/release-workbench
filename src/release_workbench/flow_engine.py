@@ -137,7 +137,15 @@ class FlowEngine(Engine):
    with self.lock:
     for k in self.selected:
      if self.state['steps'][k]['status'] in ('queued','running','stopping','pending'):
-      self.state['steps'][k].update(status='cancelled' if self.stopped else 'blocked',error='Not reached; inspect enclosing scope.')
+      # An unentered loop body or Catch is skipped, not a request for user input.
+      parent=next((s.get('scope') for s in self.workflow['steps'] if s['id']==k),None)
+      ancestor=None
+      while parent:
+       ancestor=self.state['steps'].get(parent,{}).get('status')
+       if ancestor not in ('queued','running','stopping','pending'):break
+       parent=next((s.get('scope') for s in self.workflow['steps'] if s['id']==parent),None)
+      status='cancelled' if self.stopped or ancestor=='cancelled' else 'skipped' if ancestor in ('passed','recorded','skipped') else 'blocked'
+      self.state['steps'][k].update(status=status,error=None if status=='skipped' else 'Not reached; inspect enclosing scope.',stage='Control branch was not entered.' if status=='skipped' else 'Not reached.')
     self.save()
  def region(self,parent,region,ctx,path,resume=False):
   nodes=[s for s in self.workflow['steps'] if s.get('scope')==parent and s.get('region','body')==region and (parent is not None or s['id'] in self.selected)]

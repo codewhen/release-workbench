@@ -18,7 +18,7 @@ class FlowTests(unittest.TestCase):
    if time.monotonic()>deadline:e.stop(force=True);self.fail('Flow did not stop')
    time.sleep(.02)
  def test_while_zero_iterations_and_fill_independent(self):
-  e=self.runflow([card('n','declare',name='n',value=0),card('loop','while',['n'],test={'source':'vars.n','operator':'greater_than','value':0}),cmd('body','raise Exception("must not run")',scope='loop')]);self.assertEqual(e.exit_code(),0)
+  e=self.runflow([card('n','declare',name='n',value=0),card('loop','while',['n'],test={'source':'vars.n','operator':'greater_than','value':0}),cmd('body','raise Exception("must not run")',scope='loop')]);self.assertEqual(e.exit_code(),0);self.assertEqual(e.state['steps']['body']['status'],'skipped')
  def test_while_recomputes_variable_and_exports(self):
   e=self.runflow([card('n','declare',name='n',value=0),card('loop','while',['n'],test={'source':'vars.n','operator':'less_than','value':3},outputs={'count':'${vars.n}'}),card('inc','update',scope='loop',name='n',value=1)]);self.assertEqual(e.exit_code(),0);self.assertEqual(e.state['steps']['loop']['result']['json']['count'],3)
  def test_repeat_until_executes_first(self):
@@ -144,3 +144,9 @@ class FlowTests(unittest.TestCase):
   e=Engine(self.root,dict(version=2,name='Selected cleanup',steps=[card('guard','try'),card('work','wait',scope='guard',delay=20),cmd('cleanup','from pathlib import Path;Path("should-not-exist").write_text("bad")',scope='guard',region='finally')]));e.start();time.sleep(.05);e.stop('work',force=True);self.finish(e);self.assertFalse((self.root/'should-not-exist').exists());self.assertEqual(e.exit_code(),130)
  def test_selected_stop_before_dispatch(self):
   e=Engine(self.root,dict(version=2,name='Early selected stop',steps=[card('first','wait',delay=20),card('second','wait',delay=.1)]));e.start();e.stop('first',force=True);self.finish(e);self.assertEqual(e.state['steps']['first']['status'],'cancelled');self.assertEqual(e.state['steps']['second']['status'],'passed')
+
+ def test_unused_catch_and_nested_zero_body_are_skipped_without_input_prompt(self):
+  e=self.runflow([card('guard','try'),card('loop','repeat',scope='guard',count=0),card('inner','repeat',scope='loop',count=3),cmd('never','raise Exception()',scope='inner'),card('catch','handle_error',scope='guard',region='catch')]);self.assertEqual(e.exit_code(),0)
+  for key in ('inner','never','catch'):self.assertEqual(e.state['steps'][key]['status'],'skipped')
+ def test_failed_loop_leaves_unentered_body_blocked(self):
+  e=self.runflow([card('loop','while',test={'compute':{'commands':[{'argv':['${python}','-c','raise Exception("probe failed")']} ]}}),cmd('body','print("not reached")',scope='loop')]);self.assertEqual(e.state['steps']['loop']['status'],'failed');self.assertEqual(e.state['steps']['body']['status'],'blocked')

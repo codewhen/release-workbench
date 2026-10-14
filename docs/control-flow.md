@@ -4,18 +4,24 @@ Use **While** when you want to repeat two, three or more cards while a condition
 
 ## Build a While loop
 
-1. Create a **Declare variable** card before the group. Name it `count` and set its Number value to `0`.
-2. Add **While**, or Shift-select existing cards and choose **Wrap in group → while**. The wrapper preserves internal connections. Add a join or expand the selection if it has multiple external exit cards.
-3. In the group's settings, choose **Compare a value → Variable: count → Less than → 3**.
-4. In its **Body** region, add **Update variable**, choose `count`, operation Add, value `1`. Add a Wait or any other operation and connect it after the update.
-5. Connect the preceding declaration to the group's Input. Connect Done to the work that should happen after the loop.
-6. Save and run. The condition is checked before every iteration. This example runs the body three times. A false initial condition runs it zero times.
+1. Add a **Variable** card. Choose Create variable, name it `count` and set its Number value to `0`.
+2. Add a **Loop** card and choose **While condition is true** in Loop mode. Connect the Variable output to its Entry.
+3. In the loop settings, choose **Compare a value → Variable: count → Less than → 3**.
+4. Add another **Variable**, choose Update value, `count`, Add, `1`. Connect the loop's **Body** port to its Entry. Add a Wait or another operation and connect it after the update. The connected chain belongs to Body and repeats together.
+5. Connect **Done** to the work that should happen once after the loop exits.
+6. Save and run. This example runs the body three times. A false initial condition runs it zero times.
 
-The **While group with scoped counter** starter creates this example. Each group has a white header, named regions, resize handles when selected, and a collapse control. List view offers the same nested cards and scope/region selectors. Add cards inside a region with its Add card button; add another dependency from the same source to create parallel work.
+The **While group with scoped counter** starter creates this example. Controls have the same compact width as ordinary cards. Click the plus beside a port to create a card already attached to it, or connect that port to an existing branch's first card. Dashed labelled lines identify controlled branches; solid lines are ordinary prerequisites. Body, Catch and Finally are operations owned by a controller, not additional root jobs.
+
+Use List view on phones or for keyboard editing. **Controlled by** and **Control port** expose the same ownership. Shift-select a chain and choose **Wrap in group** to create a Loop or Try around existing work. Internal connections are preserved. Add a join or expand a selection that has multiple external exits. Canvas positions are independent of execution; moving a card never moves its owned cards or changes their execution.
+
+Right-click a control connection and choose **Delete connection** to detach its chain. Detached cards become peers of their former controller, so review the graph before running. Undo restores ownership. Ambiguous branches with outside prerequisites are rejected before anything changes. Nested controllers retain their own children when detached. Disconnect Condition cards before switching to Count or For each.
+
+Older container layouts are displayed as compact cards without changing execution. Layout metadata is updated on the next editor change; opening a workflow does not save it or start jobs.
 
 ## Choose the correct repetition
 
-| Card | When the condition is checked | Completion |
+| Loop mode / card | When the condition is checked | Completion |
 | --- | --- | --- |
 | While | Before the body, including the first iteration | Condition becomes false |
 | Repeat until | After the body | Condition becomes true |
@@ -31,7 +37,7 @@ For each exposes `loop.item`, zero-based `loop.index` and one-based `loop.iterat
 
 Choose **Run commands / Python / SSH** to execute a probe. It must exit successfully and print JSON `true` or `false` to stdout. Diagnostics belong on stderr. Invalid output fails the check instead of silently selecting False.
 
-Alternatively, put cards in a While/Until **Condition** region and select a Boolean result from those cards. The entire Condition region executes again at each check. Use argv or environment bindings for dynamic values in shell commands; do not interpolate returned data into shell source.
+Alternatively, connect the **Condition** port to a probe card. Command probes are configured to capture JSON automatically, and the loop selects their Boolean result. For a multi-card probe, connect its remaining cards and choose the final Boolean output in Condition value. The entire Condition region executes again at each check. Use argv or environment bindings for dynamic values in shell commands; do not interpolate returned data into shell source.
 
 ## Variables and group boundaries
 
@@ -56,7 +62,7 @@ Active parallel work in that iteration is cancelled and cleaned up. Already comp
 
 **If** selects True or False. **Switch** checks cases in their listed order and selects the first match; its default output handles no match. Connect each labelled output to the appropriate cards and use an explicit join afterward.
 
-**Try / Catch / Finally** has three regions:
+**Try / Catch / Finally** is a compact card with three labelled control ports and a Done output. Attach existing cards to the ports or click a port label to create one:
 
 1. Try executes the body.
 2. A failure enters Catch with `error.message`. Add recovery operations, then **Handle error** to explicitly accept the recovery. Without that card, the group remains failed.
@@ -122,3 +128,23 @@ release-workbench run --non-interactive
 ```
 
 Other templates: `visual-foreach`, `visual-poll`, `visual-retry`, `visual-recovery`. The same starters appear in Home. No paid service is required. Native Windows behavior for these additions remains unverified until the Windows test matrix runs.
+
+## Why these card types remain
+
+The picker groups equivalent operations rather than offering separate cards for every mode:
+
+| Card | Purpose |
+| --- | --- |
+| Loop | While, Until, Count and For each in one mode selector |
+| Variable | Create, assign and update using one operation selector |
+| If / Switch | Boolean routing versus matching several distinct values |
+| Try / Catch / Finally | Own recovery and cleanup chains |
+| Break / Continue | Explicit loop control on a branch |
+| Handle error | Explicitly accept a successful recovery; retain failed evidence |
+| Wait / Poll until | Delay once versus probe repeatedly until ready |
+| Command / Run script / Run tests | Arbitrary execution plus guided forms for common automation tasks |
+| Manual check / Run workflow | Human evidence and reusable workflow calls |
+| Set values / Calculate / Merge outputs | Publish data, calculate a result, or combine isolated branch outputs |
+| Check file / Read JSON / Write file | Common file operations without writing a script |
+
+Set values publishes output for later cards; Variable changes the current scope's persistent state. They serve different data lifetimes. Poll is a convenient readiness check with a delay and timeout; a Loop is for multi-card bodies. Retrying a card is an advanced setting, not another card type. The old child-workflow Loop is no longer offered in the picker, but existing YAML remains readable and can use the explicit conversion action. To create new repeated child workflows, attach a Run workflow card to a Loop's Body.

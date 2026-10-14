@@ -109,12 +109,36 @@ test('wrapping preserves internal dependencies and routes external work through 
 test('wrapping rejects multiple external exits without mutating the graph',()=>{
  const w={steps:[{id:'a'},{id:'b'},{id:'x',needs:['a']},{id:'y',needs:['b']}]};assert.throws(()=>wrapGroup(w,['a','b']),/multiple external exits/);assert.equal(w.steps.length,4);
 });
-test('collapsed groups hide their descendants and retain nested list ordering',()=>{
- const steps=[{id:'child',scope:'outer'},{id:'outer',kind:'while',collapsed:true},{id:'next'}];assert.deepEqual(visibleSteps(steps).map(s=>s.id),['outer','next']);assert.deepEqual(nestedList(steps).map(s=>s.id),['outer','next']);
+test('compact controls keep their connected cards visible even in older collapsed layouts',()=>{
+ const steps=[{id:'child',scope:'outer'},{id:'outer',kind:'while',collapsed:true},{id:'next'}];assert.deepEqual(visibleSteps(steps).map(s=>s.id),['outer','next','child']);assert.deepEqual(nestedList(steps).map(s=>s.id),['outer','child','next']);
 });
 test('new loops have safe defaults with explicit unlimited settings supported',()=>{assert.equal(defaultControl('while').limit,100);assert.equal(defaultControl('while').timeout,1800);assert.equal(defaultControl('foreach').parallel,1)});
 test('ordinary connections cannot bypass a group boundary',()=>{const w={steps:[{id:'a',kind:'command'},{id:'b',kind:'command',scope:'g'}]};assert.throws(()=>connectCards(w,'a','b'),/group/)});
 import {fitGroupBounds,duplicateScope,absolutePosition} from './controlModel.js';
-test('nested group growth preserves visible regions and child bounds',()=>{const steps=[{id:'outer',kind:'while',size:{width:840,height:720}},{id:'inner',kind:'repeat',scope:'outer',region:'body',position:{x:40,y:370},size:{width:840,height:720}}];const n=fitGroupBounds(steps),outer=n.find(s=>s.id==='outer'),inner=n.find(s=>s.id==='inner');assert.ok(outer.size.width>=inner.position.x+inner.size.width);assert.ok(outer.size.height>=inner.position.y+inner.size.height);assert.equal(steps[0].size.width,840)});
+test('old container layouts normalize to independent compact cards without changing execution',()=>{const steps=[{id:'outer',kind:'while',size:{width:840,height:720}},{id:'inner',kind:'repeat',scope:'outer',region:'body',position:{x:40,y:370},size:{width:840,height:720}}];const n=fitGroupBounds(steps);assert.equal(n[0].size,undefined);assert.equal(n[1].size,undefined);assert.equal(n[1].scope,'outer');assert.equal(n[1].position.x,340);assert.equal(steps[0].size.width,840);assert.deepEqual(fitGroupBounds(n),n)});
 test('duplicate group carries children and rewrites its published references',()=>{const w={version:2,steps:[{id:'g',name:'G',kind:'repeat',control:{outputs:{x:'${steps.child.result.json}'}}},{id:'child',name:'Child',kind:'wait',scope:'g'}]};const n=duplicateScope(w,'g'),copy=n.steps[2],child=n.steps[3];assert.equal(child.scope,copy.id);assert.equal(copy.control.outputs.x,'${steps.'+child.id+'.result.json}');assert.equal(w.steps.length,2)});
-test('created-card focus accounts for ancestor positions',()=>{assert.deepEqual(absolutePosition([{id:'g',position:{x:300,y:200}},{id:'c',scope:'g',position:{x:40,y:70}}],{id:'c',scope:'g',position:{x:40,y:70}}),{x:340,y:270})});
+test('created-card focus uses absolute coordinates for controlled cards',()=>{assert.deepEqual(absolutePosition([{id:'g',position:{x:300,y:200}},{id:'c',scope:'g',position:{x:40,y:70}}],{id:'c',scope:'g',position:{x:40,y:70}}),{x:40,y:70})});
+
+import {controlEdges} from './controlModel.js';
+test('Body port takes ownership of a complete chain and Done stays outside the loop',()=>{
+ let w={version:2,steps:[{id:'loop',kind:'while',control:defaultControl('while')},{id:'a',kind:'command'},{id:'b',kind:'wait',needs:['a']},{id:'after',kind:'command'}]};w=connectCards(w,'loop','a','region:body','entry');assert.equal(w.steps[1].scope,'loop');assert.equal(w.steps[2].scope,'loop');assert.deepEqual(w.steps[1].needs,undefined);assert.deepEqual(w.steps[2].needs,['a']);w=connectCards(w,'loop','after','done','entry');assert.deepEqual(w.steps[3].needs,['loop']);assert.equal(w.steps[3].scope,undefined);assert.deepEqual(controlEdges(w.steps).map(e=>[e.source,e.target,e.sourceHandle]),[['loop','a','region:body']]);
+});
+test('extending a controlled chain adopts the next card and its downstream work',()=>{
+ let w={steps:[{id:'loop',kind:'repeat'},{id:'a',kind:'wait',scope:'loop',region:'body'},{id:'b',kind:'wait'},{id:'c',kind:'wait',needs:['b']}]};w=connectCards(w,'a','b');assert.equal(w.steps[2].scope,'loop');assert.equal(w.steps[3].scope,'loop');assert.deepEqual(w.steps[2].needs,['a']);
+});
+test('Condition port configures fresh Boolean output capture and can be detached',()=>{
+ let w={steps:[{id:'loop',kind:'while',control:defaultControl('while')},{id:'probe',kind:'command'}]};w=connectCards(w,'loop','probe','region:condition');assert.equal(w.steps[1].region,'condition');assert.equal(w.steps[1].capture,'json');assert.equal(w.steps[0].control.test.source,'steps.probe.result.json');w=disconnectCards(w,'loop','probe');assert.equal(w.steps[1].scope,undefined);assert.equal(w.steps[0].control.test.source,'');
+});
+test('Try ports own independent Body, Catch and Finally chains',()=>{
+ let w={steps:[{id:'try',kind:'try'},...['body','catch','finally'].map(id=>({id,kind:'wait'}))]};for(const region of ['body','catch','finally'])w=connectCards(w,'try',region,'region:'+region);assert.deepEqual(w.steps.slice(1).map(s=>[s.scope,s.region]),[['try','body'],['try','catch'],['try','finally']]);assert.equal(controlEdges(w.steps).length,3);
+});
+test('control connections reject ownership cycles, ambiguous prerequisites and cross-control stealing',()=>{
+ const w={steps:[{id:'loop',kind:'while'},{id:'inner',kind:'repeat',scope:'loop',region:'body'},{id:'other',kind:'try'},{id:'a',kind:'wait'},{id:'b',kind:'wait',needs:['a']}]};assert.throws(()=>connectCards(w,'inner','loop','region:body'),/ancestor|cycle/);assert.throws(()=>connectCards(w,'other','inner','region:body'),/already belongs/);assert.throws(()=>connectCards(w,'loop','b','region:body'),/first card/);assert.throws(()=>connectCards(w,'loop','a','region:catch'),/valid control/);assert.equal(w.steps[3].scope,undefined);
+});
+test('detaching a Body chain preserves nested loop ownership and internal dependencies',()=>{
+ const w={steps:[{id:'outer',kind:'while'},{id:'inner',kind:'repeat',scope:'outer',region:'body'},{id:'child',kind:'wait',scope:'inner',region:'body'},{id:'end',kind:'wait',scope:'outer',region:'body',needs:['inner']}]};const n=disconnectCards(w,'outer','inner');assert.equal(n.steps[1].scope,undefined);assert.equal(n.steps[2].scope,'inner');assert.equal(n.steps[3].scope,undefined);assert.deepEqual(n.steps[3].needs,['inner']);assert.equal(w.steps[1].scope,'outer');
+});
+
+import {setControlOwner} from './model.js';
+test('keyboard ownership moves the full chain with the same safety as canvas ports',()=>{const w={steps:[{id:'try',kind:'try'},{id:'a',kind:'wait',scope:'try',region:'body'},{id:'b',kind:'wait',scope:'try',region:'body',needs:['a']}]};const n=setControlOwner(w,'a','try','finally');assert.equal(n.steps[1].region,'finally');assert.equal(n.steps[2].region,'finally');assert.throws(()=>setControlOwner(w,'b','try','catch'),/first card/);assert.equal(w.steps[1].region,'body')});
+test('Add next and If branches inherit the owning control branch',()=>{const w={steps:[{id:'if',kind:'condition',scope:'loop',region:'body'}]};assert.equal(appendStep(w,'if').steps[1].scope,'loop');const n=appendBranch(w,'if',false);assert.equal(n.steps[1].region,'body');assert.deepEqual(n.steps[1].when,{step:'if',equals:false})});
