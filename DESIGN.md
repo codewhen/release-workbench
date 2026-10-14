@@ -158,3 +158,5 @@ All single-value choices use the shared Select component, including Home filters
 Arrow keys navigate enabled options; Home/End jump, typing searches by prefix, Enter selects, Escape cancels the menu, and Tab accepts the active option before moving focus. Required choices show an inline error and focus the first invalid control. Disabled controls and options remain unavailable. Menu bounds adapt to viewport width and available space above or below the trigger.
 
 Canvas zoom and fit controls use fixed 20px Lucide icons centered in 44px buttons. Their SVG fill is disabled, and keyboard focus remains visible outside the control group.
+
+Canvas controls reset the React Flow panel margin and sit 16px above the canvas bottom. The hint ends 72px above the bottom, preserving a 12px gap above the 44px controls even when its text wraps.
