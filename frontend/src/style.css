@@ -13,8 +13,8 @@ dialog::backdrop{background:rgba(24,42,48,.45)}
 .banner.attention{background:#e8f0f3;flex-wrap:wrap;max-height:180px}.banner.attention>span{flex:1;min-width:200px}.banner.attention>button{margin-left:0}.banner.attention strong{font-weight:650}
 
 /* Execution is distinct from the user-selected inspection surface. */
-.step-node.running,.step-list>button.execution-running{border-left:5px solid var(--accent)}
-.step-node.running .node-state,.step-list>button.execution-running small{color:var(--accent);font-weight:650}
+
+.step-node.running .node-state,.step-list>button.execution-running small{color:#146040;font-weight:650}
 
 /* Details stay separate from the independently scrolling workflow surface. */
 .workspace{grid-template-columns:min(var(--panel-width,370px),calc(100% - 332px)) 12px minmax(0,1fr)}
@@ -57,3 +57,19 @@ dialog::backdrop{background:rgba(24,42,48,.45)}
 .graph .react-flow__controls{display:flex;flex-direction:row;bottom:12px;left:16px}.graph .react-flow__minimap{bottom:16px;right:16px}.graph .canvas-hint{left:24px;right:180px;bottom:60px}
 .compute-label{position:absolute;top:12px;left:50%;transform:translateX(-50%);font-size:12px;color:var(--accent);background:var(--surface);padding:0 4px}
 .step-node.kind-loop{border-radius:16px;border:2px dashed var(--accent);background:#edf3f5}
+
+/* Execution remains visible independently of the selected card. */
+.step-node,.step-list>button{position:relative}
+.running-border{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+.running-border rect,.running-border path{fill:none;stroke:#168044;stroke-width:3;vector-effect:non-scaling-stroke;stroke-dasharray:24 76;animation:execution-orbit 2.6s linear infinite}
+@keyframes execution-orbit{to{stroke-dashoffset:-100}}
+.step-node.running,.step-list>button.execution-running{border:1px solid #146040;background:#eff8f1}
+.step-node.passed,.step-node.recorded,.step-list>button.execution-passed,.step-list>button.execution-recorded{border-color:#146040;background:#eaf5ee;color:#164c31}
+.step-node.failed,.step-list>button.execution-failed{border-color:#a12424;background:#fff0ef;color:#8b2424}
+.step-node.skipped,.step-list>button.execution-skipped{background:#e8ecee;border-color:#b7c1c5;color:#52616a}
+.step-list>button.execution-passed small,.step-list>button.execution-recorded small{color:#27583c}.step-list>button.execution-failed small{color:#8b2424}.step-list>button.execution-skipped small{color:#52616a}
+.step-node.kind-condition.running{border:0;background:transparent}.step-node.kind-condition.running::before{background:#eff8f1;border-color:#146040}
+.step-node.kind-condition.passed,.step-node.kind-condition.recorded,.step-node.kind-condition.failed,.step-node.kind-condition.skipped{background:transparent}
+.step-node.kind-condition.passed::before,.step-node.kind-condition.recorded::before{background:#eaf5ee}.step-node.kind-condition.failed::before{background:#fff0ef}.step-node.kind-condition.skipped::before{background:#e8ecee;border-color:#b7c1c5}
+.overview-back{width:100%;margin-bottom:24px}.overview-status{font-weight:650;margin-top:18px}.overview-progress,.run-counts{font-variant-numeric:tabular-nums}.run-overview>progress{margin-top:20px}.run-counts{display:grid;grid-template-columns:1fr auto;gap:7px 16px;margin:24px 0;padding:16px 0;border-block:1px solid var(--line)}.run-counts dt{color:var(--muted)}.run-counts dd{margin:0;font-weight:650}.overview-job{padding:12px 0 20px;border-bottom:1px solid var(--line)}.overview-job>button{width:100%;justify-content:space-between;text-align:left;margin-bottom:12px}.overview-job details{margin-top:8px}.overview-attention{width:100%;justify-content:space-between;text-align:left;margin:6px 0}.overview-attention svg{flex:none}.overview-scope{color:#735214;background:#faf3df;padding:12px;border-radius:6px}
+@media(prefers-reduced-motion:reduce){.running-border rect,.running-border path{animation:none;stroke-dasharray:none}}

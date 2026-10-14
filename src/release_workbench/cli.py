@@ -37,7 +37,7 @@ def wizard(path,template=None,name=None):
 
 def main(argv=None):
     parser=argparse.ArgumentParser(description='Visual workflows, parallel jobs and release evidence on your own machine.')
-    parser.add_argument('--version',action='version',version='0.9.0')
+    parser.add_argument('--version',action='version',version='0.10.0')
     sub=parser.add_subparsers(dest='action',required=True)
     for command in ('init','validate','serve','run','report'):
         child=sub.add_parser(command);child.add_argument('--config',default='release-workbench.yaml');child.add_argument('--output',default='.workbench')

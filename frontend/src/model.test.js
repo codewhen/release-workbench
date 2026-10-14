@@ -70,3 +70,17 @@ test('moving a Compute source to Entry clears the Compute pin',()=>{let w={steps
 test('inserting into a Compute connection preserves the Compute port',()=>{const w={steps:[{id:'a',kind:'command'},{id:'if',kind:'condition',needs:['a'],condition:{input:{step:'a'}}}]};const n=insertStep(w,'a','if');assert.equal(n.steps[1].condition.input.step,n.steps.at(-1).id);});
 
 test('Loop cards are independent bodies with a bounded iteration count and can join a chain',()=>{const w=appendCard({steps:[]},'loop');assert.equal(w.steps[0].kind,'loop');assert.equal(w.steps[0].loop.iterations,3);const n=appendStep(w,w.steps[0].id);assert.deepEqual(n.steps[1].needs,[w.steps[0].id]);});
+
+import {executionFocus,runSummary} from './runModel.js';
+test('execution focus stays on an active parallel branch and advances after it finishes',()=>{
+ const steps=[{id:'a'},{id:'b'},{id:'c'}];const state={steps:{a:{status:'running'},b:{status:'running'},c:{status:'queued'}}};
+ assert.equal(executionFocus(steps,state,'b'),'b');state.steps.b.status='passed';assert.equal(executionFocus(steps,state,'b'),'a');state.steps.a.status='failed';assert.equal(executionFocus(steps,state,'a'),null);
+});
+test('overall progress respects selected scope and distinguishes failures from passing',()=>{
+ const workflow={steps:[{id:'a'},{id:'b'},{id:'c'},{id:'d'}]};
+ const state={selection:['a','b','c'],steps:{a:{status:'passed'},b:{status:'failed'},c:{status:'running'},d:{status:'pending'}}};const result=runSummary(workflow,state);
+ assert.equal(result.total,3);assert.equal(result.done,2);assert.equal(result.percent,67);assert.equal(result.counts.failed,1);assert.equal(result.partial,true);
+});
+test('overall progress counts skipped and blocked results while manual gates remain unfinished',()=>{
+ const workflow={steps:[{id:'a'},{id:'b'},{id:'c'}]};const result=runSummary(workflow,{steps:{a:{status:'skipped'},b:{status:'blocked'},c:{status:'manual'}}});assert.equal(result.done,2);assert.equal(result.counts.manual,1);assert.equal(result.partial,false);
+});
