@@ -3,7 +3,7 @@
 A local visual workflow builder and parallel test/release runner with a multi-project workflow home page. Configure steps in the browser canvas, YAML, or a terminal starter wizard. Runs stay on your own machine. MIT licensed; no subscriptions or hosted service required.
 
 ```bash
-python -m pip install https://github.com/codewhen/release-workbench/releases/download/v0.11.0/release_workbench-0.11.0-py3-none-any.whl
+python -m pip install https://github.com/codewhen/release-workbench/releases/download/v0.12.0/release_workbench-0.12.0-py3-none-any.whl
 release-workbench init
 release-workbench serve
 ```
@@ -26,7 +26,7 @@ In parallel runs the camera stays on one active branch until that job finishes; 
 
 ### Organizing workflow entry points
 
-Home has local folders that can contain workflows from multiple registered projects. Choose **New folder**, pick its parent, then name it. Use each entry’s **Move to folder** control to file it; **All workflows** always shows the full catalog. Folder breadcrumbs and the sidebar navigate subfolders. **Manage folder** renames a folder, including its descendants, or removes it and returns entries to **Unfiled**. New workflows created while browsing a folder are filed there automatically.
+Home has local folders that can contain workflows from multiple registered projects. Choose **New folder**, pick its parent, then name it. Right-click an entry and choose **Move to folder…** to file it; **All workflows** always shows the full catalog. Folder breadcrumbs and the sidebar navigate subfolders. Right-click a folder to rename it, move it to another parent, create a subfolder or remove it and return its entries to **Unfiled**. Removing a folder opens an inline confirmation. Right-click a workflow entry to open it, move it, return it to Unfiled or copy its YAML path. Focus a folder or entry and press **Shift+F10** (or the Context Menu key) for the same actions; arrow keys navigate the menu and Escape closes it. New workflows created while browsing a folder are filed there automatically.
 
 This organization is stored atomically in the launcher’s local `library.json`, alongside project registration. It does not rename or move YAML files, modify workflow configuration or run commands. Existing libraries load with all entries Unfiled.
 
