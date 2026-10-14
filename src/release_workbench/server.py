@@ -113,6 +113,7 @@ def make_server(app,port=3103):
                             return self.send({'id':library.identity(selected.resolve()),'path':str(selected.resolve())})
                     finally:picker_lock.release()
                 with library.lock:
+                    if route=='/api/library/organize':return self.send(library.organize(data.get('action'),data.get('folder'),data.get('new_folder'),data.get('workflow')))
                     if route=='/api/library/register':return self.send(library.register(data.get('project'),data.get('config')))
                     if route=='/api/library/create':return self.send(library.create(data['project'],data['name'],data['filename'],data.get('template','blank')))
                     app=library.get(parse_qs(urlparse(self.path).query).get('workflow',[None])[0])

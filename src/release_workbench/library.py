@@ -21,11 +21,13 @@ class Library:
         self.projects={str(self.root)}
         self.files={str(self.primary)} if self.primary.is_file() else set()
         self.apps={}
+        self.folders=set();self.assignments={}
         if self.registry.is_file():
             data=json.loads(self.registry.read_text())
             if data.get('version')!=1:raise ValueError('Unsupported workflow library version.')
             self.projects.update(data.get('projects',[]))
             self.files.update(data.get('files',[]))
+            self.folders.update(data.get('folders',[]));self.assignments.update(data.get('assignments',{}))
         if initial_app:self.apps[self.identity(self.primary)]=initial_app
         if resume:self.get(self.identity(self.primary),resume)
 
@@ -35,10 +37,48 @@ class Library:
     def persist(self):
         self.registry.parent.mkdir(parents=True,exist_ok=True)
         with tempfile.NamedTemporaryFile(mode='w',dir=self.registry.parent,delete=False,encoding='utf-8') as stream:
-            json.dump(dict(version=1,projects=sorted(self.projects),files=sorted(self.files)),stream,indent=2)
+            json.dump(dict(version=1,projects=sorted(self.projects),files=sorted(self.files),folders=sorted(self.folders),assignments=self.assignments),stream,indent=2)
             name=stream.name
         try:os.replace(name,self.registry)
         finally:Path(name).unlink(missing_ok=True)
+
+    @staticmethod
+    def folder_path(value):
+        if not isinstance(value,str):raise ValueError('Enter a folder name.')
+        parts=value.split('/')
+        if len(value)>240 or len(parts)>8 or any(not p.strip() or p.strip() in ('.','..') or any(ord(c)<32 or c in '\\' for c in p) for p in parts):
+            raise ValueError('Use folder names separated by /, up to eight levels; empty names and . or .. are not allowed.')
+        return '/'.join(p.strip() for p in parts)
+
+    def organize(self,action,folder=None,new_folder=None,workflow=None):
+        if folder is not None and not isinstance(folder,str):raise ValueError('Select a valid folder.')
+        if workflow is not None and not isinstance(workflow,str):raise ValueError('Select a valid workflow.')
+        if action=='move':
+            if workflow not in self.paths():raise ValueError('Select an existing workflow.')
+            if folder not in ('',None) and folder not in self.folders:raise ValueError('Select an existing folder.')
+            if folder:self.assignments[workflow]=folder
+            else:self.assignments.pop(workflow,None)
+        elif action=='create':
+            folder=self.folder_path(folder)
+            if folder in self.folders:raise ValueError('A folder already exists with this name.')
+            self.folders.update('/'.join(folder.split('/')[:i]) for i in range(1,len(folder.split('/'))+1))
+        elif action in ('rename','remove'):
+            if folder not in self.folders:raise ValueError('Folder not found.')
+            descendants={p for p in self.folders if p==folder or p.startswith(folder+'/')}
+            if action=='rename':
+                new_folder=self.folder_path(new_folder)
+                if new_folder==folder:return self.catalog()
+                if new_folder.startswith(folder+'/'):raise ValueError('A folder cannot be moved inside itself.')
+                replacements={p:new_folder+p[len(folder):] for p in descendants}
+                if set(replacements.values())&(self.folders-descendants):raise ValueError('A destination folder already exists.')
+                self.folders.difference_update(descendants);self.folders.update(replacements.values())
+                self.folders.update('/'.join(new_folder.split('/')[:i]) for i in range(1,len(new_folder.split('/'))+1))
+                self.assignments={key:replacements.get(value,value) for key,value in self.assignments.items()}
+            else:
+                self.folders.difference_update(descendants)
+                self.assignments={key:value for key,value in self.assignments.items() if value not in descendants}
+        else:raise ValueError('Unknown folder operation.')
+        self.persist();return self.catalog()
 
     def paths(self):
         paths={Path(p) for p in self.files}
@@ -104,7 +144,7 @@ class Library:
     def catalog(self):
         rows=[]
         for key,path in sorted(self.paths().items(),key=lambda item:str(item[1]).casefold()):
-            item=dict(id=key,path=str(path),project_id=self.identity(path.parent),project=str(path.parent),filename=path.name,name=path.stem,description='',steps=0,error='',busy=False,latest=None)
+            item=dict(id=key,folder=self.assignments.get(key,''),path=str(path),project_id=self.identity(path.parent),project=str(path.parent),filename=path.name,name=path.stem,description='',steps=0,error='',busy=False,latest=None)
             try:
                 value=Store(path).read()['workflow'];project=workspace_root(path.parent,value);item.update(project=str(project),project_id=self.identity(project));item.update(name=value['name'],description=value.get('description',''),steps=len(value['steps']))
                 current=self.apps.get(key)
@@ -124,7 +164,7 @@ class Library:
                     item['latest']=dict(run_id=saved['run_id'],status=outcome,passed=sum(s in ('passed','recorded','skipped') for s in statuses),total=len(statuses),started=saved['started'])
             except (ValueError,OSError,KeyError,TypeError) as error:item['error']=str(error)
             rows.append(item)
-        return dict(workflows=rows,projects=[dict(id=self.identity(p),path=p,name=Path(p).name or p,available=Path(p).is_dir()) for p in sorted(self.projects)],primary=self.identity(self.primary))
+        return dict(folders=sorted(self.folders,key=str.casefold),workflows=rows,projects=[dict(id=self.identity(p),path=p,name=Path(p).name or p,available=Path(p).is_dir()) for p in sorted(self.projects)],primary=self.identity(self.primary))
 
     def shutdown(self):
         import time

@@ -51,3 +51,28 @@ class LibraryTests(unittest.TestCase):
   try:link.symlink_to(outside)
   except OSError:self.skipTest('Symlink creation unavailable')
   self.assertNotIn(self.lib.identity(outside),self.lib.paths())
+
+ def test_nested_folders_move_and_rename_persist_without_changing_yaml(self):
+  old=self.file.read_bytes();key=self.lib.identity(self.file)
+  self.lib.organize('create','Builds/Android');self.lib.organize('move','Builds/Android',workflow=key)
+  self.lib.organize('rename','Builds',new_folder='Release')
+  restarted=Library(self.file);catalog=restarted.catalog()
+  self.assertEqual(catalog['folders'],['Release','Release/Android'])
+  self.assertEqual(catalog['workflows'][0]['folder'],'Release/Android')
+  self.assertEqual(old,self.file.read_bytes());self.assertFalse(restarted.apps)
+ def test_removing_folder_rehomes_entries_without_removing_workflows_or_runs(self):
+  key=self.lib.identity(self.file);self.lib.organize('create','Builds/Android');self.lib.organize('move','Builds/Android',workflow=key)
+  self.lib.organize('remove','Builds');self.assertEqual(self.lib.catalog()['folders'],[])
+  self.assertEqual(self.lib.catalog()['workflows'][0]['folder'],'');self.assertTrue(self.file.is_file())
+ def test_invalid_folder_mutations_leave_registry_unchanged(self):
+  self.lib.organize('create','Tests');old=self.lib.registry.read_bytes()
+  for name in ('../outside','Tests//Bad','', 'Bad\\Name','a/' , 'x/'*9+'y'):
+   with self.assertRaises(ValueError):self.lib.organize('create',name)
+  with self.assertRaises(ValueError):self.lib.organize('rename','Tests',new_folder='Tests/Child')
+  with self.assertRaises(ValueError):self.lib.organize('move','Missing',workflow=self.lib.identity(self.file))
+  with self.assertRaises(ValueError):self.lib.organize('move','Tests',workflow='unknown')
+  self.assertEqual(old,self.lib.registry.read_bytes())
+ def test_folder_rename_collision_does_not_merge_entries(self):
+  self.lib.organize('create','First');self.lib.organize('create','Second')
+  with self.assertRaises(ValueError):self.lib.organize('rename','First',new_folder='Second')
+  self.assertEqual(self.lib.catalog()['folders'],['First','Second'])
