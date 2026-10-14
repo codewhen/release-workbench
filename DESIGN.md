@@ -139,7 +139,7 @@ Workflow Home uses border-separated rows rather than raised cards: name and desc
 
 ## Automation card vocabulary
 
-Command nodes use a rectangular body and terminal icon. If nodes use a diamond, with True at the right tip and False at the bottom tip. Manual checks use rounded gate bodies; reusable workflows use a double outline. Built-in actions use a labelled header and an action-specific icon. Type is visible without relying on outcome color. Selection and written outcome labels remain distinct from the type treatment.
+Command nodes use a rectangular body and terminal icon. If nodes use a diamond with a centered If(a), title and state. Entry, Compute, True and False labels sit outside their respective ports, leaving the decision text clear. True exits at the right tip and False at the bottom tip. Manual checks use rounded gate bodies; reusable workflows use a double outline. Built-in actions use a labelled header and an action-specific icon. Type is visible without relying on outcome color. Selection and written outcome labels remain distinct from the type treatment.
 
 The right-click Add a card menu is a fixed, scrollable overlay using existing surface, ink and accent tokens. The toolbar and List view expose the same picker. Arrow keys, Home/End and Escape support keyboard use; items include a short task description. Ordinary action forms select earlier values and typed constants; opaque references live in Reference details.
 
@@ -156,3 +156,5 @@ Saved HTML reports use the same restrained palette, responsive headings, written
 All single-value choices use the shared Select component, including Home filters, folder destinations, card settings and required-input dialogs. The trigger keeps a fixed-size chevron vertically centered beside an ellipsized value. Options appear in a constrained, scrollable surface with a selected checkmark and explicit focus treatment. Modal menus belong to their dialog so they remain above the modal backdrop.
 
 Arrow keys navigate enabled options; Home/End jump, typing searches by prefix, Enter selects, Escape cancels the menu, and Tab accepts the active option before moving focus. Required choices show an inline error and focus the first invalid control. Disabled controls and options remain unavailable. Menu bounds adapt to viewport width and available space above or below the trigger.
+
+Canvas zoom and fit controls use fixed 20px Lucide icons centered in 44px buttons. Their SVG fill is disabled, and keyboard focus remains visible outside the control group.
