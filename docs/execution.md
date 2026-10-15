@@ -1,43 +1,50 @@
-# Execution, CI and cancellation
+# Running and evidence
 
-A workflow is a dependency graph. Roots are eligible immediately. A step waits until all prerequisites pass or have recorded manual evidence; failed, cancelled or disabled prerequisites block dependents. Independent branches continue collecting results after a failure. Named resources and the concurrency limit decide which eligible jobs can start together.
+## The shared coordinator
 
-Use `resources` when jobs share build trees, hardware, ports or mutable test data. Interactive jobs reserve the local `desktop` lock automatically. This prevents two interactive jobs overlapping, but it does not stop a person using the computer. Actual OS input tests still require an untouched desktop. Use `exclusive:true` for controlled performance measurements so unrelated builds/tests cannot skew results.
+One coordinator manages slots, pause state, resource locks, exclusive operations and cancellation across every frame and external workspace. Structural containers do not reserve a slot while waiting on children. This prevents nested Parallel/functions from deadlocking a one-slot workflow. The runtime keeps intermediate results per invocation and explicit branch ownership; layout never enters scheduling.
 
-## Selection
+Run all begins from Start using the saved revision. Stop all cancels pending and active work, including subprocesses and nested workflows. Stop this job targets its execution subtree. A cancellation remains cancelled, distinct from a failed assertion or command. Pause scheduling prevents new cards/operations from starting; it does not suspend an already running process.
 
-```bash
-release-workbench run --profile background --non-interactive
-release-workbench run --step package --non-interactive
-release-workbench run --profile nightly --non-interactive
+The process adapter kills the POSIX process group and tracked descendants; Windows uses descendant process termination. Commands remain trusted local programs and may produce side effects before cancellation. Truly detached processes that reparent and leave the process group before they can be observed are outside the cleanup guarantee. Native Windows cleanup has not yet passed its native acceptance suite.
+
+## Progress and inspection
+
+Overall run shows passed/failed/active counts and active execution paths. Select a card to see its returned type/value, elapsed time, attempts, log and failures. Selecting/dragging away disables follow-active; Overall run enables it. Main-canvas loops show iteration paths and repeated condition evaluations. Functions open in their own flowchart. Skipped branches are grey; passed cards green; failed cards red; running cards have a green animated border respecting reduced-motion preferences.
+
+A command may emit newline-terminated structured progress:
+
+```text
+::workbench::{"done":3,"total":10,"stage":"Checking packages"}
 ```
 
-Run selected includes unmet ancestors. Rerunning a selected step (`--rerun`) invalidates downstream results and manual attestations. Background selection includes only background command steps whose prerequisites are background-compatible or already completed; excluded manual/device work stays pending. Named profiles include their dependencies and do not certify the complete release.
-
-CLI never automatically attests manual gates, including without `--non-interactive`; use the browser to record evidence. The flag documents CI intent. Exit codes are `0` selected work passed, `1` failed, `2` invalid or blocked, and `130` cancelled.
-
-Pass typed values with `--input serial=USB_EXAMPLE`. JSON booleans/numbers are accepted, otherwise values are strings. Upload the `.workbench/<run>/` directory as CI evidence; review it for private information before making it public. No hosted runner subscription is required.
-
-## Stop and pause
-
-**Pause scheduling** allows running jobs to finish and keeps queued work waiting. **Resume scheduling** continues that queue. **Stop selected job** interrupts one running job or cancels a queued job; independent branches continue. **Stop all** also stops queued work from starting.
-
-On POSIX systems the supervisor discovers descendants (including separate sessions), sends SIGINT and allows up to 30 seconds for cleanup, then kills remaining processes. Device runners must implement their own finally handlers to restore settings. Windows currently uses forced `taskkill /T /F`; check device/network settings afterward. Native Windows behavior remains unverified until tested on a Windows host.
-
-Cancelled jobs retain their logs and partial attempts. Timeout is a failure, not a cancellation. Stopping does not roll back completed installs or other command side effects. Arbitrary configured commands run with the operator's account, not inside an OS sandbox.
+Measured progress is labelled measured. An explicit expected_seconds estimate is labelled estimated and capped before completion. Loops and polling do not invent overall percentages/ETAs. Their evidence retains elapsed time and iteration/probe counts.
 
 ## Reports and history
 
-Run summaries contain source/workflow fingerprints, selected IDs, statuses, attempts, commands, inputs/outputs, durations and report hashes. HTML reports can be opened directly after the server stops. Browser-served HTML evidence is sandboxed with scripts disabled. File access is limited to the output directory and configured workspace report locations.
+Preview storage is separate, default `.workbench-preview/`:
 
-Changing source or workflow creates a new run. Resume requires matching fingerprints and platform. Prior running/queued steps become cancelled on restart; inspect lingering processes before retrying. Schema version 1 runs are the supported format; application-specific legacy reports remain historical evidence rather than inherited passes.
+```text
+library.json
+runs/RUN_ID/
+  summary.json
+  events.jsonl
+  report.html
+  HASH.log
+  children/CHILD_RUN_ID/...
+```
 
-## Verification matrix for 0.1.0
+Summary includes source/config/input fingerprint, status, attempts, outcomes, declared global transitions and hierarchical execution IDs. Events retain every condition evaluation and attempt. HTML is script-free and escapes results/log links. Open saved reports from the run panel or Home's preview history. Report serving is restricted to preview evidence storage.
 
-| Environment | Evidence |
-|---|---|
-| macOS / Python 3.14 | Actual engine/API/process tests, wheel install and browser acceptance checks |
-| Windows | Native command selection and taskkill invocation tested as plans; native runtime not executed |
-| Linux | POSIX implementation present; native runtime not executed |
+Declare secret environment names. Literal values are masked in persisted logs, event data and reports, including secret strings split across output chunks. Do not store credentials in workflow YAML. Redacted results cannot safely be reused as computation values on resume; the runner blocks and asks for a new run.
 
-Run the contributor test commands on each target host before relying on its release evidence. This first release does not claim native Windows or Linux certification.
+## Resume deliberately
+
+```bash
+workflow-workbench run --resume RUN_ID --non-interactive
+workflow-workbench run --resume RUN_ID --retry-interrupted --non-interactive
+```
+
+A matching run can replay successful saved results and declared global transitions without re-executing successful side effects. Configuration, declared source files or input changes require a new run. Layout changes are ignored by execution fingerprints. Interrupted/failed cards require the explicit retry option. The original attempt remains in evidence. Manual gates are never automatically approved in CI. Supply the same required inputs when resuming.
+
+Run all always starts a fresh run and resets globals. Distinguish that deliberate rerun from resume; externally visible operations may execute again.

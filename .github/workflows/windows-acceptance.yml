@@ -1,0 +1,23 @@
+name: Native Windows preview acceptance (unverified until passed)
+on: workflow_dispatch
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: python -m pip install -e '.[dev]'
+      - run: python -m unittest discover -v
+      - run: ruff check src tests
+      - run: mypy src
+      - run: npm --prefix frontend ci
+      - run: npm --prefix frontend test
+      - run: npm --prefix frontend run build
+      - run: npx --prefix frontend playwright install chromium
+      - run: npm --prefix frontend run test:browser
+      - run: python -m build

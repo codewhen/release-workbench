@@ -6,3 +6,8 @@ dist/
 node_modules/
 .workbench/
 .impeccable/review/
+.workbench-preview/
+frontend/test-results/
+frontend/playwright-report/
+.mypy_cache/
+.ruff_cache/

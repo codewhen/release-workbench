@@ -1,80 +1,50 @@
-# Create your first workflow
+# Your first workflow
 
-Release Workbench runs locally. Python 3.11 or newer is required; Node is required only for contributors rebuilding the frontend. Download a versioned wheel from the repository's GitHub Releases, install it into a virtual environment, then:
+## Choose a starting point
 
-```bash
-release-workbench init
-release-workbench serve
+Home is a library of workflow **entry points**, organized into folders across multiple project directories. Folders organize the library; they do not move files on disk. Use **Add project or file** for a local path. **Open YAML** opens the browser file picker and validates uploaded contents before creating a new file in the selected project. Existing files are never overwritten by import.
+
+Choose **New workflow**, enter its name, project folder and unique YAML filename, then choose a starter. Start with **Python return and file output** to see an operation that logs text, returns a typed object and writes it to disk. Choose **Blank flowchart** to build entirely from cards.
+
+## Build ten steps without YAML
+
+1. Open the workflow and choose **Edit**. Choose List for keyboard editing, or Flowchart for wiring.
+2. Click **Add card**, or right-click empty canvas space. The picker groups operations into six categories.
+3. Add a **Wait** card. Its duration is editable directly on the canvas and in the details panel. Set it to `0` for this demonstration. Rename it “Step one”.
+4. Add nine more Wait cards. Each new card receives focus. The cards are not executable until connected.
+5. Connect Start's execution output to Step one's Entry. Connect the ten cards in order, then connect the last to Finish. In List view select the source, choose **Connections → Connect to**, then **Connect execution**. A new connection replaces that execution output's previous connection.
+6. Click **Validate & review**. This shows structural errors or the configuration diff without executing anything. A disconnected operation must be connected or deleted before validation succeeds.
+7. Click **Save**, then choose Run and **Run all**. The overall panel shows active work. Select a card to inspect its attempts, returned value and logs. **Overall run** follows active execution again.
+
+Right-click a card to duplicate, disconnect or delete it. Right-click a connection to delete it. Undo/redo restore browser draft changes. Start cannot be deleted. Layout areas have no effect on execution. Collapse an area only to hide its selected member cards.
+
+## Return data from Python
+
+Choose the Python starter or add a Python card. In its details panel enter:
+
+```python
+print("Checking the supplied name")
+return {"greeting": "Hello " + inputs["name"]}
 ```
 
-`init` asks for a workflow name, starter template and test command. Use `--template blank --name "My release"` to create a blank configuration without prompts. Add `--config path/to/release-workbench.yaml` to each command to select a different file. The file's parent directory is the workspace; commands and report paths resolve from it.
+Declare a named input `name` in **Named inputs** and choose an entered value or a previous card's result. Set Return type to `object`. Printing creates log output; it does not replace the returned object. The generated wrapper is a function in a child process, so ordinary `return` works.
 
-## Home: multiple workflows and projects
+Connect this card's square Value output to a later card's square field/argument input, or choose a prior card in Named inputs. Execution must still pass through the producer before the consumer. A value wire never runs either card. Validation rejects values that are unavailable on one incoming branch.
 
-`serve` opens the workflow library first. The initial project is the parent folder of `--config`; that folder must exist, but the YAML file need not exist yet. You can start in an empty project with `release-workbench serve` and create its first checklist from Home.
+## Conditions and functions
 
-- **Add project or file** registers an absolute local folder path or an existing YAML file. Folders discover `release-workbench*.yaml` and `release-workbench*.yml` directly within them. Add an individual file for a different filename. Registration validates YAML files and never executes commands.
-- **New workflow** selects a registered project, name, YAML filename and blank/test/release starter. It creates a separate file without overwriting any existing configuration. Commands resolve from that file's parent project folder.
-- Search names, descriptions, projects or filenames; use the Project filter for one folder. Workflow rows show the current session's run, or the last matching configuration run on disk. A displayed completion is historical evidence, not permission to publish a release.
-- **Open workflow** enters its canvas. **Home** returns to the list; unsaved changes require an explicit keep/discard choice. Existing server-side jobs continue while Home is displayed, and opening the same workflow again keeps its current engine and evidence.
+If, While and Poll select a function declared to return Boolean. Use **Create function** to open a dedicated flowchart. It starts with Start and a Boolean Return marker. Insert Python, a comparison, a file check or a Manual decision between them; pass that result to Return. Use the breadcrumb **Back to caller** to return to the main workflow.
 
-Project registration is persisted in `library.json` inside the initial project's configured output directory (default `.workbench`). It contains local absolute paths; do not commit or publish it. The same relative output setting applies in each registered project; logs and reports stay inside that project's output directory. Keep generated outputs ignored by Git.
+Return **true/false**, never the strings `"true"`/`"false"`, `0`/`1`, or arbitrary JSON. A function with a dynamic JSON-producing operation is checked again at runtime.
 
-One workflow runs at a time in a launcher, including paused scheduling. Finish or stop it before executing another workflow. Parallel branches within the chosen workflow continue to use its configured concurrency and resource locks. Separate launcher processes do not coordinate hardware locks; use one launcher for a shared desktop/phone.
-
-Opening an uncached workflow creates a fresh run and never silently inherits old passes. Use `serve --config PATH --resume RUN_ID` for a matching saved run; it opens that workflow directly. Source/configuration changes still require fresh verification. Creating a YAML file changes a Git checkout, so an already-fingerprinted run may need **New run** before further execution.
-
-## Ten steps without writing YAML
-
-1. Open the local URL printed by `serve` (default port 3103).
-2. On Home choose **New workflow**, enter its name and filename, select the project and **Blank checklist**, then **Create and open**. This creates a separate empty YAML file; no commands run. Step edits remain unsaved until Save.
-3. Choose **Add first step**, enter the step name and command. The default command is a harmless Python demonstration, not a test of your application.
-4. Choose **Add next step** nine times, naming each step and entering its command. Connections automatically make each new step depend on the preceding step.
-5. Choose **Validate & review**. Fix missing commands, unknown dependencies, invalid fields or cycles; inspect the YAML diff.
-6. Choose **Save** to write configuration, or **Save and run** to write configuration and execute it.
-7. In **Run**, choose a node to inspect its current stage, live output and saved evidence. A saved workflow does not imply that tests have passed.
-
-Command execution defaults to a program plus arguments. Quotes group arguments; pipes, `&&` and redirects are not evaluated. Choose an explicit bash/sh/PowerShell/cmd shell for scripts that need those operators. Only run workflow files from trusted repositories.
-
-## Branches, gates and advanced settings
-
-Connect one node to two others to create parallel branches. Connect both branches to a later node to form a join. Use the plus button on a connection to insert a step. Deleting a step reconnects its dependents to its prerequisites, after an in-page confirmation. The dependency settings also provide checkboxes, so graph manipulation is never required.
-
-Select **Add manual gate** when a person must inspect evidence or prepare devices. When a gate becomes ready, the browser opens an **Action required** dialog with its instructions. Record a meaningful evidence note to complete it; manual gates do not execute commands. **Not now** closes the dialog without completing the gate. A **Respond** reminder stays visible in Run view and on the Home page until the gate is completed. After recording, waiting dependents can continue automatically. A disabled prerequisite blocks downstream work; it never becomes a pass.
-
-Expand **Advanced settings** for platform commands, resources, timeouts, input requirements, progress parsing and reports. Workflow settings contains input definitions, environment references, profiles and detection hooks. Complex fields use labelled JSON controls; the YAML tab is the complete configuration view, not a second configuration store.
-
-**List** provides equivalent selection and step editing on narrow screens. Below 700px it is selected automatically. Choosing a step opens and focuses its settings; **Back to workflow steps** returns to the list. Workflow settings also opens in view on mobile. **Undo/Redo** affects unsaved configuration only. Execution evidence is never undone.
-
-## Saving and resuming
-
-Switching away from YAML validates and applies pending edits; invalid YAML stays in the editor and is never discarded. New/delete dialogs trap keyboard focus, close with Escape and return focus to their triggering control.
-
-Save checks that the file has not changed externally, validates all settings and writes atomically. A conflict asks you to reload rather than overwriting someone else's edit. Configuration edits are disabled while execution or paused scheduling is active.
-
-The desktop work area fits the viewport, with independently scrollable settings and larger canvas controls. In Run, **View running step** focuses the active job; **Inputs and run evidence** expands to reveal detection and report links. Manual gates show evidence status instead of execution percentages.
-
-Reloading the page leaves execution on the server running. Stop the server only after stopping jobs and waiting for cleanup. To resume a matching saved run:
+## Run from the terminal
 
 ```bash
-release-workbench serve --resume RUN_ID
-release-workbench run --resume RUN_ID --non-interactive
+workflow-workbench init --template while --name "Count to three"
+workflow-workbench validate
+workflow-workbench run --non-interactive
 ```
 
-Source, platform and workflow fingerprints must match. Changed source/configuration starts a new run; old HTML/JSON reports remain available. Non-Git projects should declare `source_paths` to fingerprint application source. Git projects fingerprint HEAD and changed/untracked files, excluding the configured evidence output directory.
+The While starter declares a numeric `count` global, evaluates “Count below three” before each iteration and increments count in its main-canvas Body. Observe four condition evaluations and three body executions in the report.
 
-## Required inputs before running
-
-When you choose Run all, Run selected or Save and run, the browser checks the inputs needed by that selection and its prerequisites. Missing or invalid values open an **Inputs required** dialog before commands start. Fill the labelled fields, or use **Auto-detect inputs** when the workflow defines a detection command, then choose **Save inputs and start**. Dismissing the dialog leaves an **Enter required inputs** reminder. Saving configuration alone never executes commands.
-
-Inputs produced by a selected prerequisite through declared JSON outputs are collected during execution instead of being requested beforehand. If a step later needs input, its **Review** action opens the fields or the step details. Changing inputs after attempts or manual evidence have been recorded requires an explicitly labelled new run; previous evidence remains in its historical run.
-
-Commands should consume configured workflow inputs or environment references. An arbitrary command-line stdin prompt does not become a browser form automatically; model human preparation as a manual gate and values as workflow inputs.
-
-## Arrange your workspace
-
-Details appear on the left of the workflow. Drag the divider to change its width, or focus the divider and press Left/Right (Shift for larger changes); Home and End select the allowed minimum and maximum. **Hide details** gives the workflow the full width; **Show details** restores the panel. The browser remembers your preference. Selecting a step or opening Workflow settings reveals the panel. Both panes scroll independently. On a phone the workflow and details stack vertically, and the horizontal divider is hidden.
-
-## Open an existing workflow from Home
-
-Click **Open YAML file** and choose a `.yaml` or `.yml` file in the native file picker. Workbench validates the YAML and schema, registers its original project folder and opens it. Invalid workflows show an error on Home without being imported; cancelling leaves the library unchanged. No commands run until you choose Run. Relative paths remain relative to the original YAML folder. Linux needs zenity or kdialog for the native picker; **Add project or file** remains available for direct path entry and headless sessions. macOS dialog opening and cancellation are verified locally; native Windows/Linux dialogs remain unverified. Valid-file registration and invalid-file errors are covered by automated tests.
+Commands use the workflow YAML's directory as their workspace. Keep scripts and file operations beneath that project. External workspace calls deliberately select another YAML file and execute relative to its own directory.

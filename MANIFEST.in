@@ -1,7 +1,7 @@
 include LICENSE README.md CONTRIBUTING.md PRODUCT.md DESIGN.md
 recursive-include docs *.md
 recursive-include examples *.yaml
-recursive-include frontend/src *.js *.jsx *.css
+recursive-include frontend/src *.ts *.tsx *.css
 include frontend/package.json frontend/package-lock.json frontend/vite.config.js frontend/index.html
 include .impeccable/design.json
 recursive-include src/release_workbench/static *
@@ -10,4 +10,9 @@ include src/release_workbench/schema.json
 
 recursive-include .impeccable/surfaces *.md
 
-include src/release_workbench/schema-v2.json
+include frontend/tsconfig.json frontend/vitest.config.ts frontend/playwright.config.ts
+recursive-include frontend/scripts *.mjs
+recursive-include frontend/e2e *.ts *.py
+recursive-include tests *.py
+
+include src/release_workbench/THIRD_PARTY_NOTICES.txt
