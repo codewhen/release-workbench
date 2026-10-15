@@ -41,5 +41,11 @@ export function fitGroupBounds(steps){
  const result=steps.some(s=>s.size||s.region_sizes)?layoutScopes(steps):structuredClone(steps);
  for(const s of result){delete s.size;delete s.region_sizes;delete s.collapsed;}return result;
 }
-export function controlEdges(steps){const visible=new Set(visibleSteps(steps).map(s=>s.id));return steps.filter(s=>s.scope&&visible.has(s.id)&&visible.has(s.scope)&&!(s.needs||[]).length).map(s=>({id:`scope:${s.scope}:${s.id}`,source:s.scope,target:s.id,sourceHandle:'region:'+(s.region||'body'),targetHandle:'entry',label:(s.region||'body')}))}
+export function controlEdges(steps){
+ const visible=new Set(visibleSteps(steps).map(s=>s.id));
+ const edges=steps.filter(s=>s.scope&&visible.has(s.id)&&visible.has(s.scope)&&!(s.needs||[]).length).map(s=>({id:`scope:${s.scope}:${s.id}`,source:s.scope,target:s.id,sourceHandle:'region:'+(s.region||'body'),targetHandle:'entry',label:(s.region||'body')}));
+ for(const loop of steps.filter(s=>['while','until'].includes(s.kind))){const id=loop.control?.test?.source?.match(/^steps\.([^.]+)\.result\./)?.[1],card=steps.find(s=>s.id===id);if(card&&visible.has(loop.id)&&visible.has(id)&&card.scope===loop.id&&card.region==='condition')edges.push({id:`return:${id}:${loop.id}`,source:id,target:loop.id,targetHandle:'condition-result',sourceHandle:isGroup(card)?'done':'result',label:'Return value',returnValue:true});}
+ return edges;
+}
+
 export function duplicateScope(workflow,id){const selected=workflow.steps.find(s=>s.id===id);const ids=new Set([id,...descendants(workflow.steps,id)]);const prefix=nextId(workflow.steps),mapping=Object.fromEntries([...ids].map(k=>[k,k===id?prefix:prefix+'-'+k]));let copies=workflow.steps.filter(s=>ids.has(s.id)).map(s=>{let text=JSON.stringify(s);for(const [old,next] of Object.entries(mapping))text=text.split('steps.'+old+'.').join('steps.'+next+'.');const copy=JSON.parse(text);copy.id=mapping[s.id];copy.name=s.name+' copy';if(ids.has(s.scope))copy.scope=mapping[s.scope];copy.needs=(s.needs||[]).map(k=>mapping[k]||k);if(copy.when?.step)copy.when.step=mapping[copy.when.step]||copy.when.step;if(copy.condition?.input?.step)copy.condition.input.step=mapping[copy.condition.input.step]||copy.condition.input.step;copy.position={x:(s.position?.x||0)+40,y:(s.position?.y||0)+155};return copy});return {...workflow,steps:[...workflow.steps,...copies]}}

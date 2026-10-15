@@ -1,6 +1,6 @@
 # Visual control flow (workflow schema v2)
 
-Use **While** when you want to repeat two, three or more cards while a condition is true. You do not need to create a separate YAML file or draw a connection back to an earlier card.
+Use **While** when you want to repeat two, three or more cards while a condition is true. You do not need to create a separate YAML file or add an execution cycle. The Condition result connection returns data; it is not a new execution dependency.
 
 ## Build a While loop
 
@@ -37,7 +37,25 @@ For each exposes `loop.item`, zero-based `loop.index` and one-based `loop.iterat
 
 Choose **Run commands / Python / SSH** to execute a probe. It must exit successfully and print JSON `true` or `false` to stdout. Diagnostics belong on stderr. Invalid output fails the check instead of silently selecting False.
 
-Alternatively, connect the **Condition** port to a probe card. Command probes are configured to capture JSON automatically, and the loop selects their Boolean result. For a multi-card probe, connect its remaining cards and choose the final Boolean output in Condition value. The entire Condition region executes again at each check. Use argv or environment bindings for dynamic values in shell commands; do not interpolate returned data into shell source.
+For a multi-card condition, wire both sides explicitly:
+
+1. Connect **Loop.Condition → first condition card.Entry** to start the computation on every check.
+2. Connect the condition cards in order, such as Script → Calculator.
+3. Connect **final condition card.Return value → Loop.Condition result**. This labelled return line binds the selected card's data; it never adds a scheduling dependency or a cycle. A new return replaces the previous return.
+4. Select the **Returned value / comparison input** in loop settings. For JSON objects choose the field; for numbers choose a comparison and its value. The comparison must yield a Boolean.
+
+Examples:
+
+| Returning card | Returned value | Loop comparison |
+| --- | --- | --- |
+| Script printing `true` or `false` with JSON capture | Entire JSON output | Is true |
+| Script printing `{"ready": true}` | JSON field `ready` | Is true |
+| Calculator | Numeric field `value` | Less than `10`, or another explicit comparison |
+| Manual check | Boolean field `decision` | Is true |
+
+A manual check selected as the return card prompts for **True or False** and evidence notes on every evaluation. False is a valid recorded answer; it does not fail the check. While continues on True and exits on False; Until exits on True. Noninteractive CI remains blocked until human evidence is supplied. A plain completed manual gate never silently means True.
+
+Connecting a Condition start card automatically selects its result initially and shows a return line. Extend the branch and reconnect its final card to Condition result when its output should decide the loop. Deleting the return line keeps the computation cards in Condition and clears the binding; choose a new return before running. Commands capture JSON, and invalid/non-Boolean results fail clearly rather than being treated as truthy. Use argv or environment bindings for dynamic values in shell commands; do not interpolate returned data into shell source.
 
 ## Variables and group boundaries
 
@@ -92,7 +110,7 @@ Legacy Loop still repeats a separate child workflow with its original count/unti
 
 ### YAML representation
 
-Schema v2 keeps cards in a single `steps` list. `scope` identifies the containing group; `region` identifies body, condition, catch or finally. `needs` remains the dependency list within that region. Layout positions are relative to the containing group. `control` stores typed settings and named bindings; `retry` stores executable retry policy. Canvas, forms, List, YAML and CLI use this same representation. Both versions are described by `/api/schema` and the packaged JSON Schema.
+Schema v2 keeps cards in a single `steps` list. `scope` identifies the containing group; `region` identifies body, condition, catch or finally. `needs` remains the dependency list within that region. Layout positions are absolute canvas coordinates and do not affect scope. `control` stores typed settings and named bindings; `retry` stores executable retry policy. Canvas, forms, List, YAML and CLI use this same representation. Both versions are described by `/api/schema` and the packaged JSON Schema.
 
 ```yaml
 version: 2

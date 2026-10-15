@@ -28,6 +28,11 @@ def validate_flow(workflow,schema):
   if kind in GROUPS|{'poll'} and c.get('test'):
    test=c['test']
    if not isinstance(test,dict) or not (test.get('source') or test.get('compute',{}).get('commands')):errors.append(key+': choose a condition value or probe commands.')
+   source=test.get('source','').split('.') if isinstance(test.get('source',''),str) else []
+   if len(source)>1 and source[0]=='steps':
+    result=by.get(source[1])
+    if result is None:errors.append(key+': condition result references a missing card.')
+    elif kind=='while' and result.get('scope')==key and result.get('region','body')!='condition':errors.append(key+': return a value from Condition, not Body.')
    if test.get('operator','is_true') not in ('is_true','equals','not_equals','less_than','greater_than','contains'):errors.append(key+': invalid condition operator.')
   if kind=='poll' and not c.get('test'):errors.append(key+': configure a condition probe.')
   if kind in ('declare','assign','update') and not c.get('name'):errors.append(key+': choose a variable name.')

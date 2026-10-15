@@ -31,9 +31,25 @@ function moveBranch(workflow,id,scope,region){
  if(workflow.steps.some(s=>ids.has(s.id)&&(s.needs||[]).some(k=>!ids.has(k))))throw Error('This branch has outside prerequisites. Disconnect them first, or include them in the controlled branch.');
  return {...workflow,steps:workflow.steps.map(s=>ids.has(s.id)?{...s,scope:scope||undefined,region:scope?region:undefined}:s)};
 }
+export function conditionValuePath(step){
+ const base='steps.'+step.id+'.result.';
+ if(step.kind==='manual')return base+'json.decision';
+ if(step.kind==='condition'||step.kind==='switch')return base+'decision';
+ if(step.kind==='action'&&step.action?.type==='calculate')return base+'json.value';
+ if(step.kind==='action'&&step.action?.type==='file_exists')return base+'json.exists';
+ if(['declare','assign','update'].includes(step.kind))return base+'json.'+step.control.name;
+ return base+'json';
+}
 export function connectCards(workflow,source,target,handle=null,targetHandle=null){
  if(!workflow.steps.some(s=>s.id===source)||!workflow.steps.some(s=>s.id===target))throw Error('Select existing cards to connect.');
  let parent=workflow.steps.find(s=>s.id===source),child=workflow.steps.find(s=>s.id===target);
+ if(targetHandle==='condition-result'){
+  if(!['while','until'].includes(child.kind))throw Error('Condition result belongs on a While or Until loop.');
+  if(parent.scope!==target||parent.region!=='condition')throw Error('Return a card from this loop’s Condition branch. Connect Condition to its first card first.');
+  return {...workflow,steps:workflow.steps.map(s=>s.id===target?{...s,control:{...s.control,test:{source:conditionValuePath(parent),operator:'is_true'}}}:s.id===source&&s.kind==='command'?{...s,capture:'json'}:s)};
+ }
+
+ if(handle==='result')throw Error('Return value connects to a Loop Condition result. Use Output to run the next card.');
  if(handle?.startsWith('region:')){
   const region=handle.slice(7),allowed=parent.kind==='try'?['body','catch','finally']:['while','until'].includes(parent.kind)?['body','condition']:['body'];
   if(!controlKinds.includes(parent.kind)||!allowed.includes(region))throw Error('Choose a valid control port.');
@@ -41,7 +57,7 @@ export function connectCards(workflow,source,target,handle=null,targetHandle=nul
   if((child.needs||[]).length)throw Error('Connect this port to the first card in a branch, without incoming dependencies.');
   if(child.scope&&child.scope!==source)throw Error('This card already belongs to another control card. Disconnect its control connection first.');
   let next=moveBranch(workflow,target,source,region);
-  if(region==='condition')next={...next,steps:next.steps.map(s=>s.id===source?{...s,control:{...s.control,test:{source:'steps.'+target+'.result.'+(child.kind==='condition'?'decision':'json'),operator:'is_true'}}}:s.id===target&&['command','action'].includes(s.kind)?{...s,capture:'json'}:s)};
+  if(region==='condition')next={...next,steps:next.steps.map(s=>s.id===source?{...s,control:{...s.control,test:{source:conditionValuePath(child),operator:'is_true'}}}:s.id===target&&['command','action'].includes(s.kind)?{...s,capture:'json'}:s)};
   return {...next,version:2};
  }
  if(createsCycle(workflow.steps,source,target))throw Error('This connection would create a dependency cycle.');
@@ -68,11 +84,14 @@ export function connectCards(workflow,source,target,handle=null,targetHandle=nul
 }
 export function disconnectCards(workflow,source,target){
  const child=workflow.steps.find(s=>s.id===target),parent=workflow.steps.find(s=>s.id===source);
- if(child?.scope===source&&!(child.needs||[]).length){let next=moveBranch(workflow,target,parent?.scope,parent?.region||'body');if(child.region==='condition')next={...next,steps:next.steps.map(s=>s.id===source?{...s,control:{...s.control,test:{source:'',operator:'is_true'}}}:s)};return next;}
+ if(['while','until'].includes(child?.kind)&&child.control?.test?.source?.startsWith('steps.'+source+'.result.'))return {...workflow,steps:workflow.steps.map(s=>s.id===target?{...s,control:{...s.control,test:{source:'',operator:'is_true'}}}:s)};
+
+ if(child?.scope===source&&!(child.needs||[]).length){let next=moveBranch(workflow,target,parent?.scope,parent?.region||'body');if(child.region==='condition'&&branchIds(workflow.steps,target).has(parent?.control?.test?.source?.match(/^steps\.([^.]+)\.result\./)?.[1]))next={...next,steps:next.steps.map(s=>s.id===source?{...s,control:{...s.control,test:{source:'',operator:'is_true'}}}:s)};return next;}
  return {...workflow,steps:workflow.steps.map(s=>{if(s.id!==target)return s;const next={...s,needs:(s.needs||[]).filter(id=>id!==source)};if(next.when?.step===source)delete next.when;if(next.condition?.input?.step===source){next.condition={input:{...next.condition.input}};delete next.condition.input.step;}return next})};
 }
 export function disconnectNode(workflow,id){
  let next=workflow;const s=workflow.steps.find(s=>s.id===id);
+ for(const owner of workflow.steps.filter(s=>['while','until'].includes(s.kind)&&s.control?.test?.source?.startsWith('steps.'+id+'.result.')))next=disconnectCards(next,id,owner.id);
  if(s?.scope&&!(s.needs||[]).length)next=disconnectCards(next,s.scope,id);
  for(const child of workflow.steps.filter(s=>s.scope===id&&!(s.needs||[]).length))next=disconnectCards(next,id,child.id);
  return {...next,steps:next.steps.map(s=>{if(s.id===id){const next={...s,needs:[]};delete next.when;if(next.condition?.input){next.condition={input:{...next.condition.input}};delete next.condition.input.step;}return next;}if(!(s.needs||[]).includes(id))return s;const next={...s,needs:s.needs.filter(dep=>dep!==id)};if(next.when?.step===id)delete next.when;if(next.condition?.input?.step===id){next.condition={input:{...next.condition.input}};delete next.condition.input.step;}return next;})};

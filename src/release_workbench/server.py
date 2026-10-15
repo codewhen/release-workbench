@@ -154,7 +154,9 @@ def make_server(app,port=3103):
                         app.engine.interactive=True
                         app.engine.start(data.get('profile','all'),data.get('step'),data.get('rerun',False))
                     elif route=='/api/record':
-                        library.ensure_can_run(app);app.engine.record(data['step'],data['note'])
+                        library.ensure_can_run(app)
+                        if app.engine.workflow.get('version')==2:app.engine.record(data['step'],data['note'],decision=data.get('decision'))
+                        else:app.engine.record(data['step'],data['note'])
                     elif route=='/api/stop':
                         if type(data.get('force',False)) is not bool:raise ValueError('force must be true or false.')
                         app.engine.stop(data.get('step'),force=data.get('force',False))

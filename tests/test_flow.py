@@ -150,3 +150,31 @@ class FlowTests(unittest.TestCase):
   for key in ('inner','never','catch'):self.assertEqual(e.state['steps'][key]['status'],'skipped')
  def test_failed_loop_leaves_unentered_body_blocked(self):
   e=self.runflow([card('loop','while',test={'compute':{'commands':[{'argv':['${python}','-c','raise Exception("probe failed")']} ]}}),cmd('body','print("not reached")',scope='loop')]);self.assertEqual(e.state['steps']['loop']['status'],'failed');self.assertEqual(e.state['steps']['body']['status'],'blocked')
+
+ def test_calculator_condition_return_uses_comparison_and_recomputes(self):
+  steps=[card('n','declare',name='n',value=0),card('loop','while',['n'],test={'source':'steps.sum.result.json.value','operator':'less_than','value':2},outputs={'count':'${vars.n}'}),dict(id='sum',name='Calculate next',kind='action',scope='loop',region='condition',action={'type':'calculate','left':'${vars.n}','right':1,'operator':'add'}),card('inc','update',scope='loop',name='n',value=1)]
+  e=self.runflow(steps);self.assertEqual(e.exit_code(),0);self.assertEqual(e.state['steps']['loop']['result']['iterations'],1);self.assertEqual(e.state['steps']['loop']['result']['json']['count'],1)
+ def test_manual_condition_requires_explicit_boolean_and_returns_each_iteration(self):
+  steps=[card('loop','while',test={'source':'steps.ask.result.json.decision','operator':'is_true'}),dict(id='ask',name='Continue?',kind='manual',scope='loop',region='condition'),card('body','wait',scope='loop',delay=0)]
+  w=dict(version=2,name='Manual return',steps=steps);self.assertEqual(validate(w),[]);e=Engine(self.root,w);e.interactive=True;e.start()
+  try:
+   previous=None
+   for decision in (True,False):
+    deadline=time.monotonic()+5
+    while True:
+     active=e.snapshot().get('manual_executions',[])
+     if active and active[0]['id']!=previous:break
+     if time.monotonic()>deadline:self.fail('Manual return did not prompt')
+     time.sleep(.02)
+    path=active[0]['id'];self.assertTrue(active[0]['decision_required'])
+    with self.assertRaisesRegex(ValueError,'True or False'):e.record(path,'Checked')
+    with self.assertRaisesRegex(ValueError,'True or False'):e.record(path,'Checked',decision='false')
+    e.record(path,'Checked',decision=decision);previous=path
+   self.finish(e);self.assertEqual(e.exit_code(),0);self.assertEqual(e.state['steps']['loop']['result']['iterations'],1)
+   results=[v['result']['json']['decision'] for v in e.state['executions'].values() if v['step']=='ask'];self.assertEqual(results,[True,False])
+  finally:
+   if e.busy():e.stop(force=True);self.finish(e)
+ def test_condition_return_rejects_missing_and_body_cards(self):
+  steps=[card('loop','while',test={'source':'steps.body.result.json','operator':'is_true'}),cmd('body','print("true")',scope='loop',capture='json')]
+  self.assertTrue(any('Condition, not Body' in x for x in validate(dict(version=2,name='Invalid return',steps=steps))))
+  steps[0]['control']['test']['source']='steps.missing.result.json';self.assertTrue(any('missing card' in x for x in validate(dict(version=2,name='Invalid return',steps=steps))))

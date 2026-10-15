@@ -109,3 +109,8 @@ dialog::backdrop{background:rgba(24,42,48,.45)}
 .control-done-label{position:absolute;right:12px;top:calc(50% - 22px);font-size:10px;color:var(--muted);background:var(--surface);padding:0 2px}
 .wrap-tools{display:flex;gap:6px;align-items:center}.wrap-tools>.select-control{width:130px}.wrap-tools>button{white-space:nowrap}
 .switch-route{position:absolute;left:calc(100% + 16px);transform:translateY(-50%);font-size:12px;background:#edf3f5;padding:2px 4px}.kind-switch{min-height:180px}.step-list button[aria-pressed=true]{outline:1px solid var(--accent)}
+
+.condition-result-label{position:absolute;top:-28px;left:50%;transform:translateX(-50%);font-size:12px;font-weight:600;white-space:nowrap;color:var(--accent);background:#edf3f5;padding:2px 6px;border-radius:4px;pointer-events:none}
+
+.return-value-label{position:absolute;top:-28px;left:50%;transform:translateX(-50%);font-size:12px;font-weight:600;white-space:nowrap;color:#735214;background:#edf3f5;padding:2px 6px;border-radius:4px;pointer-events:none}
+.step-node .react-flow__handle[data-handleid=result]{background:#735214}

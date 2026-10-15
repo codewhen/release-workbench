@@ -32,7 +32,7 @@ class Coordinator:
 
 class FlowEngine(Engine):
  def __init__(self,*args,**kwargs):
-  super().__init__(*args,**kwargs);self.coordinator=Coordinator(self.workflow.get('concurrency',4));self.leaves={};self.cancelled=set();self.manual_events={};self.manual_notes={};self.children={};self.interactive=False;self.deadlines={}
+  super().__init__(*args,**kwargs);self.coordinator=Coordinator(self.workflow.get('concurrency',4));self.leaves={};self.cancelled=set();self.manual_events={};self.manual_notes={};self.manual_decisions={};self.children={};self.interactive=False;self.deadlines={}
   self.by={s['id']:s for s in self.workflow['steps']};self.state['version']=2;self.state.setdefault('executions',{});self.state.setdefault('variables',{})
  def selection(self,profile='all',step=None):
   if step:
@@ -253,7 +253,7 @@ class FlowEngine(Engine):
     if not self.interactive:raise FlowBlocked('Manual evidence required in '+path)
     event=threading.Event();value['note']='';self.manual_events[path]=(event,key);value.update(status='manual',stage=path);self.save()
     while not event.wait(.05):self.checkpoint(path)
-    result={'json':{'evidence':self.manual_notes.get(path,value.get('note',''))}};self.manual_events.pop(path,None);status='recorded'
+    result={'json':{'evidence':self.manual_notes.get(path,value.get('note','')),**({'decision':self.manual_decisions[path]} if path in self.manual_decisions else {})}};self.manual_events.pop(path,None);status='recorded'
    elif kind=='condition' and not s.get('condition',{}).get('compute'):
     test=s['condition']
     if 'input' in test:
@@ -406,11 +406,17 @@ class FlowEngine(Engine):
    finally:self.coordinator.release(path)
    if n+1<retry.get('attempts',1):self.sleep(retry.get('delay',1)*retry.get('backoff',1)**n,path)
   raise FlowFailure(last or 'Executable card failed.')
- def record(self,key,note):
+ def manual_returns_condition(self,key):
+  return any(s['kind'] in ('while','until') and s.get('control',{}).get('test',{}).get('source')=='steps.'+key+'.result.json.decision' for s in self.workflow['steps'])
+ def record(self,key,note,decision=None):
   if not note.strip():raise ValueError('Record evidence before continuing.')
   candidates=[(p,e,k) for p,(e,k) in self.manual_events.items() if p==key or k==key]
   if len(candidates)!=1:raise ValueError('Choose a unique active manual execution.')
-  p,event,k=candidates[0];self.manual_notes[p]=self.masker.text(note);self.state['steps'][k]['note']=self.manual_notes[p];event.set()
+  p,event,k=candidates[0]
+  if self.manual_returns_condition(k) and type(decision) is not bool:raise ValueError('Choose True or False for the condition result.')
+  if decision is not None and type(decision) is not bool:raise ValueError('Condition result must be Boolean true or false.')
+  if decision is not None:self.manual_decisions[p]=decision
+  self.manual_notes[p]=self.masker.text(note);self.state['steps'][k]['note']=self.manual_notes[p];event.set()
  def stop(self,key=None,force=False):
   with self.lock:
    if key is None:self.stopped=True;self.paused=False;self.coordinator.paused=False
@@ -429,7 +435,7 @@ class FlowEngine(Engine):
   with self.lock:self.paused=paused;self.coordinator.paused=paused;self.save()
  def snapshot(self):
   with self.lock:
-   result=copy.deepcopy(self.state);result['manual_executions']=[{'id':p,'step':k} for p,(e,k) in self.manual_events.items()];result.update(active=list({v.get('step') for p,v in self.state['executions'].items() if p in self.running}),busy=self.busy(),paused=self.paused)
+   result=copy.deepcopy(self.state);result['manual_executions']=[{'id':p,'step':k,'decision_required':self.manual_returns_condition(k)} for p,(e,k) in self.manual_events.items()];result.update(active=list({v.get('step') for p,v in self.state['executions'].items() if p in self.running}),busy=self.busy(),paused=self.paused)
    for p,(event,key) in self.manual_events.items():result['steps'][key].update(status='manual',execution_id=p)
    for key,value in result['steps'].items():
     value['timing']={'percent':100 if value['status'] in PASSED|FAILED|SKIPPED else None,'estimated':False,'indeterminate':value['status'] in ('running','manual'),'elapsed':round(time.monotonic()-self.running[value['execution_id']]['started'],1) if value.get('execution_id') in self.running else value.get('seconds',0),'eta':None,'expected':None}
