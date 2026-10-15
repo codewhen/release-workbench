@@ -8,7 +8,7 @@ from urllib.request import Request, urlopen
 
 from release_workbench.application.starters import starter
 from release_workbench.infrastructure.documents import render_document
-from release_workbench.interfaces.server import create_server
+from release_workbench.interfaces.server import WorkbenchApplication, create_server
 
 
 class Interfaces(unittest.TestCase):
@@ -35,6 +35,7 @@ class Interfaces(unittest.TestCase):
     def test_mutation_token_and_origin_protection(self):
         for headers in (
             {},
+            {"X-Workbench-Token": "wrong-token"},
             {"X-Workbench-Token": self.app.token, "Origin": "https://other.example"},
         ):
             with self.assertRaises(HTTPError) as caught:
@@ -47,6 +48,15 @@ class Interfaces(unittest.TestCase):
             {"X-Workbench-Token": self.app.token},
         )
         self.assertEqual(status, 200)
+
+    def test_restart_keeps_existing_browser_session(self):
+        restarted = WorkbenchApplication(self.root, self.root / "storage")
+        self.assertEqual(restarted.token, self.app.token)
+        self.assertTrue(restarted.sessions.accepts(self.app.token))
+        self.assertFalse(restarted.sessions.accepts("wrong-token"))
+        self.assertFalse(restarted.sessions.accepts(None))
+        token_file = self.root / "storage" / "browser-sessions.json"
+        self.assertEqual(token_file.stat().st_mode & 0o777, 0o600)
 
     def test_report_escape_unknown_and_host_rejected(self):
         for path in ("/reports/%2e%2e/%2e%2e/test.yaml", "/api/missing", "/not-a-page"):

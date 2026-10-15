@@ -4,7 +4,7 @@ Version **0.18.0a2**, schema v3. Verified locally on macOS on 15 October 2026. T
 
 | Check | Result |
 |---|---|
-| Python unittest | 68 passed |
+| Python unittest | 69 passed |
 | Ruff lint and format | Passed |
 | mypy source checks | Passed, no untyped definitions |
 | Strict TypeScript with unused-code checks | Passed |
@@ -30,3 +30,5 @@ For-each, Switch, Repeat-until, recursion, arbitrary Go To, remote agents, sched
 ## Draft-save regression (0.18.0a2)
 
 Save accepts schema-valid unfinished flowcharts. Validate and Run still perform full execution validation. YAML switching and importing unfinished drafts remain available. Failed validation creates a revision-matched recovery backup without overwriting the saved file; a new editor restores that draft after reload. External revisions are never replaced by a recovery record. Browser tests cover save/reload, blocked execution and old-editor draft recovery.
+
+Open browser sessions retain their protected token across preview restarts. Restart persistence, private token-file permissions, and incorrect-token/origin rejection are covered by backend tests.

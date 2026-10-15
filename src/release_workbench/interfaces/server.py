@@ -5,7 +5,6 @@ from __future__ import annotations
 import difflib
 import json
 import mimetypes
-import secrets
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -29,6 +28,7 @@ from release_workbench.infrastructure.documents import (
 from release_workbench.infrastructure.drafts import DraftStore
 from release_workbench.infrastructure.library import Library
 from release_workbench.infrastructure.services import LocalServices
+from release_workbench.infrastructure.sessions import LocalSessions
 
 
 class WorkbenchApplication:
@@ -39,7 +39,8 @@ class WorkbenchApplication:
         self.drafts = DraftStore(self.storage / "drafts")
         self.runs: dict[str, Run] = {}
         self.lock = threading.RLock()
-        self.token = secrets.token_urlsafe(32)
+        self.sessions = LocalSessions(self.storage / "browser-sessions.json")
+        self.token = self.sessions.token
 
     def state(self, key: str) -> dict[str, Any]:
         run = self.runs.get(key)
@@ -307,7 +308,7 @@ def create_server(
             origin = self.headers.get("Origin")
             if (
                 not self.authorized_host()
-                or self.headers.get("X-Workbench-Token") != app.token
+                or not app.sessions.accepts(self.headers.get("X-Workbench-Token"))
                 or origin
                 not in (
                     None,
