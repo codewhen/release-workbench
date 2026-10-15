@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, unquote, urlsplit
 
+from release_workbench.application.compiler import CompilationError
 from release_workbench.application.runtime import Run
 from release_workbench.application.starters import TEMPLATES
 from release_workbench.domain.cards import REGISTRY
@@ -20,9 +21,12 @@ from release_workbench.infrastructure.documents import (
     SCHEMA,
     DocumentStore,
     compile_document,
+    document_readiness,
     parse_document,
     render_document,
+    validate_document_schema,
 )
+from release_workbench.infrastructure.drafts import DraftStore
 from release_workbench.infrastructure.library import Library
 from release_workbench.infrastructure.services import LocalServices
 
@@ -32,6 +36,7 @@ class WorkbenchApplication:
         self.project, self.storage = project.resolve(), storage.resolve()
         self.library = Library(self.storage, self.project)
         self.services = LocalServices()
+        self.drafts = DraftStore(self.storage / "drafts")
         self.runs: dict[str, Run] = {}
         self.lock = threading.RLock()
         self.token = secrets.token_urlsafe(32)
@@ -104,7 +109,7 @@ class WorkbenchApplication:
                 return self.library.listing()
             if route == "import":
                 raw = parse_document(data["yaml"])
-                compile_document(raw)
+                validate_document_schema(raw)
                 project = Path(data.get("project", self.project)).resolve()
                 filename = data["filename"]
                 entry = self.library.create(project, filename, raw["name"], "blank")
@@ -115,20 +120,44 @@ class WorkbenchApplication:
                 return entry
             file = self.library.file(key)
             store = DocumentStore(file)
-            if route in ("validate", "save"):
+            if route in ("validate", "save", "draft"):
                 if any(run.busy for run in self.runs.values()):
                     raise ValueError("Editing is disabled during execution.")
                 current = store.read()
                 raw = data.get("workflow") or parse_document(data["yaml"])
-                compile_document(raw)
+                validate_document_schema(raw)
+                validation_errors: list[str] = []
+                issues: list[dict[str, str]] = []
+                try:
+                    compile_document(raw)
+                except CompilationError as error:
+                    validation_errors, issues = error.errors, error.issues
+                    if route == "validate":
+                        self.drafts.save(key, raw, current)
+                        raise CompilationError(
+                            [
+                                "Draft backed up. You can save incomplete work in the updated editor; Run still requires the following fixes.",
+                                *error.errors,
+                            ],
+                            error.issues,
+                        ) from error
                 yaml = render_document(raw, current["yaml"])
                 if route == "save":
                     result = store.save(yaml, data["revision"])
                     self.runs.pop(key, None)
-                    return result
+                    self.drafts.clear(key)
+                    return {
+                        **result,
+                        "runnable": not validation_errors,
+                        "validation_errors": validation_errors,
+                        "issues": issues,
+                    }
                 return {
                     "workflow": raw,
                     "yaml": yaml,
+                    "runnable": not validation_errors,
+                    "validation_errors": validation_errors,
+                    "issues": issues,
                     "diff": "".join(
                         difflib.unified_diff(
                             current["yaml"].splitlines(True),
@@ -226,7 +255,14 @@ def create_server(
                 elif route == "/api/schema":
                     self.json(SCHEMA)
                 elif route == "/api/config":
-                    self.json(DocumentStore(app.library.file(key)).read())
+                    record = DocumentStore(app.library.file(key)).read()
+                    self.json(
+                        {
+                            **record,
+                            **document_readiness(record["workflow"]),
+                            "recovery": app.drafts.matching(key, record["revision"]),
+                        }
+                    )
                 elif route == "/api/state":
                     self.json(app.state(key))
                 elif route == "/api/history":
@@ -259,7 +295,13 @@ def create_server(
                         or "application/octet-stream",
                     )
             except Exception as error:
-                self.json({"error": str(error)}, 400)
+                self.json(
+                    {
+                        "error": str(error),
+                        "issues": error.issues if isinstance(error, CompilationError) else [],
+                    },
+                    400,
+                )
 
         def do_POST(self) -> None:
             origin = self.headers.get("Origin")
@@ -284,7 +326,13 @@ def create_server(
                 key = parse_qs(parsed.query).get("workflow", [""])[0]
                 self.json(app.mutation(parsed.path.removeprefix("/api/"), key, data))
             except Exception as error:
-                self.json({"error": str(error)}, 400)
+                self.json(
+                    {
+                        "error": str(error),
+                        "issues": error.issues if isinstance(error, CompilationError) else [],
+                    },
+                    400,
+                )
 
     server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
     server.daemon_threads = True

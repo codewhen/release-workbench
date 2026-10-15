@@ -182,3 +182,104 @@ test("invalid JSON cannot silently save its previous value", async ({
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByRole("status")).toContainText("saved");
 });
+
+test("unfinished cards save and reload as a draft while Run stays blocked", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "New workflow", exact: true }).click();
+  await page.getByLabel("Name", { exact: true }).fill("Unfinished draft");
+  await page.getByLabel("Filename", { exact: true }).fill("unfinished.yaml");
+  await page
+    .getByRole("button", { name: "Create workflow", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Edit", exact: true }).click();
+  await page.getByRole("button", { name: "List", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Add card", exact: true })
+    .first()
+    .click();
+  await page
+    .getByRole("menuitem", { name: "Manual decision / approval", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByRole("status")).toContainText("Draft saved");
+  await expect(
+    page.getByRole("button", { name: /^Connect Manual/ }),
+  ).toBeVisible();
+  await page.reload();
+  await page.getByRole("button", { name: "List", exact: true }).click();
+  await expect(page.locator("[data-card-id]")).toHaveCount(3);
+  await page.getByRole("button", { name: "Run all", exact: true }).click();
+  await expect(page.locator(".alert.error")).toContainText(
+    "no execution connection",
+  );
+  await expect(
+    page.getByRole("dialog", { name: "Action required" }),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: /^Connect Manual/ }).click();
+  await expect(page.getByLabel("Card name", { exact: true })).toHaveValue(
+    "Manual decision / approval",
+  );
+});
+test("unfinished graph can switch between YAML and flowchart without run validation", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page
+    .locator(".workflow-row")
+    .filter({
+      has: page.getByRole("heading", { name: "Unfinished draft", exact: true }),
+    })
+    .getByRole("button", { name: "Open workflow" })
+    .click();
+  await page.getByRole("button", { name: "Edit", exact: true }).click();
+  await page.getByRole("button", { name: "Yaml", exact: true }).click();
+  await expect(
+    page.getByRole("textbox", { name: "Workflow YAML", exact: true }),
+  ).toHaveValue(/Manual decision/);
+  await page.getByRole("button", { name: "List", exact: true }).click();
+  await expect(page.locator("[data-card-id]")).toHaveCount(3);
+});
+
+test("old editor validation failure recovers its unsaved draft on reload", async ({
+  page,
+  request,
+}) => {
+  await open(page, "Unfinished draft");
+  const key = new URL(page.url()).searchParams.get("workflow")!;
+  const token = await page
+    .locator('meta[name="workbench-token"]')
+    .getAttribute("content");
+  const response = await request.get("/api/config?workflow=" + key);
+  const record = await response.json();
+  const raw = record.workflow;
+  raw.graphs.main.cards.push({
+    id: "legacy-unsaved",
+    kind: "wait",
+    name: "Recovered wait",
+    config: { seconds: 1 },
+  });
+  const rejected = await request.post("/api/validate?workflow=" + key, {
+    headers: { "X-Workbench-Token": token! },
+    data: { workflow: raw },
+  });
+  expect(rejected.status()).toBe(400);
+  await page.reload();
+  await expect(page.getByRole("status")).toContainText(
+    "Recovered your unsaved draft",
+  );
+  await page.getByRole("button", { name: "List", exact: true }).click();
+  await expect(page.locator('[data-card-id="legacy-unsaved"]')).toBeVisible();
+  await page.getByRole("button", { name: "Edit", exact: true }).click();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByRole("status")).toContainText("Draft saved");
+  await page.reload();
+  await page.getByRole("button", { name: "List", exact: true }).click();
+  await expect(page.locator('[data-card-id="legacy-unsaved"]')).toBeVisible();
+  await expect(
+    page.getByText("Recovered your unsaved draft. Save to keep it.", {
+      exact: true,
+    }),
+  ).toHaveCount(0);
+});

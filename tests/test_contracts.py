@@ -174,3 +174,9 @@ class Contracts(unittest.TestCase):
         for text in ("a: &x [1]\nb: *x", "a: !something x"):
             with self.assertRaises(ValueError):
                 parse_document(text)
+
+    def test_finish_output_contract_is_checked_before_running(self):
+        raw = starter("Output")
+        by_id(raw, "finish")["config"] = {"returns": "boolean", "value": None}
+        with self.assertRaisesRegex(CompilationError, "Expected boolean"):
+            compile_document(raw)

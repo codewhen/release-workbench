@@ -5,6 +5,7 @@ import threading
 import time
 import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 
 import psutil
 
@@ -311,3 +312,39 @@ class Scheduling(unittest.IsolatedAsyncioTestCase):
         cancel = True
         with self.assertRaises(asyncio.CancelledError):
             await task
+
+
+class OptionalStdin(unittest.IsolatedAsyncioTestCase):
+    async def test_successful_non_reader_may_close_stdin_early(self):
+        from types import SimpleNamespace
+        from unittest.mock import AsyncMock, Mock, patch
+
+        from release_workbench.infrastructure.processes import ProcessAdapter
+
+        for error in (BrokenPipeError("closed"), ConnectionResetError("Connection lost")):
+            with self.subTest(error=type(error).__name__):
+                stdout = asyncio.StreamReader()
+                stdout.feed_data(b"done")
+                stdout.feed_eof()
+                stderr = asyncio.StreamReader()
+                stderr.feed_eof()
+                stream = SimpleNamespace(
+                    write=Mock(), drain=AsyncMock(side_effect=error), close=Mock()
+                )
+                process = SimpleNamespace(
+                    pid=99999999,
+                    stdin=stream,
+                    stdout=stdout,
+                    stderr=stderr,
+                    returncode=0,
+                    wait=AsyncMock(return_value=0),
+                )
+                adapter = ProcessAdapter()
+                adapter._cleanup = AsyncMock()
+                with patch("asyncio.create_subprocess_exec", AsyncMock(return_value=process)):
+                    result = await adapter.run(
+                        ["example"], Path.cwd(), {}, {"inputs": {}}, lambda _: None, lambda: None
+                    )
+                self.assertEqual(result["exit_code"], 0)
+                self.assertEqual(result["stdout"], "done")
+                stream.close.assert_called_once()

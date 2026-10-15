@@ -13,7 +13,7 @@ import {
   PanelLeftOpen,
   GitBranch,
 } from "lucide-react";
-import { api } from "./shared/api";
+import { api, ApiError } from "./shared/api";
 import {
   EMPTY_STATE,
   VALUE_TYPES,
@@ -22,6 +22,7 @@ import {
   type RunState,
   type SavedDocument,
   type Workflow,
+  type ValidationIssue,
 } from "./shared/types";
 import { useEditor } from "./editor/useEditor";
 import {
@@ -91,12 +92,14 @@ function Editor({
   onHome: () => void;
 }) {
   const { workflow, commit, reset, undo, redo, canUndo, canRedo } = useEditor(
-    initial.workflow,
+    initial.recovery?.workflow ?? initial.workflow,
   );
   const [saved, setSaved] = useState(initial),
     [state, setState] = useState<RunState>(EMPTY_STATE),
     [graphId, setGraphId] = useState("main"),
-    [view, setView] = useState<"run" | "edit">("run"),
+    [view, setView] = useState<"run" | "edit">(
+      initial.recovery ? "edit" : "run",
+    ),
     [representation, setRepresentation] = useState<"canvas" | "list" | "yaml">(
       innerWidth < 1000 ? "list" : "canvas",
     ),
@@ -104,9 +107,11 @@ function Editor({
     [overall, setOverall] = useState(true),
     [following, setFollowing] = useState(true),
     [error, setError] = useState(""),
-    [notice, setNotice] = useState(""),
+    [notice, setNotice] = useState(
+      initial.recovery ? "Recovered your unsaved draft. Save to keep it." : "",
+    ),
     [working, setWorking] = useState(false),
-    [yaml, setYaml] = useState(initial.yaml),
+    [yaml, setYaml] = useState(initial.recovery?.yaml ?? initial.yaml),
     [yamlDirty, setYamlDirty] = useState(false),
     [review, setReview] = useState(""),
     [menu, setMenu] = useState<MenuState | null>(null),
@@ -119,6 +124,9 @@ function Editor({
     [confirmDelete, setConfirmDelete] = useState<string | null>(null),
     [runInputs, setRunInputs] = useState<Record<string, unknown> | null>(null),
     [manualId, setManualId] = useState<string | null>(null);
+  const [issues, setIssues] = useState<ValidationIssue[]>(
+    initial.recovery ? [] : (initial.issues ?? []),
+  );
   const [breadcrumbs, setBreadcrumbs] = useState<
     { graph: string; card: string | null; name: string }[]
   >([]);
@@ -196,10 +204,12 @@ function Editor({
   async function act<T>(fn: () => Promise<T>): Promise<T | undefined> {
     setWorking(true);
     setError("");
+    setIssues([]);
     try {
       return await fn();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
+      if (e instanceof ApiError) setIssues(e.issues);
       return undefined;
     } finally {
       setWorking(false);
@@ -253,6 +263,12 @@ function Editor({
   function openFunction(id: string) {
     const f = workflow.functions?.[id];
     if (!f) return;
+    if (!workflow.graphs[f.graph]) {
+      setError(
+        "This function has no graph yet. Create it in YAML or choose Create function.",
+      );
+      return;
+    }
     setBreadcrumbs((old) => [
       ...old,
       {
@@ -363,19 +379,28 @@ function Editor({
   }
   async function save(andRun = false) {
     await act(async () => {
-      const result = await checked();
+      assertFormValidity();
       const record = await api<SavedDocument>(
         "save",
-        { yaml: result.yaml, revision: saved.revision },
+        { ...(yamlDirty ? { yaml } : { workflow }), revision: saved.revision },
         id,
       );
       setSaved(record);
       reset(record.workflow);
       setYaml(record.yaml);
       setYamlDirty(false);
-      setNotice("Workflow saved.");
+      setNotice(
+        record.runnable === false
+          ? `Draft saved. ${record.validation_errors?.length ?? 0} validation issue(s) must be fixed before running.`
+          : "Workflow saved.",
+      );
+      setIssues(record.issues ?? []);
       setReview("");
-      if (andRun) prepareRun(record);
+      if (andRun && record.runnable !== false) prepareRun(record);
+      else if (andRun)
+        setError(
+          "Draft saved. Complete the execution connections before running.",
+        );
     });
   }
   function prepareRun(record = saved) {
@@ -404,7 +429,13 @@ function Editor({
   }
   async function mode(next: "canvas" | "list" | "yaml") {
     if (yamlDirty && next !== "yaml") {
-      const result = await act(checked);
+      const result = await act(() =>
+        api<{ workflow: Workflow; yaml: string; diff: string }>(
+          "draft",
+          { yaml },
+          id,
+        ),
+      );
       if (!result) return;
       commit(result.workflow);
       setYaml(result.yaml);
@@ -412,7 +443,7 @@ function Editor({
     }
     if (next === "yaml" && !yamlDirty)
       setYaml(
-        (await act(() => api<{ yaml: string }>("validate", { workflow }, id)))
+        (await act(() => api<{ yaml: string }>("draft", { workflow }, id)))
           ?.yaml ?? yaml,
       );
     setRepresentation(next);
@@ -484,7 +515,11 @@ function Editor({
             <h1>Workflow Workbench</h1>
             <p>
               {workflow.name} ·{" "}
-              {dirty ? "Unsaved draft" : "Saved configuration"}
+              {dirty
+                ? "Unsaved draft"
+                : saved.runnable === false
+                  ? "Saved draft · not ready to run"
+                  : "Saved configuration"}
             </p>
           </div>
         </div>
@@ -524,6 +559,35 @@ function Editor({
         <div className="alert" role="status">
           <span>{notice}</span>
           <button onClick={() => setNotice("")}>Dismiss</button>
+        </div>
+      )}
+      {issues.length > 0 && (
+        <div className="validation-issues" aria-label="Workflow issues">
+          {issues.map((issue) => (
+            <button
+              key={issue.graph + ":" + issue.card + ":" + issue.port}
+              onClick={() => {
+                setGraphId(issue.graph);
+                setView("edit");
+                setSettings(false);
+                select(issue.card);
+                setRepresentation("list");
+                requestAnimationFrame(() =>
+                  panel.current
+                    ?.querySelector<HTMLButtonElement>(
+                      '[aria-label="Connect to card"]',
+                    )
+                    ?.focus(),
+                );
+              }}
+            >
+              Connect{" "}
+              {workflow.graphs[issue.graph]?.cards.find(
+                (c) => c.id === issue.card,
+              )?.name ?? issue.card}
+              .{issue.port}
+            </button>
+          ))}
         </div>
       )}
       <div className="toolbar">

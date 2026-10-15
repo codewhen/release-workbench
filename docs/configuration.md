@@ -83,4 +83,4 @@ Retry is off by default. Attempts includes the first attempt. With errors_contai
 
 ## Preservation and safe saving
 
-Browser edits remain drafts until Save. Validate shows the saved-to-draft diff. Saves validate, preserve YAML comments where possible, write atomically and require the last revision. External changes produce a reload-required error; they are never silently overwritten. Editing is disabled during active runs. Removing layout areas does not remove or re-scope executable cards.
+Browser edits remain drafts until Save. Validate shows the saved-to-draft diff. Saves validate the v3 document structure, preserve YAML comments where possible, write atomically and require the last revision. External changes produce a reload-required error; they are never silently overwritten. Incomplete execution graphs can be saved as drafts; Validate and Run enforce full execution contracts. Failed validation keeps a revision-matched draft recovery backup. Editing is disabled during active runs. Removing layout areas does not remove or re-scope executable cards.

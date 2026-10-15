@@ -59,10 +59,16 @@ class ProcessAdapter:
 
         async def send() -> None:
             if process.stdin:
-                if payload is not None:
-                    process.stdin.write(json.dumps(payload, allow_nan=False).encode())
-                    await process.stdin.drain()
-                process.stdin.close()
+                try:
+                    if payload is not None:
+                        process.stdin.write(json.dumps(payload, allow_nan=False).encode())
+                        await process.stdin.drain()
+                except (BrokenPipeError, ConnectionResetError):
+                    # Successful programs may exit without consuming optional JSON stdin.
+                    # Their exit code and captured output still determine the result.
+                    pass
+                finally:
+                    process.stdin.close()
 
         tasks = [
             asyncio.create_task(read("stdout", process.stdout)),

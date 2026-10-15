@@ -14,6 +14,7 @@ from .documents import (
     compile_document,
     digest,
     render_document,
+    validate_document_schema,
 )
 
 
@@ -44,7 +45,7 @@ class Library:
     def register(self, file: Path, validate: bool = True) -> dict[str, Any]:
         file = file.resolve()
         if validate:
-            compile_document(DocumentStore(file).read()["workflow"])
+            validate_document_schema(DocumentStore(file).read()["workflow"])
         key = digest(str(file).encode())[:20]
         entry = next((item for item in self.data["entries"] if item["id"] == key), None)
         if entry is None:

@@ -1,15 +1,15 @@
 # Preview acceptance
 
-Version **0.18.0a1**, schema v3. Verified locally on macOS on 15 October 2026. This is a breaking preview and does not replace the stable installation.
+Version **0.18.0a2**, schema v3. Verified locally on macOS on 15 October 2026. This is a breaking preview and does not replace the stable installation.
 
 | Check | Result |
 |---|---|
-| Python unittest | 61 passed |
+| Python unittest | 68 passed |
 | Ruff lint and format | Passed |
 | mypy source checks | Passed, no untyped definitions |
 | Strict TypeScript with unused-code checks | Passed |
 | Vitest immutable editor commands | 10 passed |
-| Playwright Chromium | 7 passed |
+| Playwright Chromium | 10 passed |
 | Browser-only ten-step creation, wiring, save/reload/run | Passed |
 | Function navigation, manual True/False across runs, Stop | Passed |
 | Context actions, undo/redo, layout collapse, mobile List/dropdowns | Passed |
@@ -26,3 +26,7 @@ Backend coverage includes zero/count/nested loops, changing Boolean functions, B
 Commands are trusted local configuration, not sandboxed untrusted code. Bash requires a local Bash installation. POSIX process groups and tracked detached descendants are cleaned up; a process that deliberately escapes and reparents before observation cannot be guaranteed. Environment/service state and undeclared source files are not a reproducibility guarantee: declare source_paths and avoid including generated outputs in source globs. Redacted outputs block resume rather than being reused as real values.
 
 For-each, Switch, Repeat-until, recursion, arbitrary Go To, remote agents, schedules, database connectors and multiplayer editing are outside this initial catalog. Use functions and Python where appropriate. Native Windows support must remain unverified until its acceptance suite actually passes.
+
+## Draft-save regression (0.18.0a2)
+
+Save accepts schema-valid unfinished flowcharts. Validate and Run still perform full execution validation. YAML switching and importing unfinished drafts remain available. Failed validation creates a revision-matched recovery backup without overwriting the saved file; a new editor restores that draft after reload. External revisions are never replaced by a recovery record. Browser tests cover save/reload, blocked execution and old-editor draft recovery.

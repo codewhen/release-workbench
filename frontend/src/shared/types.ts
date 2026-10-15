@@ -47,7 +47,17 @@ export interface Catalog {
   templates: Record<string, string>;
   schema: unknown;
 }
+export interface ValidationIssue {
+  graph: string;
+  card: string;
+  port: string;
+  message: string;
+}
 export interface SavedDocument {
+  runnable?: boolean;
+  validation_errors?: string[];
+  issues?: ValidationIssue[];
+  recovery?: { workflow: Workflow; yaml: string } | null;
   workflow: Workflow;
   yaml: string;
   revision: string;

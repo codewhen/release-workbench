@@ -11,8 +11,9 @@ from release_workbench.domain.values import ContractError, TypedValue
 
 
 class CompilationError(ContractError):
-    def __init__(self, errors: list[str]):
+    def __init__(self, errors: list[str], issues: list[dict[str, str]] | None = None):
         self.errors = list(dict.fromkeys(errors))
+        self.issues = issues or []
         super().__init__("\n".join(self.errors))
 
 
@@ -32,6 +33,7 @@ class Compiler:
     """Own semantic validation; adapters own parsing and schema validation."""
 
     def compile(self, raw: dict[str, Any]) -> Workflow:
+        self.issues: list[dict[str, str]] = []
         if raw.get("version") != 3:
             raise CompilationError(
                 [
@@ -63,7 +65,7 @@ class Compiler:
                 errors.append(f"{graph_id}: connection IDs must be unique.")
             graphs[graph_id] = Graph(graph_id, cards, edges)
         if errors:
-            raise CompilationError(errors)
+            raise CompilationError(errors, self.issues)
         workflow = Workflow(
             raw["name"],
             graphs,
@@ -105,7 +107,7 @@ class Compiler:
             for graph in graphs.values():
                 errors.extend(self._parallel_conflicts(workflow, graph))
         if errors:
-            raise CompilationError(errors)
+            raise CompilationError(errors, self.issues)
         return workflow
 
     def _validate_graph(self, workflow: Workflow, graph: Graph) -> list[str]:
@@ -153,6 +155,11 @@ class Compiler:
                 errors.append(
                     f"{card.id}: Finish belongs to the main workflow, outside controlled branches."
                 )
+            if card.kind == "finish" and not list(references(card.config.get("value"))):
+                try:
+                    TypedValue.checked(card.config.get("value"), card.config.get("returns", "void"))
+                except ContractError as error:
+                    errors.append(f"{card.id}: {error}")
             if card.kind == "return" and not card.owner:
                 function = next(
                     (f for f in workflow.functions.values() if f["graph"] == graph.id),
@@ -270,8 +277,14 @@ class Compiler:
                 connections = flows.get((card.id, port), [])
                 optional = card.kind == "try" and port in ("catch", "finally")
                 if len(connections) != 1 and not (optional and not connections):
-                    errors.append(
-                        f"{card.id}.{port}: connect exactly one next card; use Parallel for concurrent work."
+                    message = (
+                        f"{graph.id}/{card.id}.{port}: no execution connection. Connect {card.name}'s {port} output to the next card or a completion marker."
+                        if not connections
+                        else f"{graph.id}/{card.id}.{port}: has {len(connections)} execution connections. Keep one, or use Parallel for concurrent work."
+                    )
+                    errors.append(message)
+                    self.issues.append(
+                        {"graph": graph.id, "card": card.id, "port": port, "message": message}
                     )
             if card.kind == "parallel":
                 next_edges = graph.outgoing(card.id, "done")

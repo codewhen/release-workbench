@@ -45,7 +45,10 @@
       "minProperties": 1,
       "additionalProperties": {
         "$ref": "#/$defs/graph"
-      }
+      },
+      "required": [
+        "main"
+      ]
     },
     "layout": {
       "type": "object",

@@ -1184,3 +1184,21 @@ pre {
 .flow-card .card-inputs small {
   color: #64747b;
 }
+
+.validation-issues {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 8px 20px;
+  background: #fff4e4;
+  border-bottom: 1px solid var(--line);
+}
+.validation-issues button {
+  font-size: 12px;
+}
+
+.validation-issues {
+  max-height: 120px;
+  overflow: auto;
+  flex-shrink: 0;
+}

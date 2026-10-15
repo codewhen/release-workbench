@@ -13,7 +13,7 @@ Choose **New workflow**, enter its name, project folder and unique YAML filename
 3. Add a **Wait** card. Its duration is editable directly on the canvas and in the details panel. Set it to `0` for this demonstration. Rename it “Step one”.
 4. Add nine more Wait cards. Each new card receives focus. The cards are not executable until connected.
 5. Connect Start's execution output to Step one's Entry. Connect the ten cards in order, then connect the last to Finish. In List view select the source, choose **Connections → Connect to**, then **Connect execution**. A new connection replaces that execution output's previous connection.
-6. Click **Validate & review**. This shows structural errors or the configuration diff without executing anything. A disconnected operation must be connected or deleted before validation succeeds.
+6. Click **Validate & review**. This shows structural errors or the configuration diff without executing anything. A disconnected operation must be connected or deleted before validation succeeds. You can still Save the unfinished draft and return to it later.
 7. Click **Save**, then choose Run and **Run all**. The overall panel shows active work. Select a card to inspect its attempts, returned value and logs. **Overall run** follows active execution again.
 
 Right-click a card to duplicate, disconnect or delete it. Right-click a connection to delete it. Undo/redo restore browser draft changes. Start cannot be deleted. Layout areas have no effect on execution. Collapse an area only to hide its selected member cards.
@@ -48,3 +48,9 @@ workflow-workbench run --non-interactive
 The While starter declares a numeric `count` global, evaluates “Count below three” before each iteration and increments count in its main-canvas Body. Observe four condition evaluations and three body executions in the report.
 
 Commands use the workflow YAML's directory as their workspace. Keep scripts and file operations beneath that project. External workspace calls deliberately select another YAML file and execute relative to its own directory.
+
+## Saving work in progress
+
+Save preserves schema-valid drafts even when cards are disconnected or required execution fields are unfinished. It shows what must be completed before running. Validate checks readiness; Run never executes an invalid flowchart. Connection messages include the graph/card and offer buttons to open the affected card.
+
+If an older editor rejects Save, the updated server backs up that submitted draft. Reload the page only after the error confirms **Draft backed up**. The updated editor restores the backup as an unsaved draft; click Save to keep it. A backup whose base revision no longer matches the saved file is not restored over external changes.

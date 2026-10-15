@@ -77,3 +77,90 @@ class Interfaces(unittest.TestCase):
         self.assertFalse(self.app.runs)
         with self.assertRaisesRegex(ValueError, "outside"):
             self.app.mutation("save", key, {"workflow": value, "revision": record["revision"]})
+
+    def test_incomplete_draft_saves_but_never_starts_execution(self):
+        from release_workbench.application.starters import card, edge
+        from release_workbench.infrastructure.documents import DocumentStore
+
+        key = self.app.library.listing()["entries"][0]["id"]
+        file = self.app.library.file(key)
+        record = DocumentStore(file).read()
+        raw = record["workflow"]
+        raw["graphs"]["main"]["cards"].append(
+            card(
+                "unfinished",
+                "python",
+                {
+                    "code": "from pathlib import Path\nPath('must-not-run').write_text('bad')\nreturn True"
+                },
+            )
+        )
+        raw["graphs"]["main"]["edges"] = [edge("start", "unfinished")]
+        saved = self.app.mutation("save", key, {"workflow": raw, "revision": record["revision"]})
+        self.assertFalse(saved["runnable"])
+        self.assertIn("unfinished.next", saved["validation_errors"][0])
+        self.assertNotIn("use Parallel", saved["validation_errors"][0])
+        self.assertEqual(DocumentStore(file).read()["workflow"], raw)
+        with self.assertRaisesRegex(ValueError, "no execution connection"):
+            self.app.mutation("run", key, {"revision": saved["revision"]})
+        self.assertFalse(self.app.runs)
+        self.assertFalse((file.parent / "must-not-run").exists())
+
+    def test_failed_validation_backs_up_draft_for_existing_browser(self):
+        from release_workbench.application.starters import card
+        from release_workbench.infrastructure.documents import DocumentStore
+
+        key = self.app.library.listing()["entries"][0]["id"]
+        file = self.app.library.file(key)
+        original = DocumentStore(file).read()
+        raw = original["workflow"]
+        raw["graphs"]["main"]["cards"].append(card("unfinished", "manual"))
+        with self.assertRaisesRegex(ValueError, "Draft backed up"):
+            self.app.mutation("validate", key, {"workflow": raw})
+        self.assertEqual(DocumentStore(file).read()["yaml"], original["yaml"])
+        reloaded = json.loads(self.request("/api/config?workflow=" + key)[1])
+        self.assertEqual(reloaded["recovery"]["workflow"], raw)
+        self.app.mutation("save", key, {"workflow": raw, "revision": original["revision"]})
+        self.assertIsNone(self.app.drafts.matching(key, original["revision"]))
+
+    def test_schema_invalid_draft_is_not_saved(self):
+        from release_workbench.infrastructure.documents import DocumentStore
+
+        key = self.app.library.listing()["entries"][0]["id"]
+        file = self.app.library.file(key)
+        record = DocumentStore(file).read()
+        raw = record["workflow"]
+        raw["version"] = 2
+        with self.assertRaisesRegex(ValueError, "Unsupported"):
+            self.app.mutation("save", key, {"workflow": raw, "revision": record["revision"]})
+        self.assertEqual(DocumentStore(file).read()["revision"], record["revision"])
+
+    def test_recovery_never_overwrites_an_external_revision(self):
+        from release_workbench.infrastructure.documents import DocumentStore
+
+        key = self.app.library.listing()["entries"][0]["id"]
+        file = self.app.library.file(key)
+        record = DocumentStore(file).read()
+        self.app.drafts.save(key, record["workflow"], record)
+        file.write_text(record["yaml"] + "\n# changed externally\n")
+        reloaded = json.loads(self.request("/api/config?workflow=" + key)[1])
+        self.assertIsNone(reloaded["recovery"])
+
+    def test_draft_serialization_and_import_accept_unfinished_workflows(self):
+        from release_workbench.application.starters import card
+        from release_workbench.infrastructure.documents import DocumentStore
+
+        key = self.app.library.listing()["entries"][0]["id"]
+        raw = DocumentStore(self.app.library.file(key)).read()["workflow"]
+        raw["graphs"]["main"]["cards"].append(card("unfinished", "manual"))
+        result = self.app.mutation("draft", key, {"workflow": raw})
+        self.assertFalse(result["runnable"])
+        self.assertIn("unfinished", result["yaml"])
+        self.assertFalse(self.app.runs)
+        entry = self.app.mutation(
+            "import",
+            "",
+            {"project": str(self.root), "filename": "draft.yaml", "yaml": result["yaml"]},
+        )
+        self.assertTrue(entry["id"])
+        self.assertEqual(self.app.library.register(self.root / "draft.yaml")["id"], entry["id"])

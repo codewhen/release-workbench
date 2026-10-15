@@ -73,7 +73,7 @@ def render_document(value: dict[str, Any], original: str = "") -> str:
     return stream.getvalue()
 
 
-def compile_document(raw: dict[str, Any]) -> Workflow:
+def validate_document_schema(raw: dict[str, Any]) -> None:
     if raw.get("version") != 3:
         raise CompilationError(
             [
@@ -86,7 +86,20 @@ def compile_document(raw: dict[str, Any]) -> Workflow:
     ]
     if errors:
         raise CompilationError(errors)
+
+
+def compile_document(raw: dict[str, Any]) -> Workflow:
+    validate_document_schema(raw)
     return Compiler().compile(raw)
+
+
+def document_readiness(raw: dict[str, Any]) -> dict[str, Any]:
+    """Execution diagnostics do not determine whether a schema-valid draft can be stored."""
+    try:
+        compile_document(raw)
+    except CompilationError as error:
+        return {"runnable": False, "validation_errors": error.errors, "issues": error.issues}
+    return {"runnable": True, "validation_errors": [], "issues": []}
 
 
 def atomic_write(path: Path, text: str) -> None:
@@ -122,6 +135,6 @@ class DocumentStore:
         current = self.read()
         if current["revision"] != revision:
             raise ValueError("This workflow changed outside the editor. Reload before saving.")
-        compile_document(parse_document(text))
+        validate_document_schema(parse_document(text))
         atomic_write(self.path, text)
         return self.read()

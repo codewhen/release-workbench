@@ -53,7 +53,11 @@ const icons: Record<string, typeof Code> = {
 export function flowOutputs(card: Card, meta?: CardMeta): string[] {
   if (card.kind === "parallel")
     return [
-      ...((card.config?.branches as string[]) ?? ["first", "second"]),
+      ...(Array.isArray(card.config?.branches)
+        ? card.config.branches.filter(
+            (value): value is string => typeof value === "string",
+          )
+        : ["first", "second"]),
       "done",
     ];
   return meta?.ports ?? [];
