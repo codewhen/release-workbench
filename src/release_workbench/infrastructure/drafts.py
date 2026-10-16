@@ -25,7 +25,7 @@ class DraftStore:
         file = self.directory / (key + ".json")
         if not file.exists():
             return None
-        value: dict[str, Any] = json.loads(file.read_text())
+        value: dict[str, Any] = json.loads(file.read_text(encoding="utf-8"))
         return value if value.get("base_revision") == revision else None
 
     def clear(self, key: str) -> None:

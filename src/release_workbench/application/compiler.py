@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 from collections.abc import Iterator
 from typing import Any
 
@@ -34,6 +35,13 @@ class Compiler:
 
     def compile(self, raw: dict[str, Any]) -> Workflow:
         self.issues: list[dict[str, str]] = []
+        self.graph_labels = {"main": "Main workflow"}
+        self.graph_labels.update(
+            {
+                definition["graph"]: f"Function “{name}”"
+                for name, definition in raw.get("functions", {}).items()
+            }
+        )
         if raw.get("version") != 3:
             raise CompilationError(
                 [
@@ -44,6 +52,7 @@ class Compiler:
         errors: list[str] = []
         for graph_id, data in raw["graphs"].items():
             cards = {}
+            card_errors: list[str] = []
             for item in data["cards"]:
                 spec = get_spec(item["kind"])
                 owner = Owner(**item["owner"]) if item.get("owner") else None
@@ -51,7 +60,7 @@ class Compiler:
                     item["id"],
                     item["kind"],
                     item["name"],
-                    {**spec.defaults, **item.get("config", {})},
+                    {**copy.deepcopy(spec.defaults), **copy.deepcopy(item.get("config", {}))},
                     item.get("inputs", {}),
                     owner,
                     item.get("settings", {}),
@@ -59,13 +68,14 @@ class Compiler:
                 if card.id in cards:
                     errors.append(f"{graph_id}: duplicate card ID {card.id}.")
                 cards[card.id] = card
-                errors.extend(spec.validate(card))
+                card_errors.extend(spec.validate(card))
             edges = tuple(Edge(**edge) for edge in data["edges"])
             if len({edge.id for edge in edges}) != len(edges):
                 errors.append(f"{graph_id}: connection IDs must be unique.")
             graphs[graph_id] = Graph(graph_id, cards, edges)
+            errors.extend(self._diagnostics(card_errors, graphs[graph_id]))
         if errors:
-            raise CompilationError(errors, self.issues)
+            raise CompilationError(errors, self._complete_issues(errors))
         workflow = Workflow(
             raw["name"],
             graphs,
@@ -107,8 +117,53 @@ class Compiler:
             for graph in graphs.values():
                 errors.extend(self._parallel_conflicts(workflow, graph))
         if errors:
-            raise CompilationError(errors, self.issues)
+            raise CompilationError(errors, self._complete_issues(errors))
         return workflow
+
+    def _complete_issues(self, errors: list[str]) -> list[dict[str, str]]:
+        described = {
+            f"{issue['label']}{' · ' + issue['port'] if issue['port'] else ''}: {issue['message']}"
+            for issue in self.issues
+        }
+        return self.issues + [
+            {"graph": "", "card": "", "port": "", "label": "Workflow settings", "message": error}
+            for error in dict.fromkeys(errors)
+            if error not in described
+        ]
+
+    def _diagnostics(self, errors: list[str], graph: Graph) -> list[str]:
+        """Keep navigation identity separate from names shown to workflow authors."""
+        messages = []
+        for error in errors:
+            location, separator, detail = error.partition(": ")
+            local = location.removeprefix(graph.id + "/")
+            card = next(
+                (
+                    item
+                    for item in graph.cards.values()
+                    if local == item.id or local.startswith(item.id + ".")
+                ),
+                None,
+            )
+            port = local[len(card.id) + 1 :] if card and local.startswith(card.id + ".") else ""
+            if card is None:
+                edge = next((item for item in graph.edges if item.id == local), None)
+                if edge:
+                    card = graph.cards.get(edge.target) or graph.cards.get(edge.source)
+            graph_label = self.graph_labels.get(graph.id, graph.id)
+            label = f"{graph_label} › {card.name}" if card else graph_label
+            message = detail if separator else error
+            messages.append(f"{label}{' · ' + port if port else ''}: {message}")
+            self.issues.append(
+                {
+                    "graph": graph.id,
+                    "card": card.id if card else "",
+                    "port": port,
+                    "label": label,
+                    "message": message,
+                }
+            )
+        return messages
 
     def _validate_graph(self, workflow: Workflow, graph: Graph) -> list[str]:
         errors: list[str] = []
@@ -153,13 +208,22 @@ class Compiler:
                 )
             if card.kind == "finish" and (graph.id != "main" or card.owner):
                 errors.append(
-                    f"{card.id}: Finish belongs to the main workflow, outside controlled branches."
+                    f"{card.id}: Finish belongs to the main workflow, outside controlled branches. Replace it with a Return card to complete this function or branch."
                 )
-            if card.kind == "finish" and not list(references(card.config.get("value"))):
+            if (
+                card.kind == "finish"
+                and not list(references(card.config.get("value")))
+                and not any(
+                    e.kind == "value" and e.target == card.id and e.target_port == "config:value"
+                    for e in graph.edges
+                )
+            ):
                 try:
                     TypedValue.checked(card.config.get("value"), card.config.get("returns", "void"))
                 except ContractError as error:
-                    errors.append(f"{card.id}: {error}")
+                    errors.append(
+                        f"{card.id}: {str(error).rstrip('.')}. The execution connection does not supply a result. Choose Result source to use a Python or Calculate result, or enter a value matching the return type."
+                    )
             if card.kind == "return" and not card.owner:
                 function = next(
                     (f for f in workflow.functions.values() if f["graph"] == graph.id),
@@ -167,23 +231,19 @@ class Compiler:
                 )
                 if not function:
                     errors.append(f"{card.id}: Return belongs in a function or controlled branch.")
-                elif not list(references(card.config.get("value"))):
+                elif not list(references(card.config.get("value"))) and not any(
+                    e.kind == "value" and e.target == card.id and e.target_port == "config:value"
+                    for e in graph.edges
+                ):
                     try:
                         TypedValue.checked(card.config.get("value"), function["returns"])
                     except ContractError as error:
-                        errors.append(f"{card.id}: {error}")
-            if card.settings.get("retry") and card.kind not in (
-                "python",
-                "bash",
-                "script",
-                "program",
-                "http",
-                "read_file",
-                "check_path",
-                "write_file",
-            ):
+                        errors.append(
+                            f"{card.id}: {str(error).rstrip('.')}. The execution connection does not supply a result. Choose Result source to use a Python or Calculate result, or enter a value matching the return type."
+                        )
+            if card.settings.get("retry") and not get_spec(card.kind).supports_retry:
                 errors.append(f"{card.id}: retry applies to executable operations only.")
-            if card.kind in ("loop", "parallel", "try", "call", "workspace") and any(
+            if not get_spec(card.kind).holds_slot and any(
                 card.settings.get(key) for key in ("resources", "exclusive", "interactive")
             ):
                 errors.append(
@@ -213,13 +273,7 @@ class Compiler:
                 errors.append(f"{edge.id}: connection references a missing card.")
                 continue
             if edge.kind == "value":
-                source_type = get_spec(source.kind).output
-                if source.kind in ("python", "return", "finish"):
-                    source_type = source.config.get("returns", source_type)
-                elif source.kind == "call" and source.config.get("function") in workflow.functions:
-                    source_type = workflow.functions[source.config["function"]]["returns"]
-                elif source.kind == "variable" and source.config.get("name") in workflow.globals:
-                    source_type = workflow.globals[source.config["name"]]["type"]
+                source_type = get_spec(source.kind).result_type(source, workflow)
                 target_type = None
                 if (
                     edge.target_port.startswith("input:")
@@ -283,9 +337,6 @@ class Compiler:
                         else f"{graph.id}/{card.id}.{port}: has {len(connections)} execution connections. Keep one, or use Parallel for concurrent work."
                     )
                     errors.append(message)
-                    self.issues.append(
-                        {"graph": graph.id, "card": card.id, "port": port, "message": message}
-                    )
             if card.kind == "parallel":
                 next_edges = graph.outgoing(card.id, "done")
                 join = graph.cards.get(next_edges[0].target) if next_edges else None
@@ -296,7 +347,7 @@ class Compiler:
                 if not parallel or parallel.kind != "parallel":
                     errors.append(f"{card.id}: choose its Parallel card.")
         errors.extend(self._cycles_and_values(graph, starts))
-        return errors
+        return self._diagnostics(errors, graph)
 
     def _inside_loop(self, graph: Graph, card: Card) -> bool:
         owner = card.owner
@@ -462,4 +513,4 @@ class Compiler:
                         errors.append(
                             f"{parallel.id}: parallel global conflict: {', '.join(sorted(conflicts))}. Sequence these operations or return branch values through Join."
                         )
-        return errors
+        return self._diagnostics(errors, graph)

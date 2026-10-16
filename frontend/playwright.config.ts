@@ -9,7 +9,7 @@ export default defineConfig({
     trace: "retain-on-failure",
   },
   webServer: {
-    command: "python3 e2e/preview_server.py",
+    command: "python e2e/preview_server.py",
     url: "http://127.0.0.1:3115",
     reuseExistingServer: false,
     timeout: 30000,

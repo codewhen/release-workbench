@@ -5,7 +5,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any, ClassVar, Protocol
 
 from release_workbench.domain.models import Card, Outcome, Workflow
 
@@ -34,6 +34,8 @@ class ExecutionContext(Protocol):
 
 class CardExecutor(ABC):
     """All concrete card executors obey the same typed result contract."""
+
+    kind: ClassVar[str]
 
     @abstractmethod
     async def execute(self, card: Card, context: ExecutionContext) -> Outcome:
@@ -80,8 +82,8 @@ class Services(Protocol):
         root: Path,
         inputs: dict[str, Any],
         environment: dict[str, str],
-        log: Any,
-        check: Any,
+        log: Callable[[str], None],
+        check: Callable[[], None],
     ) -> Any: ...
 
 

@@ -1,3 +1,4 @@
+import { belongsToProject } from "./shared/projectPaths";
 import { useEffect, useRef, useState } from "react";
 import { Folder, FolderPlus, Plus, Upload, GitBranch } from "lucide-react";
 import { api } from "./shared/api";
@@ -73,7 +74,7 @@ export function Home({
   const entries = library.entries.filter(
     (e) =>
       (folder === "*" || e.folder === folder) &&
-      (project === "*" || e.path.startsWith(project + "/")) &&
+      (project === "*" || belongsToProject(e.path, project)) &&
       (e.name + " " + e.path).toLowerCase().includes(query.toLowerCase()),
   );
   const context = (

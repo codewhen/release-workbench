@@ -18,7 +18,7 @@ from release_workbench.domain.models import Workflow
 
 MAX_BYTES = 1024 * 1024
 SCHEMA_PATH = Path(__file__).resolve().parents[1] / "schema.json"
-SCHEMA = json.loads(SCHEMA_PATH.read_text())
+SCHEMA = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
 
 
 def digest(value: Any) -> str:
@@ -123,7 +123,7 @@ class DocumentStore:
     def read(self) -> dict[str, Any]:
         if self.path.stat().st_size > MAX_BYTES:
             raise ValueError("Workflow exceeds 1 MiB.")
-        text = self.path.read_text()
+        text = self.path.read_text(encoding="utf-8")
         return {
             "workflow": parse_document(text),
             "yaml": text,

@@ -232,19 +232,7 @@ class Run:
                 "Interrupted or failed execution requires an explicit retry: " + path
             )
         context = frame.for_node(path)
-        config = context.resolve(definition.config)
-        inputs = context.resolve(definition.inputs)
-        for edge in frame.graph.edges:
-            if edge.kind == "value" and edge.target == definition.id:
-                value = context.reference("card:" + edge.source, edge.path)
-                if edge.target_port.startswith("config:"):
-                    config[edge.target_port[7:]] = value
-                else:
-                    inputs[edge.target_port.removeprefix("input:")] = value
-        if definition.kind == "join":
-            inputs["branches"] = context.reference("card:" + config["parallel"])
-        context.inputs = copy.deepcopy(frame.inputs) if definition.kind == "start" else inputs
-        card = replace(definition, config=config, inputs=inputs)
+        card = definition
         entry: dict[str, Any] = {
             "card": card.id,
             "graph": frame.graph.id,
@@ -260,17 +248,30 @@ class Run:
         if old:
             entry["previous_attempt"] = copy.deepcopy(old)
         self.evidence.state["executions"][path] = entry
-        timeout = (
-            card.config.get("timeout")
-            if card.kind in ("loop", "poll")
-            else card.settings.get("timeout")
-        )
-        if timeout is not None:
-            self.deadlines[path] = self.clock.monotonic() + timeout
         started = self.clock.monotonic()
         self.evidence.emit("started", path, card=card.id, graph=frame.graph.id)
         self.evidence.save()
         try:
+            config = context.resolve(definition.config)
+            inputs = context.resolve(definition.inputs)
+            for edge in frame.graph.edges:
+                if edge.kind == "value" and edge.target == definition.id:
+                    value = context.reference("card:" + edge.source, edge.path)
+                    if edge.target_port.startswith("config:"):
+                        config[edge.target_port[7:]] = value
+                    else:
+                        inputs[edge.target_port.removeprefix("input:")] = value
+            if definition.kind == "join":
+                inputs["branches"] = context.reference("card:" + config["parallel"])
+            context.inputs = copy.deepcopy(frame.inputs) if definition.kind == "start" else inputs
+            card = replace(definition, config=config, inputs=inputs)
+            timeout = (
+                card.config.get("timeout")
+                if card.kind in ("loop", "poll")
+                else card.settings.get("timeout")
+            )
+            if timeout is not None:
+                self.deadlines[path] = self.clock.monotonic() + timeout
             retry = card.settings.get("retry", {"attempts": 1})
             for attempt in range(retry["attempts"]):
                 try:

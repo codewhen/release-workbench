@@ -1,10 +1,12 @@
+import { TerminalValue } from "./TerminalValue";
 import { Choice } from "../components/Choice";
-import { JsonInput } from "../components/JsonInput";
+import { ValueInput } from "./ValueInput";
 import {
   VALUE_TYPES,
   type Card,
   type Field,
   type Workflow,
+  type CardMeta,
 } from "../shared/types";
 export function fieldVisible(
   field: Field,
@@ -19,6 +21,8 @@ export function fieldVisible(
 }
 export function FieldEditor({
   field,
+  graphId,
+  catalog,
   card,
   workflow,
   disabled,
@@ -28,6 +32,8 @@ export function FieldEditor({
   onInvalid,
 }: {
   field: Field;
+  graphId: string;
+  catalog: CardMeta[];
   card: Card;
   workflow: Workflow;
   disabled: boolean;
@@ -36,6 +42,18 @@ export function FieldEditor({
   onNewFunction: (returns?: string) => void;
   onInvalid?: (error: string) => void;
 }) {
+  if (["finish", "return"].includes(card.kind) && field.key === "value")
+    return (
+      <TerminalValue
+        card={card}
+        workflow={workflow}
+        graphId={graphId}
+        catalog={catalog}
+        disabled={disabled}
+        onChange={onChange}
+        onInvalid={onInvalid}
+      />
+    );
   const value = card.config?.[field.key];
   const change = (v: unknown) => onChange(field.key, v);
   if (field.widget === "function") {
@@ -107,12 +125,14 @@ export function FieldEditor({
   }
   if (field.widget === "json")
     return (
-      <JsonInput
-        label={field.label}
-        value={value}
-        onChange={change}
+      <ValueInput
+        field={field}
+        card={card}
+        graphId={graphId}
+        catalog={catalog}
+        workflow={workflow}
         disabled={disabled}
-        multiline={field.advanced}
+        onChange={change}
         onInvalid={onInvalid}
       />
     );

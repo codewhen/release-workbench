@@ -49,7 +49,12 @@ export function WorkflowSettings({
           commit({ ...workflow, inputs: v as Workflow["inputs"] })
         }
       />
-      <h3>Globals for this run</h3>
+      <h3>Global variables</h3>
+      <p>
+        Declare each global here, choose its type and set its initial value.
+        Every new run starts with these initial values; Get, Set and Update use
+        the current run’s value.
+      </p>
       <Declarations
         globals
         values={workflow.globals ?? {}}

@@ -84,6 +84,9 @@ export function Declarations({
         New {globals ? "global variable" : "input"} name
         <input
           disabled={disabled}
+          aria-label={
+            "New " + (globals ? "global variable" : "input") + " name"
+          }
           value={newName}
           placeholder="e.g. attempts"
           onChange={(e) => setNewName(e.target.value)}

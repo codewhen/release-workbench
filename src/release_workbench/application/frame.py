@@ -4,13 +4,14 @@ from __future__ import annotations
 
 import asyncio
 import copy
-import json
 from typing import TYPE_CHECKING, Any
 
+from release_workbench.domain.cards import get_spec
 from release_workbench.domain.models import Card, Graph, Outcome
 from release_workbench.domain.values import VOID, ContractError, TypedValue, ValueType
 
 from .executors import EXECUTORS, EvidenceRequired, ExecutionFailure
+from .progress import parse_progress
 
 if TYPE_CHECKING:
     from .runtime import Run
@@ -132,27 +133,14 @@ class Frame:
         while "\n" in self._log_buffer:
             line, self._log_buffer = self._log_buffer.split("\n", 1)
             if line.startswith("::workbench::"):
-                try:
-                    progress = json.loads(line[len("::workbench::") :])
-                    if (
-                        type(progress["done"]) in (int, float)
-                        and type(progress["total"]) in (int, float)
-                        and progress["total"] > 0
-                    ):
-                        self.run.evidence.state["executions"][self.path]["progress"] = {
-                            "done": progress["done"],
-                            "total": progress["total"],
-                            "stage": str(progress.get("stage", "")),
-                            "measured": True,
-                        }
-                        self.run.evidence.emit("progress", self.path, **progress)
-                except (KeyError, ValueError, TypeError):
-                    pass
+                progress = parse_progress(line[len("::workbench::") :])
+                if progress is not None:
+                    self.run.evidence.state["executions"][self.path]["progress"] = progress
+                    self.run.evidence.emit("progress", self.path, **progress)
 
     async def execute(self, card: Card) -> Outcome:
         # Structural cards must never occupy a slot while waiting on their children.
-        structural = {"if", "loop", "parallel", "try", "call", "workspace", "poll"}
-        if card.kind in structural:
+        if not get_spec(card.kind).holds_slot:
             return await EXECUTORS[card.kind].execute(card, self)
         resources = set(card.settings.get("resources", []))
         if card.settings.get("interactive"):

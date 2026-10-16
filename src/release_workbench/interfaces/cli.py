@@ -56,7 +56,7 @@ def main() -> None:
             )
             value = starter(name, template)
             compile_document(value)
-            with args.config.open("x") as stream:
+            with args.config.open("x", encoding="utf-8") as stream:
                 stream.write(render_document(value))
             print(f"Created {args.config}. Open the browser to connect and configure cards.")
         elif args.command == "serve":

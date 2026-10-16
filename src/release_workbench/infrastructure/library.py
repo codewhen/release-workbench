@@ -23,7 +23,7 @@ class Library:
         self.storage = storage.resolve()
         self.path = self.storage / "library.json"
         self.data = (
-            json.loads(self.path.read_text())
+            json.loads(self.path.read_text(encoding="utf-8"))
             if self.path.exists()
             else {"projects": [], "entries": [], "folders": []}
         )
@@ -97,6 +97,6 @@ class Library:
         file = project / filename
         value = starter(name, template)
         compile_document(value)
-        with file.open("x") as stream:
+        with file.open("x", encoding="utf-8") as stream:
             stream.write(render_document(value))
         return self.register(file)

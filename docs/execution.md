@@ -48,3 +48,7 @@ workflow-workbench run --resume RUN_ID --retry-interrupted --non-interactive
 A matching run can replay successful saved results and declared global transitions without re-executing successful side effects. Configuration, declared source files or input changes require a new run. Layout changes are ignored by execution fingerprints. Interrupted/failed cards require the explicit retry option. The original attempt remains in evidence. Manual gates are never automatically approved in CI. Supply the same required inputs when resuming.
 
 Run all always starts a fresh run and resets globals. Distinguish that deliberate rerun from resume; externally visible operations may execute again.
+
+## Inspect a running card
+
+Select a card in Run view to inspect its live output, event trail, attempts and typed returned value. The selected evidence stays expanded after completion. Functions and control cards include child execution events and logs; logs and events retain the engine’s secret masking. Use **Overall run** at the top of the left panel to return to the overview and resume following active work.

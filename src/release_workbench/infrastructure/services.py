@@ -98,11 +98,24 @@ class LocalServices:
         return EvidenceStore(
             directory,
             state,
-            SecretMasker([environment.get(name, "") for name in workflow.raw.get("secrets", [])]),
+            SecretMasker(
+                [
+                    value
+                    for name in workflow.raw.get("secrets", [])
+                    for value in [
+                        environment.get(name, ""),
+                        *(
+                            card.settings.get("environment", {}).get(name, "")
+                            for graph in workflow.graphs.values()
+                            for card in graph.cards.values()
+                        ),
+                    ]
+                ]
+            ),
         )
 
     def load_state(self, directory: Path) -> dict[str, Any]:
-        return json.loads((directory / "summary.json").read_text())
+        return json.loads((directory / "summary.json").read_text(encoding="utf-8"))
 
     def load_workflow(self, file: Path) -> Workflow:
         return compile_document(DocumentStore(file).read()["workflow"])

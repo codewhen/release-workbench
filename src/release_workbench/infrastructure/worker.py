@@ -73,10 +73,10 @@ def main() -> None:
                 }
                 if not 200 <= response.status < 300:
                     raise ValueError(f"HTTP status {response.status}: {text[:500]}")
-        destination.write_text(json.dumps({"value": value}, allow_nan=False))
+        destination.write_text(json.dumps({"value": value}, allow_nan=False), encoding="utf-8")
     except BaseException as error:
         traceback.print_exc()
-        destination.write_text(json.dumps({"error": str(error)}))
+        destination.write_text(json.dumps({"error": str(error)}), encoding="utf-8")
         sys.exit(1)
 
 

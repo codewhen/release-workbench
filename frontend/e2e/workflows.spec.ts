@@ -7,7 +7,7 @@ async function open(page: Page, name: string) {
     .getByRole("button", { name: "Open workflow" })
     .click();
   await expect(
-    page.getByRole("button", { name: "Run all", exact: true }),
+    page.getByRole("button", { name: "Edit", exact: true }),
   ).toBeVisible();
 }
 async function choose(page: Page, label: string, value: string) {
@@ -205,19 +205,32 @@ test("unfinished cards save and reload as a draft while Run stays blocked", asyn
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByRole("status")).toContainText("Draft saved");
   await expect(
-    page.getByRole("button", { name: /^Connect Manual/ }),
+    page.getByRole("button", { name: /Main workflow › Manual.*next/ }),
   ).toBeVisible();
   await page.reload();
   await page.getByRole("button", { name: "List", exact: true }).click();
   await expect(page.locator("[data-card-id]")).toHaveCount(3);
+  await expect(
+    page.getByRole("region", { name: "Workflow validation" }),
+  ).toHaveCount(0);
   await page.getByRole("button", { name: "Run all", exact: true }).click();
-  await expect(page.locator(".alert.error")).toContainText(
-    "no execution connection",
-  );
+  await expect(page.getByRole("status")).toContainText("Run not started");
+  await expect(
+    page.getByRole("region", { name: "Workflow validation" }),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "Edit", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Validate & review", exact: true })
+    .click();
+  await expect(
+    page.getByRole("region", { name: "Workflow validation" }),
+  ).toContainText("no execution connection");
   await expect(
     page.getByRole("dialog", { name: "Action required" }),
   ).toHaveCount(0);
-  await page.getByRole("button", { name: /^Connect Manual/ }).click();
+  await page
+    .getByRole("button", { name: /Main workflow › Manual.*next/ })
+    .click();
   await expect(page.getByLabel("Card name", { exact: true })).toHaveValue(
     "Manual decision / approval",
   );
@@ -282,4 +295,383 @@ test("old editor validation failure recovers its unsaved draft on reload", async
       exact: true,
     }),
   ).toHaveCount(0);
+});
+
+test("validation appears only on request and is cleared when fields change", async ({
+  page,
+  request,
+}) => {
+  await open(page, "Blank flowchart");
+  const key = new URL(page.url()).searchParams.get("workflow")!;
+  const token = await page
+    .locator('meta[name="workbench-token"]')
+    .getAttribute("content");
+  const record = await (
+    await request.get("/api/config?workflow=" + key)
+  ).json();
+  const finish = record.workflow.graphs.main.cards.find(
+    (c: { kind: string }) => c.kind === "finish",
+  );
+  finish.name = "Publish result";
+  finish.config = { returns: "boolean", value: null };
+  const response = await request.post("/api/save?workflow=" + key, {
+    headers: { "X-Workbench-Token": token! },
+    data: { workflow: record.workflow, revision: record.revision },
+  });
+  expect(response.status()).toBe(200);
+  await page.reload();
+  const validation = page.getByRole("region", { name: "Workflow validation" });
+  await expect(validation).toHaveCount(0);
+  await page.getByRole("button", { name: "Edit", exact: true }).click();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(validation).toContainText("1 issue prevents running");
+  await validation
+    .getByRole("button", { name: /Main workflow › Publish result/ })
+    .click();
+  await expect(page.getByLabel("Card name", { exact: true })).toHaveValue(
+    "Publish result",
+  );
+  await expect(
+    page.getByRole("button", { name: "Flowchart", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator(".react-flow__node.selected")).toContainText(
+    "Publish result",
+  );
+  await page
+    .getByRole("complementary", { name: "Card settings" })
+    .getByLabel("Workflow output", { exact: true })
+    .fill("false");
+  await expect(validation).toHaveCount(0);
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(validation).toContainText("Ready to run");
+  await expect(page.getByRole("status")).toContainText("Workflow saved.");
+});
+
+test("completion markers select Python and Calculate results without extra wires", async ({
+  page,
+  request,
+}) => {
+  await page.goto("/");
+  const token = await page
+    .locator('meta[name="workbench-token"]')
+    .getAttribute("content");
+  const headers = { "X-Workbench-Token": token! };
+  const entry = await (
+    await request.post("/api/create", {
+      headers,
+      data: { filename: "terminal-results.yaml", name: "Terminal results" },
+    })
+  ).json();
+  const record = await (
+    await request.get("/api/config?workflow=" + entry.id)
+  ).json();
+  const card = (id: string, kind: string, name: string, config = {}) => ({
+    id,
+    kind,
+    name,
+    config,
+  });
+  const edge = (source: string, target: string) => ({
+    id: source + target,
+    kind: "flow",
+    source,
+    target,
+    source_port: "next",
+    target_port: "entry",
+  });
+  record.workflow.functions = {
+    check: { graph: "check", returns: "boolean", inputs: {} },
+  };
+  record.workflow.graphs = {
+    main: {
+      cards: [
+        card("start", "start", "Start"),
+        card("call", "call", "Call check", { function: "check" }),
+        card("calculate", "calculate", "Calculate", {
+          operation: "add",
+          left: 2,
+          right: 3,
+        }),
+        card("finish", "finish", "Finish"),
+      ],
+      edges: [
+        edge("start", "call"),
+        edge("call", "calculate"),
+        edge("calculate", "finish"),
+      ],
+    },
+    check: {
+      cards: [
+        card("start", "start", "Start"),
+        card("python", "python", "Python", {
+          code: "return False",
+          returns: "boolean",
+        }),
+        card("wrong", "finish", "Finish"),
+      ],
+      edges: [edge("start", "python"), edge("python", "wrong")],
+    },
+  };
+  expect(
+    (
+      await request.post("/api/save?workflow=" + entry.id, {
+        headers,
+        data: { workflow: record.workflow, revision: record.revision },
+      })
+    ).status(),
+  ).toBe(200);
+  await page.goto("/?workflow=" + entry.id);
+  await page.getByRole("button", { name: "Edit", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Validate & review", exact: true })
+    .click();
+  await page
+    .getByRole("region", { name: "Workflow validation" })
+    .getByRole("button", { name: /Function “check” › Finish/ })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Flowchart", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator(".react-flow__node.selected")).toContainText(
+    "Finish",
+  );
+  await page.getByRole("button", { name: "List", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Replace with Return", exact: true })
+    .click();
+  await choose(page, "Result source", "Result of “Python”");
+  await page
+    .getByRole("button", { name: "Back to caller", exact: true })
+    .click();
+  await page.locator('[data-card-id="finish"]').click();
+  await choose(page, "Result source", "Result of “Calculate”");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(
+    page.getByRole("region", { name: "Workflow validation" }),
+  ).toContainText("Ready to run");
+  await choose(page, "Result source", "No result (Void)");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(
+    page.getByRole("region", { name: "Workflow validation" }),
+  ).toContainText("Ready to run");
+  await choose(page, "Result source", "Result of “Calculate”");
+  await page.getByRole("button", { name: "Save and run", exact: true }).click();
+  await expect(page.locator(".toolbar .status.passed")).toBeVisible();
+  const state = await (
+    await request.get("/api/state?workflow=" + entry.id)
+  ).json();
+  const executions = Object.values(state.executions) as {
+    card: string;
+    outcome: { value: { value: unknown } };
+  }[];
+  expect(executions.find((c) => c.card === "finish")?.outcome.value.value).toBe(
+    5,
+  );
+  expect(executions.find((c) => c.card === "call")?.outcome.value.value).toBe(
+    false,
+  );
+});
+
+test("selected run card keeps live logs, trail and returned value visible", async ({
+  page,
+  request,
+}) => {
+  await page.goto("/");
+  const token = await page
+    .locator('meta[name="workbench-token"]')
+    .getAttribute("content");
+  const headers = { "X-Workbench-Token": token! };
+  const entry = await (
+    await request.post("/api/create", {
+      headers,
+      data: { filename: "live-details.yaml", name: "Live card details" },
+    })
+  ).json();
+  const record = await (
+    await request.get("/api/config?workflow=" + entry.id)
+  ).json();
+  record.workflow.graphs.main.cards.splice(1, 0, {
+    id: "python",
+    kind: "python",
+    name: "Python probe",
+    config: {
+      returns: "boolean",
+      code: "import time\nprint('probe started', flush=True)\ntime.sleep(3)\nprint('probe completed', flush=True)\nreturn False",
+    },
+  });
+  record.workflow.graphs.main.edges = [
+    {
+      id: "start-python",
+      source: "start",
+      target: "python",
+      source_port: "next",
+      target_port: "entry",
+      kind: "flow",
+    },
+    {
+      id: "python-finish",
+      source: "python",
+      target: "finish",
+      source_port: "next",
+      target_port: "entry",
+      kind: "flow",
+    },
+  ];
+  expect(
+    (
+      await request.post("/api/save?workflow=" + entry.id, {
+        headers,
+        data: { workflow: record.workflow, revision: record.revision },
+      })
+    ).status(),
+  ).toBe(200);
+  await page.goto("/?workflow=" + entry.id);
+  await page.getByRole("button", { name: "List", exact: true }).click();
+  await page.getByRole("button", { name: "Run all", exact: true }).click();
+  await page.locator('[data-card-id="python"]').click();
+  const panel = page.getByRole("complementary", { name: "Card execution" });
+  await expect(
+    panel.getByLabel("Python probe live output", { exact: true }),
+  ).toContainText("probe started");
+  await expect(
+    panel.getByRole("region", { name: "Python probe live trail" }),
+  ).toContainText("started");
+  await expect(
+    panel.getByLabel("Python probe returned value", { exact: true }),
+  ).toHaveText("false");
+  await expect(
+    panel.getByLabel("Python probe live output", { exact: true }),
+  ).toContainText("probe completed");
+  await expect(
+    panel.getByRole("region", { name: "Python probe live trail" }),
+  ).toContainText("finished · passed");
+  await panel.getByRole("button", { name: "Overall run", exact: true }).click();
+  await expect(
+    page.getByRole("complementary", { name: "Overall run" }),
+  ).toBeVisible();
+});
+
+test("Compare chooses Get Count by name instead of requiring reference JSON", async ({
+  page,
+  request,
+}) => {
+  await open(page, "While with a Boolean function");
+  await page.getByRole("button", { name: "Edit", exact: true }).click();
+  await page.getByRole("button", { name: "List", exact: true }).click();
+  await page.locator('[data-card-id="repeat"]').click();
+  await page
+    .getByRole("button", { name: "Open function", exact: true })
+    .click();
+  await page.locator('[data-card-id="compare"]').click();
+  await expect(
+    page.getByRole("combobox", { name: "First value source", exact: true }),
+  ).toContainText("Result of “Get Count”");
+  await expect(
+    page.getByRole("textbox", { name: "First value", exact: true }),
+  ).toHaveCount(0);
+  await choose(page, "First value source", "Type a value");
+  await page.getByLabel("First value", { exact: true }).fill("0");
+  await choose(page, "First value source", "Result of “Get Count”");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(
+    page.getByRole("region", { name: "Workflow validation" }),
+  ).toContainText("Ready to run");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByRole("status")).toContainText("saved");
+  const key = new URL(page.url()).searchParams.get("workflow")!;
+  const record = await (
+    await request.get("/api/config?workflow=" + key)
+  ).json();
+  expect(
+    record.workflow.graphs.condition.cards.find(
+      (c: { id: string }) => c.id === "compare",
+    ).config.left,
+  ).toEqual({ $ref: "card:get-count" });
+  await page
+    .getByRole("button", { name: "Back to caller", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.getByRole("button", { name: "Run all", exact: true }).click();
+  await expect(page.locator(".toolbar .status.passed")).toBeVisible();
+  const state = await (await request.get("/api/state?workflow=" + key)).json();
+  expect(state.globals.count).toBe(3);
+});
+
+test("Variable card opens global declaration and initialization settings", async ({
+  page,
+  request,
+}) => {
+  await open(page, "While with a Boolean function");
+  await page.getByRole("button", { name: "Edit", exact: true }).click();
+  await page.getByRole("button", { name: "List", exact: true }).click();
+  await page.locator('[data-card-id="increment"]').click();
+  await page
+    .getByRole("button", { name: "Create / initialize global", exact: true })
+    .click();
+  await expect(
+    page.getByLabel("New global variable name", { exact: true }),
+  ).toBeFocused();
+  await page
+    .getByLabel("New global variable name", { exact: true })
+    .fill("attempts");
+  await page
+    .getByRole("button", { name: "Add global variable", exact: true })
+    .click();
+  await choose(page, "attempts type", "number");
+  const variable = page
+    .locator(".declaration")
+    .filter({ has: page.getByText("attempts", { exact: true }) });
+  await variable.getByLabel("Initial value", { exact: true }).fill("0");
+  await expect(
+    page.getByRole("region", { name: "Workflow validation" }),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByRole("status")).toContainText("saved");
+  const key = new URL(page.url()).searchParams.get("workflow")!;
+  const record = await (
+    await request.get("/api/config?workflow=" + key)
+  ).json();
+  expect(record.workflow.globals.attempts).toEqual({
+    type: "number",
+    initial: 0,
+  });
+});
+
+test("context menu fits near the bottom and remains contained after resize", async ({
+  page,
+}) => {
+  await open(page, "While with a Boolean function");
+  await page.getByRole("button", { name: "Edit", exact: true }).click();
+  await page.getByRole("button", { name: "Flowchart", exact: true }).click();
+  const pane = page.locator(".react-flow__pane");
+  const bounds = await pane.boundingBox();
+  await pane.click({
+    button: "right",
+    position: { x: bounds!.width / 2, y: bounds!.height - 5 },
+  });
+  const menu = page.getByRole("menu", { name: "Add a card", exact: true });
+  await expect(menu).toBeVisible();
+  for (const size of [
+    { width: 1440, height: 1000 },
+    { width: 600, height: 400 },
+    { width: 390, height: 320 },
+  ]) {
+    await page.setViewportSize(size);
+    await expect
+      .poll(async () => {
+        const box = await menu.boundingBox();
+        return (
+          !!box &&
+          box.x >= 11 &&
+          box.y >= 11 &&
+          box.x + box.width <= size.width - 11 &&
+          box.y + box.height <= size.height - 11
+        );
+      })
+      .toBe(true);
+    await menu.press("End");
+    await expect(menu.getByRole("menuitem").last()).toBeInViewport();
+  }
+  await menu.press("Escape");
+  await expect(menu).toHaveCount(0);
 });

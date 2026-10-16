@@ -38,7 +38,9 @@ export function Connections({
         .map((e) => (
           <div key={e.id}>
             <small>
-              {e.source}.{e.source_port ?? "next"} → {e.target}.
+              {graph.cards.find((c) => c.id === e.source)?.name ?? e.source}.
+              {e.source_port ?? "next"} →{" "}
+              {graph.cards.find((c) => c.id === e.target)?.name ?? e.target}.
               {e.target_port ?? "entry"} ({e.kind ?? "flow"})
             </small>
             <button disabled={disabled} onClick={() => onDelete(e.id)}>

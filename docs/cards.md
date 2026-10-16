@@ -40,3 +40,15 @@ Calculate supports add/subtract/multiply/divide, numeric comparisons, strict equ
 ## Interventions
 
 Wait is a cancellable duration. Poll until re-invokes a Boolean function each time, sleeping for the configured interval. Its timeout may explicitly be null for unlimited waiting. It never reuses a previous result. Manual decision returns a Boolean selected by the user plus evidence notes; approval records notes and returns Void. Each invocation, including repeated loop prompts, needs its own answer. Unattended CLI runs block rather than inventing approval.
+
+## Finish and Return: execution versus results
+
+Use **Finish** to end the main workflow. Choose **No result (Void)** when it only needs to stop successfully. Use **Return** inside a function to send its result back to the calling If, While or Call function card. A Return in a controlled branch completes that branch; Finish is reserved for the main workflow.
+
+An execution connection says **when** the marker runs; it does not choose **what value** to return. In the completion marker’s **Result source** field, select **Result of “Python”** or **Result of “Calculate”**. This uses the result of that card without requiring a second wire. Keep the producer before the marker in execution order. Alternatively select **Type a value** for a constant, or wire a typed Value output to the marker’s result input. Functions must return their declared type: an If/While condition function must return a Boolean, not a number or printed text.
+
+Example: `Function Start → Python (return True) → Return`, then select **Result of “Python”** on Return. The function returns `true` to its caller. In the main graph, `Start → Calculate → Finish` can similarly publish Calculate’s result as the workflow output. Parallel branches must publish results through Join before returning them; a marker cannot read a card that has not executed on its path.
+
+## Choose values without reference syntax
+
+Calculate/Compare and other JSON value fields have a source picker. Choose **Type a value** for a constant, **Result of “Get Count”** (or another preceding card) for a returned value, or a declared workflow/function input. Existing `$ref` bindings display as named choices without changing the document. Raw references remain optional under **Advanced reference**. Choosing a new source replaces a value connection for that field, so an older wire cannot override your choice. Execution ordering and typed validation still apply.

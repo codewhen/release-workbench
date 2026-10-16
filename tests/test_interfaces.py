@@ -108,7 +108,7 @@ class Interfaces(unittest.TestCase):
         raw["graphs"]["main"]["edges"] = [edge("start", "unfinished")]
         saved = self.app.mutation("save", key, {"workflow": raw, "revision": record["revision"]})
         self.assertFalse(saved["runnable"])
-        self.assertIn("unfinished.next", saved["validation_errors"][0])
+        self.assertIn("Unfinished", saved["validation_errors"][0])
         self.assertNotIn("use Parallel", saved["validation_errors"][0])
         self.assertEqual(DocumentStore(file).read()["workflow"], raw)
         with self.assertRaisesRegex(ValueError, "no execution connection"):
@@ -174,3 +174,24 @@ class Interfaces(unittest.TestCase):
         )
         self.assertTrue(entry["id"])
         self.assertEqual(self.app.library.register(self.root / "draft.yaml")["id"], entry["id"])
+
+    def test_diagnostics_refresh_without_saving_or_backing_up_draft(self):
+        from release_workbench.infrastructure.documents import DocumentStore
+        from tests.support import by_id
+
+        entry = self.app.library.listing()["entries"][0]
+        key = entry["id"]
+        original = DocumentStore(self.app.library.file(key)).read()
+        raw = original["workflow"]
+        by_id(raw, "finish")["config"] = {"returns": "boolean", "value": None}
+        invalid = self.app.mutation("diagnostics", key, {"workflow": raw})
+        self.assertFalse(invalid["runnable"])
+        self.assertEqual(len(invalid["issues"]), 1)
+        by_id(raw, "finish")["config"]["value"] = False
+        fixed = self.app.mutation("diagnostics", key, {"workflow": raw})
+        self.assertTrue(fixed["runnable"])
+        self.assertEqual(fixed["issues"], [])
+        self.assertEqual(
+            DocumentStore(self.app.library.file(key)).read()["revision"], original["revision"]
+        )
+        self.assertIsNone(self.app.drafts.matching(key, original["revision"]))

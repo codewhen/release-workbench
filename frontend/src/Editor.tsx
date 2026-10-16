@@ -1,21 +1,12 @@
+import { useRunState } from "./run/useRunState";
+import { EditorToolbar } from "./editor/EditorToolbar";
 import { assertFormValidity } from "./components/validation";
-import { configuredCard } from "./shared/cards";
+import { configuredCard, resultType } from "./shared/cards";
 import { useEffect, useRef, useState } from "react";
 import { ReactFlowProvider, type Connection } from "@xyflow/react";
-import {
-  Play,
-  Square,
-  Pause,
-  Plus,
-  Undo2,
-  Redo2,
-  PanelLeftClose,
-  PanelLeftOpen,
-  GitBranch,
-} from "lucide-react";
+import { GitBranch } from "lucide-react";
 import { api, ApiError } from "./shared/api";
 import {
-  EMPTY_STATE,
   VALUE_TYPES,
   type Card,
   type Catalog,
@@ -24,6 +15,7 @@ import {
   type Workflow,
   type ValidationIssue,
 } from "./shared/types";
+import { setCardConfiguration } from "./editor/cardCommands";
 import { useEditor } from "./editor/useEditor";
 import {
   addCard,
@@ -42,9 +34,7 @@ import {
   type MenuState,
   type MenuAction,
 } from "./editor/ContextMenu";
-import { FieldEditor, fieldVisible } from "./cards/Fields";
-import { Connections } from "./cards/Connections";
-import { Bindings } from "./cards/Bindings";
+import { CardInspector } from "./cards/CardInspector";
 import { ManualDialog } from "./run/ManualDialog";
 import { WorkflowSettings } from "./editor/WorkflowSettings";
 import { RunPanel } from "./run/RunPanel";
@@ -95,7 +85,6 @@ function Editor({
     initial.recovery?.workflow ?? initial.workflow,
   );
   const [saved, setSaved] = useState(initial),
-    [state, setState] = useState<RunState>(EMPTY_STATE),
     [graphId, setGraphId] = useState("main"),
     [view, setView] = useState<"run" | "edit">(
       initial.recovery ? "edit" : "run",
@@ -124,9 +113,12 @@ function Editor({
     [confirmDelete, setConfirmDelete] = useState<string | null>(null),
     [runInputs, setRunInputs] = useState<Record<string, unknown> | null>(null),
     [manualId, setManualId] = useState<string | null>(null);
-  const [issues, setIssues] = useState<ValidationIssue[]>(
-    initial.recovery ? [] : (initial.issues ?? []),
-  );
+  const { state, setState } = useRunState(id, setError);
+  const [issues, setIssues] = useState<ValidationIssue[]>([]);
+  const [validatedKey, setValidatedKey] = useState<string | null>(null);
+  const draftKey = JSON.stringify(yamlDirty ? { yaml } : workflow);
+  const showValidation = validatedKey === draftKey;
+  const [checking, setChecking] = useState(false);
   const [breadcrumbs, setBreadcrumbs] = useState<
     { graph: string; card: string | null; name: string }[]
   >([]);
@@ -162,15 +154,7 @@ function Editor({
     seenManual.current.clear();
     setManualId(null);
   }, [state.run_id]);
-  useEffect(() => {
-    const poll = () =>
-      api<RunState>("state", undefined, id)
-        .then(setState)
-        .catch((e) => setError(e.message));
-    void poll();
-    const timer = setInterval(() => void poll(), 500);
-    return () => clearInterval(timer);
-  }, [id]);
+
   useEffect(() => {
     const next = Object.keys(state.manual).find(
       (path) => !seenManual.current.has(path),
@@ -201,18 +185,38 @@ function Editor({
     media.addEventListener("change", update);
     return () => media.removeEventListener("change", update);
   }, []);
-  async function act<T>(fn: () => Promise<T>): Promise<T | undefined> {
+  async function act<T>(
+    fn: () => Promise<T>,
+    validateDraft = false,
+  ): Promise<T | undefined> {
     setWorking(true);
     setError("");
-    setIssues([]);
+    if (validateDraft) {
+      setValidatedKey(draftKey);
+      setChecking(true);
+      setIssues([]);
+    }
     try {
       return await fn();
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-      if (e instanceof ApiError) setIssues(e.issues);
+      setError(
+        e instanceof ApiError && e.issues.length
+          ? ""
+          : e instanceof Error
+            ? e.message
+            : String(e),
+      );
+      if (e instanceof ApiError && e.issues.length) {
+        if (validateDraft) setIssues(e.issues);
+        else
+          setNotice(
+            "Run not started. Click Save or Validate & review to see what needs fixing.",
+          );
+      } else if (validateDraft) setValidatedKey(null);
       return undefined;
     } finally {
       setWorking(false);
+      if (validateDraft) setChecking(false);
     }
   }
   function patchCard(id: string, changes: Partial<Card>) {
@@ -224,8 +228,10 @@ function Editor({
     commit(next);
   }
   function config(id: string, key: string, value: unknown) {
-    const c = graph.cards.find((c) => c.id === id)!;
-    patchCard(id, { config: { ...c.config, [key]: value } });
+    if (editing)
+      commit(
+        setCardConfiguration(workflow, graphId, id, key, value, catalog.cards),
+      );
   }
   function select(id: string) {
     setSelected(id);
@@ -310,16 +316,35 @@ function Editor({
   function wire(connection: Connection) {
     if (!editing || !connection.source || !connection.target) return;
     try {
-      commit(
-        connect(
-          workflow,
-          graphId,
-          connection.source,
-          connection.target,
-          connection.sourceHandle ?? "flow:next",
-          connection.targetHandle ?? "flow:entry",
-        ),
+      const next = connect(
+        workflow,
+        graphId,
+        connection.source,
+        connection.target,
+        connection.sourceHandle ?? "flow:next",
+        connection.targetHandle ?? "flow:entry",
       );
+      if (
+        connection.sourceHandle === "value" &&
+        connection.targetHandle === "value:config:value"
+      ) {
+        const target = next.graphs[graphId].cards.find(
+          (c) => c.id === connection.target,
+        )!;
+        if (["finish", "return"].includes(target.kind)) {
+          const source = graph.cards.find((c) => c.id === connection.source)!;
+          target.config = {
+            ...target.config,
+            value: null,
+            returns: resultType(
+              source,
+              catalog.cards.find((m) => m.kind === source.kind)!,
+              workflow,
+            ),
+          };
+        }
+      }
+      commit(next);
       setError("");
       setNotice("Connection added. Validate the flowchart before running.");
     } catch (e) {
@@ -375,7 +400,8 @@ function Editor({
       setYamlDirty(false);
       setReview(result.diff || "Workflow is valid. No configuration changes.");
       setNotice("Validation passed.");
-    });
+      setValidatedKey(JSON.stringify(result.workflow));
+    }, true);
   }
   async function save(andRun = false) {
     await act(async () => {
@@ -385,23 +411,16 @@ function Editor({
         { ...(yamlDirty ? { yaml } : { workflow }), revision: saved.revision },
         id,
       );
+      setValidatedKey(JSON.stringify(record.workflow));
       setSaved(record);
       reset(record.workflow);
       setYaml(record.yaml);
       setYamlDirty(false);
-      setNotice(
-        record.runnable === false
-          ? `Draft saved. ${record.validation_errors?.length ?? 0} validation issue(s) must be fixed before running.`
-          : "Workflow saved.",
-      );
+      setNotice(record.runnable === false ? "Draft saved." : "Workflow saved.");
       setIssues(record.issues ?? []);
       setReview("");
       if (andRun && record.runnable !== false) prepareRun(record);
-      else if (andRun)
-        setError(
-          "Draft saved. Complete the execution connections before running.",
-        );
-    });
+    }, true);
   }
   function prepareRun(record = saved) {
     const values = Object.fromEntries(
@@ -460,7 +479,9 @@ function Editor({
       category: "Layout",
     })),
     ...catalog.cards
-      .filter((c) => c.kind !== "start")
+      .filter(
+        (c) => c.kind !== "start" && !(currentFunction && c.kind === "finish"),
+      )
       .map((c) => ({ id: c.kind, label: c.label, category: c.category })),
   ];
   function chooseMenu(action: string) {
@@ -515,11 +536,7 @@ function Editor({
             <h1>Workflow Workbench</h1>
             <p>
               {workflow.name} ·{" "}
-              {dirty
-                ? "Unsaved draft"
-                : saved.runnable === false
-                  ? "Saved draft · not ready to run"
-                  : "Saved configuration"}
+              {dirty ? "Unsaved draft" : "Saved configuration"}
             </p>
           </div>
         </div>
@@ -561,143 +578,79 @@ function Editor({
           <button onClick={() => setNotice("")}>Dismiss</button>
         </div>
       )}
-      {issues.length > 0 && (
-        <div className="validation-issues" aria-label="Workflow issues">
-          {issues.map((issue) => (
-            <button
-              key={issue.graph + ":" + issue.card + ":" + issue.port}
-              onClick={() => {
-                setGraphId(issue.graph);
-                setView("edit");
-                setSettings(false);
-                select(issue.card);
-                setRepresentation("list");
-                requestAnimationFrame(() =>
-                  panel.current
-                    ?.querySelector<HTMLButtonElement>(
-                      '[aria-label="Connect to card"]',
-                    )
-                    ?.focus(),
-                );
-              }}
-            >
-              Connect{" "}
-              {workflow.graphs[issue.graph]?.cards.find(
-                (c) => c.id === issue.card,
-              )?.name ?? issue.card}
-              .{issue.port}
-            </button>
-          ))}
-        </div>
-      )}
-      <div className="toolbar">
-        <div className="actions">
-          {view === "edit" ? (
-            <>
-              <button
-                disabled={!editing || representation === "yaml"}
-                onClick={(e) =>
-                  setMenu({ kind: "canvas", x: e.clientX, y: e.clientY })
-                }
-              >
-                <Plus size={17} />
-                Add card
-              </button>
-              <button disabled={locked} onClick={() => void save()}>
-                Save
-              </button>
-              <button
-                className="primary"
-                disabled={locked}
-                onClick={() => void save(true)}
-              >
-                <Play size={17} />
-                Save and run
-              </button>
-              <button
-                aria-label="Undo"
-                disabled={locked || !canUndo}
-                onClick={undo}
-              >
-                <Undo2 size={17} />
-              </button>
-              <button
-                aria-label="Redo"
-                disabled={locked || !canRedo}
-                onClick={redo}
-              >
-                <Redo2 size={17} />
-              </button>
-              <button
-                disabled={!editing}
-                onClick={() => commit(arrange(workflow, graphId))}
-              >
-                Arrange
-              </button>
-              <button disabled={locked} onClick={() => void validate()}>
-                Validate & review
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                className="primary"
-                disabled={locked || dirty}
-                onClick={() => prepareRun()}
-              >
-                <Play size={17} />
-                Run all
-              </button>
-              <button
-                disabled={!state.busy}
-                onClick={() => void act(() => api("stop", {}, id))}
-              >
-                <Square size={17} />
-                Stop all
-              </button>
-              <button
-                disabled={!state.busy}
-                onClick={() =>
-                  void act(() => api("pause", { paused: !state.paused }, id))
-                }
-              >
-                <Pause size={17} />
-                {state.paused ? "Resume scheduling" : "Pause scheduling"}
-              </button>
-              <button onClick={showOverall}>Overall run</button>
-              {Object.keys(state.manual).length > 0 && (
-                <button
-                  className="primary"
-                  onClick={() => setManualId(Object.keys(state.manual)[0])}
-                >
-                  Action required ({Object.keys(state.manual).length})
-                </button>
-              )}
-              <span className={"status " + state.status}>{state.status}</span>
-            </>
+      {showValidation && (
+        <section
+          className="validation-issues"
+          aria-label="Workflow validation"
+          aria-busy={checking}
+        >
+          <p className="validation-summary" aria-live="polite">
+            {checking
+              ? "Checking workflow…"
+              : issues.length
+                ? `${issues.length} ${issues.length === 1 ? "issue prevents" : "issues prevent"} running. Select an issue to fix it.`
+                : "Ready to run · Validation passed."}
+          </p>
+          {!checking && issues.length > 0 && (
+            <ul>
+              {issues.map((issue, index) => (
+                <li key={`${issue.graph}:${issue.card}:${issue.port}:${index}`}>
+                  <button
+                    onClick={() => {
+                      setView("edit");
+                      if (!issue.card || !workflow.graphs[issue.graph]) {
+                        setSettings(true);
+                        return;
+                      }
+                      setGraphId(issue.graph);
+                      setSettings(false);
+                      select(issue.card);
+                      setRepresentation("canvas");
+                    }}
+                  >
+                    <strong>
+                      {issue.label ??
+                        workflow.graphs[issue.graph]?.cards.find(
+                          (c) => c.id === issue.card,
+                        )?.name ??
+                        "Workflow settings"}
+                      {issue.port ? ` · ${issue.port}` : ""}
+                    </strong>
+                    <span>{issue.message}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
           )}
-        </div>
-        <div className="actions">
-          <button onClick={() => setHidden(!hidden)}>
-            {hidden ? (
-              <PanelLeftOpen size={17} />
-            ) : (
-              <PanelLeftClose size={17} />
-            )}{" "}
-            {hidden ? "Show details" : "Hide details"}
-          </button>
-          {(["canvas", "list", "yaml"] as const).map((v) => (
-            <button
-              key={v}
-              aria-pressed={representation === v}
-              disabled={state.busy && v === "yaml"}
-              onClick={() => void mode(v)}
-            >
-              {v === "canvas" ? "Flowchart" : v[0].toUpperCase() + v.slice(1)}
-            </button>
-          ))}
-        </div>
-      </div>
+        </section>
+      )}
+      <EditorToolbar
+        view={view}
+        representation={representation}
+        state={state}
+        editing={editing}
+        locked={locked}
+        dirty={dirty}
+        canUndo={canUndo}
+        canRedo={canRedo}
+        hidden={hidden}
+        actions={{
+          add: (e) => setMenu({ kind: "canvas", x: e.clientX, y: e.clientY }),
+          save: (andRun) => void save(andRun),
+          undo,
+          redo,
+          arrange: () => commit(arrange(workflow, graphId)),
+          validate: () => void validate(),
+          run: () => prepareRun(),
+          stop: () => void act(() => api("stop", {}, id)),
+          pause: () =>
+            void act(() => api("pause", { paused: !state.paused }, id)),
+          overall: showOverall,
+          manual: () => setManualId(Object.keys(state.manual)[0]),
+          toggleDetails: () => setHidden(!hidden),
+          representation: (v) => void mode(v),
+        }}
+      />
       <nav className="breadcrumbs" aria-label="Function navigation">
         <button
           onClick={() => {
@@ -750,7 +703,11 @@ function Editor({
             <aside
               ref={panel}
               aria-label={
-                overall && view === "run" ? "Overall run" : "Card settings"
+                view === "run"
+                  ? overall
+                    ? "Overall run"
+                    : "Card execution"
+                  : "Card settings"
               }
             >
               {settings ? (
@@ -767,6 +724,7 @@ function Editor({
                   selected={selected}
                   graphId={graphId}
                   overall={overall}
+                  onOverall={showOverall}
                   onSelect={(id, g) => {
                     setGraphId(g);
                     select(id);
@@ -822,95 +780,43 @@ function Editor({
                   </fieldset>
                 </>
               ) : card ? (
-                <>
-                  <h2>{card.name}</h2>
-                  <label>
-                    Card name
-                    <input
-                      disabled={!editing}
-                      value={card.name}
-                      onChange={(e) =>
-                        patchCard(card.id, { name: e.target.value })
-                      }
-                    />
-                  </label>
-                  {catalog.cards
-                    .find((m) => m.kind === card.kind)!
-                    .fields.filter((f) => fieldVisible(f, card.config ?? {}))
-                    .map((f) => (
-                      <FieldEditor
-                        key={f.key}
-                        field={f}
-                        card={card}
-                        workflow={workflow}
-                        disabled={!editing}
-                        onChange={(k, v) => config(card.id, k, v)}
-                        onOpenFunction={openFunction}
-                        onNewFunction={(returns) =>
-                          setNewFunction({ returns: returns ?? "json" })
-                        }
-                      />
-                    ))}
-                  <Connections
-                    meta={catalog.cards.find((c) => c.kind === card!.kind)!}
-                    catalog={catalog.cards}
-                    workflow={workflow}
-                    graphId={graphId}
-                    card={card}
-                    disabled={!editing}
-                    onConnect={wire}
-                    onDelete={(edge) => {
-                      const next = clone(workflow);
-                      next.graphs[graphId].edges = graph.edges.filter(
-                        (e) => e.id !== edge,
-                      );
-                      commit(next);
-                    }}
-                  />
-                  <Bindings
-                    card={card}
-                    workflow={workflow}
-                    graphId={graphId}
-                    disabled={!editing}
-                    onChange={(inputs) => patchCard(card.id, { inputs })}
-                  />
-                  <details>
-                    <summary>Advanced execution settings</summary>
-                    <JsonInput
-                      label="Timeout, locks, retries and environment"
-                      value={card.settings ?? {}}
-                      disabled={!editing}
-                      multiline
-                      onChange={(settings) =>
-                        patchCard(card.id, {
-                          settings: settings as Card["settings"],
-                        })
-                      }
-                    />
-                    <small>
-                      Use timeout, resources, exclusive, interactive, cwd,
-                      environment and retry. Retry defaults off.
-                    </small>
-                  </details>
-                  <div className="actions">
-                    <button
-                      disabled={!editing || card.kind === "start"}
-                      onClick={() => {
-                        const next = duplicateCard(workflow, graphId, card.id);
-                        commit(next.workflow);
-                        setSelected(next.id);
-                      }}
-                    >
-                      Duplicate
-                    </button>
-                    <button
-                      disabled={!editing || card.kind === "start"}
-                      onClick={() => setConfirmDelete(card.id)}
-                    >
-                      Delete card
-                    </button>
-                  </div>
-                </>
+                <CardInspector
+                  card={card}
+                  workflow={workflow}
+                  graphId={graphId}
+                  catalog={catalog}
+                  editing={editing}
+                  currentFunction={currentFunction}
+                  onPatch={(changes) => patchCard(card.id, changes)}
+                  onConfig={(key, value) => config(card.id, key, value)}
+                  onOpenFunction={openFunction}
+                  onNewFunction={(returns) => setNewFunction({ returns })}
+                  onOpenGlobals={() => {
+                    setSettings(true);
+                    requestAnimationFrame(() => {
+                      const field =
+                        panel.current?.querySelector<HTMLInputElement>(
+                          'input[aria-label="New global variable name"]',
+                        );
+                      field?.focus();
+                      field?.scrollIntoView({ block: "center" });
+                    });
+                  }}
+                  onConnect={wire}
+                  onDeleteEdge={(edge) => {
+                    const next = clone(workflow);
+                    next.graphs[graphId].edges = graph.edges.filter(
+                      (e) => e.id !== edge,
+                    );
+                    commit(next);
+                  }}
+                  onDuplicate={() => {
+                    const next = duplicateCard(workflow, graphId, card.id);
+                    commit(next.workflow);
+                    setSelected(next.id);
+                  }}
+                  onDelete={() => setConfirmDelete(card.id)}
+                />
               ) : (
                 <>
                   <h2>

@@ -398,3 +398,39 @@ class Flowcharts(RunCase):
                 for e in run.evidence.state["executions"].values()
             )
         )
+
+    async def test_finish_returns_python_or_calculate_result(self):
+        for operation, expected in (
+            (card("produce", "python", {"code": "return False", "returns": "boolean"}), False),
+            (card("produce", "calculate", {"operation": "add", "left": 2, "right": 3}), 5),
+        ):
+            with self.subTest(kind=operation["kind"]):
+                raw = sequence(operation)
+                by_id(raw, "finish")["config"] = {"returns": "json", "value": ref("produce")}
+                run = await self.passed(raw)
+                entries = run.evidence.state["executions"].values()
+                finish = next(item for item in entries if item["card"] == "finish")
+                self.assertEqual(finish["outcome"]["value"]["value"], expected)
+
+    async def test_function_return_accepts_python_boolean(self):
+        raw = sequence(card("call", "call", {"function": "check"}))
+        raw["functions"] = {"check": {"graph": "check", "returns": "boolean", "inputs": {}}}
+        raw["graphs"]["check"] = {
+            "cards": [
+                card("start", "start"),
+                card("python", "python", {"code": "return False", "returns": "boolean"}),
+                card("return", "return", {"returns": "boolean", "value": ref("python")}),
+            ],
+            "edges": [edge("start", "python"), edge("python", "return")],
+        }
+        await self.passed(raw)
+
+    async def test_binding_failure_is_recorded_against_its_card(self):
+        raw = sequence(card("wait", "wait", {"seconds": {"$ref": "env:WORKBENCH_REVIEW_MISSING"}}))
+        run = self.make(raw)
+        run.environment.pop("WORKBENCH_REVIEW_MISSING", None)
+        self.assertEqual(await run.execute(), 1)
+        entry = run.evidence.state["executions"]["root/main/wait"]
+        self.assertEqual(entry["status"], "failed")
+        self.assertEqual(entry["result"]["status"], "failed")
+        self.assertIn("seconds", entry)

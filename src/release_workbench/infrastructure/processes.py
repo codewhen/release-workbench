@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import codecs
 import json
 import os
 import signal
@@ -50,12 +51,16 @@ class ProcessAdapter:
         async def read(name: str, reader: asyncio.StreamReader | None) -> None:
             nonlocal size
             assert reader is not None
+            decoder = codecs.getincrementaldecoder("utf-8")(errors="replace")
             while chunk := await reader.read(4096):
                 size += len(chunk)
                 if size > MAX_OUTPUT:
                     raise ContractError("Combined process output exceeds 1 MiB.")
                 streams[name].extend(chunk)
-                log(chunk.decode("utf-8", "replace"))
+                log(decoder.decode(chunk))
+            remainder = decoder.decode(b"", final=True)
+            if remainder:
+                log(remainder)
 
         async def send() -> None:
             if process.stdin:
@@ -89,8 +94,10 @@ class ProcessAdapter:
                 if asyncio.get_running_loop().time() - start >= timeout:
                     raise TimeoutError(f"Process exceeded {timeout:g} seconds.")
                 for task in tasks:
-                    if task.done() and not task.cancelled() and task.exception():
-                        raise task.exception()  # type: ignore[misc]
+                    if task.done() and not task.cancelled():
+                        error = task.exception()
+                        if error is not None:
+                            raise error
                 await asyncio.sleep(0.03)
             await asyncio.gather(*tasks)
             result: dict[str, Any] = {
@@ -144,6 +151,7 @@ class ProcessAdapter:
             await self.run(
                 [
                     sys.executable,
+                    "-u",
                     str(Path(__file__).with_name("worker.py")),
                     str(result),
                 ],
@@ -156,7 +164,7 @@ class ProcessAdapter:
             )
             if not result.exists() or result.stat().st_size > MAX_OUTPUT:
                 raise ContractError("Structured result is missing or exceeds 1 MiB.")
-            value = json.loads(result.read_text())
+            value = json.loads(result.read_text(encoding="utf-8"))
             if "error" in value:
                 raise ContractError(value["error"])
             return value["value"]

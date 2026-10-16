@@ -272,6 +272,106 @@ class Effects(RunCase):
         (self.root / "ready.txt").write_text("ready")
         await self.passed(raw)
 
+    async def test_invalid_progress_cannot_corrupt_evidence(self):
+        code = "\n".join(
+            [
+                'print(\'::workbench::{"done":NaN,"total":1}\')',
+                'print(\'::workbench::{"done":1,"total":Infinity}\')',
+                'print(\'::workbench::{"done":-1,"total":1}\')',
+                'print(\'::workbench::{"done":1,"total":2,"stage":"Working","kind":"spoofed"}\')',
+                "return True",
+            ]
+        )
+        run = await self.passed(sequence(card("progress", "python", {"code": code})))
+        entry = run.evidence.state["executions"]["root/main/progress"]
+        self.assertEqual(
+            entry["progress"], {"done": 1, "total": 2, "stage": "Working", "measured": True}
+        )
+        self.assertTrue((run.evidence.directory / "report.html").is_file())
+        self.assertFalse(any(event["kind"] == "spoofed" for event in run.evidence.state["events"]))
+
+    async def test_declared_secret_environment_overrides_are_masked(self):
+        raw = sequence(
+            card(
+                "override",
+                "python",
+                {
+                    "code": "import os\nvalue=os.environ['WORKBENCH_DEMO_SECRET']\nprint(value)\nreturn value"
+                },
+            )
+        )
+        raw["environment"] = {"WORKBENCH_DEMO_SECRET": "demo-base-secret"}
+        raw["secrets"] = ["WORKBENCH_DEMO_SECRET"]
+        by_id(raw, "override")["settings"] = {
+            "environment": {"WORKBENCH_DEMO_SECRET": "demo-card-secret"}
+        }
+        run = await self.passed(raw)
+        for file in run.evidence.directory.iterdir():
+            if file.is_file():
+                text = file.read_text()
+                self.assertNotIn("demo-base-secret", text)
+                self.assertNotIn("demo-card-secret", text)
+        self.assertIn("[REDACTED]", (run.evidence.directory / "summary.json").read_text())
+
+    async def test_unicode_output_is_preserved_across_stream_chunks(self):
+        import os
+
+        from release_workbench.infrastructure.processes import ProcessAdapter
+
+        logs = []
+        text = "x" * 4095 + "€" + " done"
+        result = await ProcessAdapter().run(
+            [
+                sys.executable,
+                "-c",
+                "import sys;sys.stdout.buffer.write(" + repr(text.encode()) + ")",
+            ],
+            self.root,
+            dict(os.environ),
+            None,
+            logs.append,
+            lambda: None,
+        )
+        self.assertEqual(result["stdout"], text)
+        self.assertEqual("".join(logs), text)
+
+    async def test_python_print_is_live_without_explicit_flush(self):
+        raw = sequence(
+            card(
+                "live",
+                "python",
+                {
+                    "code": "import time\nfrom pathlib import Path\nprint('live without flush')\nwhile not Path('release-print.flag').exists():\n    time.sleep(0.01)\nreturn True"
+                },
+            )
+        )
+        run = self.make(raw)
+        task = asyncio.create_task(run.execute())
+        try:
+
+            async def wait_for_log():
+                while "live without flush" not in run.evidence.state["executions"].get(
+                    "root/main/live", {}
+                ).get("tail", ""):
+                    await asyncio.sleep(0.01)
+
+            await asyncio.wait_for(wait_for_log(), 5)
+            self.assertFalse(task.done())
+        finally:
+            (self.root / "release-print.flag").write_text("ready")
+            await asyncio.wait_for(task, 5)
+
+    async def test_python_respects_its_configured_working_directory(self):
+        (self.root / "nested").mkdir()
+        raw = sequence(
+            card("cwd", "python", {"code": "from pathlib import Path\nreturn Path.cwd().name"})
+        )
+        by_id(raw, "cwd")["settings"] = {"cwd": "nested"}
+        run = await self.passed(raw)
+        self.assertEqual(
+            run.evidence.state["executions"]["root/main/cwd"]["outcome"]["value"]["value"], "nested"
+        )
+
 
 class Scheduling(unittest.IsolatedAsyncioTestCase):
     async def test_budget_resource_contention_and_exclusive(self):

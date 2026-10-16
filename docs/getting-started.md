@@ -54,3 +54,11 @@ Commands use the workflow YAML's directory as their workspace. Keep scripts and 
 Save preserves schema-valid drafts even when cards are disconnected or required execution fields are unfinished. It shows what must be completed before running. Validate checks readiness; Run never executes an invalid flowchart. Connection messages include the graph/card and offer buttons to open the affected card.
 
 If an older editor rejects Save, the updated server backs up that submitted draft. Reload the page only after the error confirms **Draft backed up**. The updated editor restores the backup as an unsaved draft; click Save to keep it. A backup whose base revision no longer matches the saved file is not restored over external changes.
+
+## Create and initialize a global variable
+
+In **Edit** view, open **Workflow settings → Global variables**. Enter a name such as `count`, click **Add global variable**, choose **number**, and set **Initial value** to `0`. Save the workflow. You can also select a Variable card and click **Create / initialize global** to open this form directly.
+
+Use **Get** to read the current value, **Set** to replace it, and **Update** to change it during a run. Initial values are restored when a new run starts; Get/Set/Update do not declare new globals.
+
+Validation diagnostics appear after **Save** or **Validate & review**. Editing clears the displayed diagnostics; check again when ready. Run still enforces execution safety, and an invalid flowchart is not started.

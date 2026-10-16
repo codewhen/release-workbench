@@ -121,12 +121,14 @@ class WorkbenchApplication:
                 return entry
             file = self.library.file(key)
             store = DocumentStore(file)
-            if route in ("validate", "save", "draft"):
+            if route in ("validate", "save", "draft", "diagnostics"):
                 if any(run.busy for run in self.runs.values()):
                     raise ValueError("Editing is disabled during execution.")
                 current = store.read()
                 raw = data.get("workflow") or parse_document(data["yaml"])
                 validate_document_schema(raw)
+                if route == "diagnostics":
+                    return document_readiness(raw)
                 validation_errors: list[str] = []
                 issues: list[dict[str, str]] = []
                 try:
@@ -269,7 +271,7 @@ def create_server(
                 elif route == "/api/history":
                     records = []
                     for file in sorted((app.storage / "runs").glob("*/summary.json"), reverse=True):
-                        value = json.loads(file.read_text())
+                        value = json.loads(file.read_text(encoding="utf-8"))
                         records.append(
                             {k: value[k] for k in ("run_id", "name", "status", "fingerprint")}
                         )

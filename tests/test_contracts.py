@@ -67,11 +67,24 @@ class Contracts(unittest.TestCase):
     def test_domain_has_no_effect_adapters(self):
         base = Path(__file__).parents[1] / "src/release_workbench"
         for layer in ("domain", "application"):
-            for file in (base / layer).glob("*.py"):
+            for file in (base / layer).rglob("*.py"):
                 for node in ast.walk(ast.parse(file.read_text())):
+                    if isinstance(node, ast.Import):
+                        for alias in node.names:
+                            self.assertNotIn(
+                                "release_workbench.infrastructure", alias.name, str(file)
+                            )
+                            self.assertNotIn("release_workbench.interfaces", alias.name, str(file))
+                            if layer == "domain":
+                                self.assertNotIn(
+                                    "release_workbench.application", alias.name, str(file)
+                                )
                     if isinstance(node, ast.ImportFrom):
                         self.assertNotIn("infrastructure", node.module or "", str(file))
+                        self.assertNotIn("interfaces", node.module or "", str(file))
                         if layer == "domain":
+                            self.assertNotIn("application", node.module or "", str(file))
+                        if layer == "domain" and node.level == 0:
                             self.assertNotIn(
                                 (node.module or "").split(".")[0],
                                 ("os", "pathlib", "subprocess", "asyncio", "http"),
@@ -180,3 +193,146 @@ class Contracts(unittest.TestCase):
         by_id(raw, "finish")["config"] = {"returns": "boolean", "value": None}
         with self.assertRaisesRegex(CompilationError, "Expected boolean"):
             compile_document(raw)
+
+    def test_all_diagnostics_use_card_names_and_graph_locations(self):
+        raw = starter("Named diagnostics")
+        by_id(raw, "finish")["name"] = "Publish result"
+        by_id(raw, "finish")["config"] = {"returns": "boolean", "value": None}
+        from copy import deepcopy
+
+        raw["graphs"]["condition"] = deepcopy(raw["graphs"]["main"])
+        by_id(raw, "finish", "condition")["name"] = "Condition result"
+        by_id(raw, "finish", "condition")["config"] = {"returns": "number", "value": None}
+        raw["functions"] = {
+            "Check health": {"graph": "condition", "returns": "boolean", "inputs": {}}
+        }
+        with self.assertRaises(CompilationError) as caught:
+            compile_document(raw)
+        error = caught.exception
+        self.assertEqual(len(error.errors), 3)
+        self.assertEqual(len(error.issues), 3)
+        self.assertIn("Main workflow › Publish result", error.errors[0])
+        self.assertTrue(
+            all("Function “Check health” › Condition result" in item for item in error.errors[1:])
+        )
+        self.assertTrue(all(issue["card"] == "finish" for issue in error.issues))
+        self.assertIn("Replace it with a Return card", error.errors[1])
+        self.assertNotIn("finish:", str(error))
+
+    def test_finish_can_receive_a_typed_value_connection(self):
+        raw = sequence(card("result", "python", {"code": "return True", "returns": "boolean"}))
+        by_id(raw, "finish")["config"] = {"returns": "boolean", "value": None}
+        raw["graphs"]["main"]["edges"].append(
+            {
+                "id": "result-value",
+                "kind": "value",
+                "source": "result",
+                "source_port": "value",
+                "target": "finish",
+                "target_port": "config:value",
+            }
+        )
+        compile_document(raw)
+
+    def test_cards_have_distinct_inherited_implementation_modules(self):
+        from release_workbench.application.ports import CardExecutor
+        from release_workbench.infrastructure.operations import HANDLERS, OperationHandler
+
+        self.assertEqual(len(REGISTRY), len({type(item).__module__ for item in REGISTRY.values()}))
+        self.assertEqual(
+            len(EXECUTORS), len({type(item).__module__ for item in EXECUTORS.values()})
+        )
+        for kind, executor in EXECUTORS.items():
+            self.assertIsInstance(executor, CardExecutor)
+            self.assertEqual(executor.kind, kind)
+        self.assertEqual(len(HANDLERS), len({type(item).__module__ for item in HANDLERS.values()}))
+        for kind, handler in HANDLERS.items():
+            self.assertIsInstance(handler, OperationHandler)
+            self.assertEqual(handler.kind, kind)
+            self.assertTrue(REGISTRY[kind].supports_retry)
+
+    def test_structural_cards_cannot_silently_ignore_resource_settings(self):
+        raw = starter("Resources", "while")
+        by_id(raw, "compare", "condition")["kind"] = "poll"
+        by_id(raw, "compare", "condition")["config"] = {"function": "below-limit"}
+        by_id(raw, "compare", "condition")["settings"] = {"resources": ["desktop"]}
+        with self.assertRaisesRegex(CompilationError, "locks on operations"):
+            compile_document(raw)
+
+    def test_compilation_does_not_share_mutable_card_defaults(self):
+        raw = starter("Isolated defaults", "parallel")
+        workflow = compile_document(raw)
+        compiled = next(c for c in workflow.graphs["main"].cards.values() if c.kind == "parallel")
+        compiled.config["branches"].append("mutated")
+        self.assertNotIn("mutated", REGISTRY["parallel"].defaults["branches"])
+        original = next(c for c in raw["graphs"]["main"]["cards"] if c["id"] == compiled.id)
+        self.assertNotIn("mutated", original["config"].get("branches", []))
+
+    def test_loop_and_poll_limits_are_finite_and_iterations_integral(self):
+        for template, kind, key, value in (
+            ("while", "loop", "limit", 2.5),
+            ("while", "loop", "timeout", float("nan")),
+            ("poll", "poll", "timeout", False),
+            ("poll", "poll", "timeout", -1),
+        ):
+            with self.subTest(kind=kind, key=key, value=value):
+                raw = starter("Bounds", template)
+                target = next(c for c in raw["graphs"]["main"]["cards"] if c["kind"] == kind)
+                target["config"][key] = value
+                with self.assertRaisesRegex(CompilationError, "positive"):
+                    compile_document(raw)
+
+    def test_polymorphic_result_types_match_dynamic_card_contracts(self):
+        from release_workbench.domain.cards import get_spec
+
+        workflow = compile_document(starter("Types", "while"))
+        self.assertEqual(
+            get_spec("manual").result_type(Card("m", "manual", "Approval", {"mode": "approval"})),
+            "void",
+        )
+        self.assertEqual(
+            get_spec("manual").result_type(Card("m", "manual", "Decision", {})), "boolean"
+        )
+        self.assertEqual(
+            get_spec("python").result_type(Card("p", "python", "Python", {"returns": "number"})),
+            "number",
+        )
+        self.assertEqual(
+            get_spec("variable").result_type(
+                Card("v", "variable", "Count", {"name": "count"}), workflow
+            ),
+            "number",
+        )
+        self.assertEqual(
+            get_spec("call").result_type(
+                Card("c", "call", "Call", {"function": "below-limit"}), workflow
+            ),
+            "boolean",
+        )
+
+    def test_only_visible_fields_are_validated_for_the_selected_mode(self):
+        raw = starter("Hidden fields", "while")
+        by_id(raw, "repeat")["config"]["count"] = None
+        compile_document(raw)
+
+    def test_argument_array_contract_is_owned_by_the_field_descriptor(self):
+        from release_workbench.domain.cards import get_spec
+
+        for kind, key in (("program", "argv"), ("script", "arguments")):
+            spec = get_spec(kind)
+            descriptor = next(field for field in spec.fields if field["key"] == key)
+            self.assertEqual(descriptor["items"], "string")
+            config = {**spec.defaults, key: [1]}
+            self.assertTrue(
+                any(
+                    "array of strings" in error
+                    for error in spec.validate(Card("bad", kind, "Bad", config))
+                )
+            )
+
+    def test_json_equality_uses_typed_boolean_and_number_semantics_recursively(self):
+        self.assertIs(calculate("equals", 1, 1.0), True)
+        self.assertIs(calculate("equals", [False], [0]), False)
+        self.assertIs(calculate("equals", {"enabled": True}, {"enabled": 1}), False)
+        self.assertIs(calculate("equals", {"count": [1]}, {"count": [1.0]}), True)
+        self.assertIs(calculate("not_equals", [False], [0]), True)

@@ -58,7 +58,7 @@ class EvidenceStore:
             }
         )
         with self.lock:
-            with (self.directory / "events.jsonl").open("a") as stream:
+            with (self.directory / "events.jsonl").open("a", encoding="utf-8") as stream:
                 stream.write(json.dumps(event, allow_nan=False) + "\n")
             self.state.setdefault("events", []).append(event)
             self.state["events"] = self.state["events"][-500:]
@@ -87,7 +87,7 @@ class EvidenceStore:
                         retained = max(retained, size)
             self.pending_logs[path] = raw[-retained:] if retained else ""
             safe = self.masker.text(raw[:-retained] if retained else raw)
-            with (self.directory / name).open("a") as stream:
+            with (self.directory / name).open("a", encoding="utf-8") as stream:
                 stream.write(safe)
             entry = self.state["executions"].get(path)
             if entry is not None:

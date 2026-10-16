@@ -15,10 +15,12 @@ export async function api<T>(
   route: string,
   body?: unknown,
   workflow?: string,
+  signal?: AbortSignal,
 ): Promise<T> {
   const response = await fetch(
     `/api/${route}${workflow ? "?workflow=" + encodeURIComponent(workflow) : ""}`,
     {
+      signal,
       method: body === undefined ? "GET" : "POST",
       headers:
         body === undefined

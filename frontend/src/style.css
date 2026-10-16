@@ -1186,19 +1186,69 @@ pre {
 }
 
 .validation-issues {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  padding: 8px 20px;
+  padding: 10px 20px;
   background: #fff4e4;
   border-bottom: 1px solid var(--line);
-}
-.validation-issues button {
-  font-size: 12px;
-}
-
-.validation-issues {
-  max-height: 120px;
+  max-height: min(210px, 26vh);
   overflow: auto;
   flex-shrink: 0;
+}
+.validation-summary {
+  position: sticky;
+  top: -10px;
+  z-index: 1;
+  background: #fff4e4;
+  padding: 4px 0;
+  margin: 0;
+  font-size: 13px;
+}
+.validation-issues ul {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+}
+.validation-issues button {
+  width: 100%;
+  text-align: left;
+  display: flex;
+  align-items: start;
+  flex-direction: column;
+  gap: 4px;
+  white-space: normal;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.validation-issues button span {
+  color: var(--muted);
+}
+
+.terminal-result {
+  display: grid;
+  gap: 8px;
+}
+.terminal-result small {
+  display: block;
+  line-height: 1.5;
+}
+
+.execution-trail {
+  max-height: 200px;
+  overflow: auto;
+  padding-left: 20px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.execution-trail time {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.value-input {
+  display: grid;
+  gap: 8px;
+}
+.value-input details {
+  font-size: 12px;
 }

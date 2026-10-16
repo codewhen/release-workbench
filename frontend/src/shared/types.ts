@@ -48,6 +48,7 @@ export interface Catalog {
   schema: unknown;
 }
 export interface ValidationIssue {
+  label?: string;
   graph: string;
   card: string;
   port: string;

@@ -6,6 +6,7 @@ export function RunPanel({
   overall,
   onSelect,
   onStop,
+  onOverall,
 }: {
   state: RunState;
   selected: string | null;
@@ -13,6 +14,7 @@ export function RunPanel({
   overall: boolean;
   onSelect: (id: string, graph: string) => void;
   onStop: (path?: string) => void;
+  onOverall: () => void;
 }) {
   const executions = Object.values(state.executions);
   const visible = overall
@@ -23,11 +25,26 @@ export function RunPanel({
   );
   return (
     <section className="run-panel">
-      <h2>{overall ? "Overall run" : "Execution details"}</h2>
-      <p className={"status " + state.status}>
-        {state.status.replaceAll("_", " ")}
+      <button onClick={onOverall} aria-pressed={overall}>
+        Overall run
+      </button>
+      <h2>
+        {overall
+          ? "Overall run"
+          : (visible.at(-1)?.name ?? "Execution details")}
+      </h2>
+      <p
+        className={
+          "status " +
+          (overall ? state.status : (visible.at(-1)?.status ?? "pending"))
+        }
+      >
+        {(overall
+          ? state.status
+          : (visible.at(-1)?.status ?? "pending")
+        ).replaceAll("_", " ")}
       </p>
-      {state.error && <p className="error">{state.error}</p>}
+      {overall && state.error && <p className="error">{state.error}</p>}
       {overall && (
         <>
           <p>
@@ -57,7 +74,7 @@ export function RunPanel({
         </>
       )}
       {!overall && visible.length === 0 && (
-        <p>Select Run all to execute the flowchart from Start.</p>
+        <p>This card has not executed in the current run.</p>
       )}
       {visible.map((e) => (
         <ExecutionView
@@ -65,6 +82,7 @@ export function RunPanel({
           execution={e}
           state={state}
           onStop={() => onStop(e.path)}
+          expanded={!overall}
         />
       ))}
       {state.run_id && (
@@ -85,17 +103,40 @@ function ExecutionView({
   execution: e,
   state,
   onStop,
+  expanded,
 }: {
+  expanded: boolean;
   execution: Execution;
   state: RunState;
   onStop: () => void;
 }) {
   const elapsed = e.seconds ?? Math.max(0, Date.now() / 1000 - e.started);
   const progress = e.progress;
+  const children = expanded
+    ? Object.values(state.executions).filter((child) =>
+        child.path.startsWith(e.path + "/"),
+      )
+    : [];
+  const trail = expanded
+    ? state.events
+        .filter(
+          (event) =>
+            event.execution === e.path ||
+            event.execution.startsWith(e.path + "/"),
+        )
+        .slice(-100)
+    : [];
+  const output = [e, ...children]
+    .filter((child) => child.tail)
+    .map(
+      (child) => (child.path === e.path ? "" : child.name + ":\n") + child.tail,
+    )
+    .join("\n")
+    .slice(-16000);
   return (
     <details
       className="execution-evidence"
-      open={["running", "manual", "failed"].includes(e.status)}
+      open={expanded || ["running", "manual", "failed"].includes(e.status)}
     >
       <summary>
         <span>
@@ -134,17 +175,56 @@ function ExecutionView({
         </>
       )}
       {e.error && <p className="error">{e.error}</p>}
+      {expanded && !e.outcome && (
+        <p className="muted">
+          The returned value will appear when this card completes.
+        </p>
+      )}
       {e.outcome && (
         <>
           <h3>Returned value</h3>
-          <pre>{JSON.stringify(e.outcome.value, null, 2)}</pre>
+          <p>Type: {e.outcome.value.type}</p>
+          <pre aria-label={e.name + " returned value"}>
+            {e.outcome.value.type === "void"
+              ? "No result (Void)"
+              : JSON.stringify(e.outcome.value.value, null, 2)}
+          </pre>
         </>
       )}
       {["running", "manual"].includes(e.status) && (
         <button onClick={onStop}>Stop this job</button>
       )}
       <h3>Live output</h3>
-      <pre className="logs">{e.tail ?? "No log output."}</pre>
+      <pre className="logs" aria-label={e.name + " live output"}>
+        {expanded
+          ? output || "No log output yet."
+          : (e.tail ?? "No log output.")}
+      </pre>
+      {expanded && (
+        <section aria-label={e.name + " live trail"}>
+          <h3>Live trail</h3>
+          {!trail.length && (
+            <p className="muted">Waiting for execution events.</p>
+          )}
+          <ol className="execution-trail">
+            {trail.map((event, index) => (
+              <li key={index}>
+                {typeof event.time === "string" && (
+                  <time dateTime={event.time}>
+                    {new Date(event.time).toLocaleTimeString()}
+                  </time>
+                )}{" "}
+                <strong>
+                  {state.executions[event.execution]?.name ?? e.name}
+                </strong>
+                {" · "}
+                {event.kind.replaceAll("_", " ")}
+                {typeof event.status === "string" ? " · " + event.status : ""}
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
       {e.log && state.run_id && (
         <a
           target="_blank"

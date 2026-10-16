@@ -1,6 +1,6 @@
 import { useUpdateNodeInternals } from "@xyflow/react";
 import { useLayoutEffect } from "react";
-import { configuredCard } from "../shared/cards";
+import { configuredCard, resultType } from "../shared/cards";
 import { Handle, Position, type Node, type NodeProps } from "@xyflow/react";
 import {
   Code,
@@ -21,6 +21,8 @@ import type { Card, CardMeta, Workflow } from "../shared/types";
 import { FieldEditor, fieldVisible } from "./Fields";
 export interface CardNodeData extends Record<string, unknown> {
   card: Card;
+  graphId: string;
+  catalog: CardMeta[];
   meta: CardMeta;
   workflow: Workflow;
   editing: boolean;
@@ -75,18 +77,7 @@ export function CardNode({ data }: NodeProps<FlowNode>) {
       data.workflow.functions?.[String(card.config?.function)]?.inputs ?? {},
     ),
   ]);
-  const returnedType = ["python", "return", "finish"].includes(card.kind)
-    ? String(card.config?.returns ?? meta.output)
-    : card.kind === "call"
-      ? (data.workflow.functions?.[String(card.config?.function)]?.returns ??
-        "json")
-      : card.kind === "variable"
-        ? (data.workflow.globals?.[String(card.config?.name)]?.type ?? "json")
-        : card.kind === "manual"
-          ? card.config?.mode === "approval"
-            ? "void"
-            : "boolean"
-          : meta.output;
+  const returnedType = resultType(card, meta, data.workflow);
   const updateNode = useUpdateNodeInternals();
   useLayoutEffect(() => {
     updateNode(card.id);
@@ -150,6 +141,8 @@ export function CardNode({ data }: NodeProps<FlowNode>) {
               )}
               <FieldEditor
                 field={field}
+                graphId={data.graphId}
+                catalog={data.catalog}
                 card={card}
                 workflow={data.workflow}
                 disabled={!editing}

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 export interface MenuAction {
   id: string;
@@ -25,9 +25,38 @@ export function ContextMenu({
   onClose: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+    const place = () => {
+      const margin = 12;
+      element.style.maxHeight =
+        Math.max(0, Math.min(560, innerHeight - margin * 2)) + "px";
+      element.style.maxWidth = Math.max(0, innerWidth - margin * 2) + "px";
+      const bounds = element.getBoundingClientRect();
+      element.style.left =
+        Math.max(margin, Math.min(menu.x, innerWidth - bounds.width - margin)) +
+        "px";
+      element.style.top =
+        Math.max(
+          margin,
+          Math.min(menu.y, innerHeight - bounds.height - margin),
+        ) + "px";
+    };
+    place();
+    const observer = new ResizeObserver(place);
+    observer.observe(element);
+    window.addEventListener("resize", place);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", place);
+    };
+  }, [menu.x, menu.y]);
   useEffect(() => {
     const previous = document.activeElement;
-    ref.current?.querySelector<HTMLElement>("[role=menuitem]")?.focus();
+    ref.current
+      ?.querySelector<HTMLElement>("[role=menuitem]")
+      ?.focus({ preventScroll: true });
     const close = (e: PointerEvent) => {
       if (!ref.current?.contains(e.target as Node)) onClose();
     };
@@ -46,9 +75,10 @@ export function ContextMenu({
       role="menu"
       aria-label={menu.kind === "canvas" ? "Add a card" : "Actions"}
       style={{
-        left: Math.max(12, Math.min(menu.x, innerWidth - 304)),
-        top: Math.max(12, Math.min(menu.y, innerHeight - 400)),
-        maxHeight: Math.min(560, innerHeight - 24),
+        left: 12,
+        top: 12,
+        maxHeight: Math.max(0, Math.min(560, innerHeight - 24)),
+        maxWidth: Math.max(0, innerWidth - 24),
       }}
       onKeyDown={(e) => {
         const buttons = [

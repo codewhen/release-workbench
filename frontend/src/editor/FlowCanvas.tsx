@@ -7,6 +7,7 @@ import {
   MiniMap,
   applyNodeChanges,
   useReactFlow,
+  useNodesInitialized,
   type Connection,
   type Edge as FlowEdge,
   MarkerType,
@@ -68,6 +69,7 @@ export function FlowCanvas({
   ) => void;
 } & CanvasActions) {
   const flow = useReactFlow<CanvasNode>();
+  const nodesReady = useNodesInitialized();
   const graph = workflow.graphs[graphId];
   const [nodes, setNodes] = useState<CanvasNode[]>([]);
   const visible = useMemo(
@@ -103,6 +105,8 @@ export function FlowCanvas({
         selected: card.id === selected,
         data: {
           card,
+          graphId,
+          catalog,
           meta: catalog.find((m) => m.kind === card.kind)!,
           workflow,
           editing,
@@ -114,7 +118,7 @@ export function FlowCanvas({
     ]);
   }, [workflow, graphId, catalog, editing, selected, JSON.stringify(statuses)]);
   useEffect(() => {
-    if (!following || !focus) return;
+    if (!following || !focus || !nodesReady) return;
     const node = flow.getNode(focus);
     if (node)
       flow.setCenter(node.position.x + 134, node.position.y + 100, {
@@ -123,7 +127,7 @@ export function FlowCanvas({
           ? 0
           : 200,
       });
-  }, [focus, following]);
+  }, [focus, following, nodesReady, graphId]);
   const edges: FlowEdge[] = graph.edges
     .filter(
       (e) =>
