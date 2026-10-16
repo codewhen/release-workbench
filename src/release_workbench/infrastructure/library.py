@@ -47,7 +47,7 @@ class Library:
         if validate:
             validate_document_schema(DocumentStore(file).read()["workflow"])
         key = digest(str(file).encode())[:20]
-        entry = next((item for item in self.data["entries"] if item["id"] == key), None)
+        entry = next((item for item in self.data["entries"] if item["path"] == str(file)), None)
         if entry is None:
             entry = {"id": key, "path": str(file), "folder": ""}
             self.data["entries"].append(entry)

@@ -675,3 +675,30 @@ test("context menu fits near the bottom and remains contained after resize", asy
   await menu.press("Escape");
   await expect(menu).toHaveCount(0);
 });
+
+test("Home chooses a project folder and preserves the path on cancel", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Add project or file" }).click();
+  let selected: string | null = "/tmp/example-project";
+  await page.route("**/api/pick-folder", async (route) => {
+    await route.fulfill({ json: { path: selected } });
+  });
+  await page.getByRole("button", { name: "Choose project folder…" }).click();
+  await expect(page.getByLabel("Absolute folder or YAML path")).toHaveValue(
+    selected,
+  );
+  selected = null;
+  await page.getByRole("button", { name: "Choose project folder…" }).click();
+  await expect(
+    page.getByRole("button", { name: "Choose project folder…" }),
+  ).toBeEnabled();
+  await expect(page.getByLabel("Absolute folder or YAML path")).toHaveValue(
+    "/tmp/example-project",
+  );
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(
+    page.getByRole("button", { name: "Choose project folder…" }),
+  ).toBeInViewport();
+});

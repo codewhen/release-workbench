@@ -40,7 +40,8 @@ export function Home({
       filename: string;
       yaml: string;
     } | null>(null),
-    [working, setWorking] = useState(false);
+    [working, setWorking] = useState(false),
+    [pickingFolder, setPickingFolder] = useState(false);
   const input = useRef<HTMLInputElement>(null);
   const [history, setHistory] = useState<
     { run_id: string; name: string; status: string }[]
@@ -95,7 +96,6 @@ export function Home({
             <p>Build a flowchart. Automate the work.</p>
           </div>
         </div>
-        <span className="preview-badge">New architecture preview</span>
       </header>
       <div className="home-title">
         <div>
@@ -155,6 +155,30 @@ export function Home({
           }}
         >
           <h3>Add an existing project or workflow</h3>
+          <button
+            type="button"
+            disabled={working || pickingFolder}
+            onClick={() => {
+              setPickingFolder(true);
+              setError("");
+              void api<{ path: string | null }>("pick-folder", {})
+                .then((result) => {
+                  if (result.path) setPath(result.path);
+                })
+                .catch((e) =>
+                  setError(e instanceof Error ? e.message : String(e)),
+                )
+                .finally(() => setPickingFolder(false));
+            }}
+          >
+            <Folder size={17} />
+            {pickingFolder ? "Folder picker open…" : "Choose project folder…"}
+          </button>
+          <p role="status">
+            {pickingFolder
+              ? "Choose a folder or cancel in the system window on the computer running Workbench."
+              : "Choose a folder on this computer, or enter an absolute path below."}
+          </p>
           <label>
             Absolute folder or YAML path
             <input
@@ -163,7 +187,7 @@ export function Home({
               required
             />
           </label>
-          <button disabled={working} className="primary">
+          <button disabled={working || pickingFolder} className="primary">
             Add to library
           </button>
         </form>

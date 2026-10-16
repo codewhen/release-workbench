@@ -3,6 +3,7 @@ import tempfile
 import threading
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
@@ -68,6 +69,28 @@ class Interfaces(unittest.TestCase):
             self.request("/api/library", headers={"Host": "outside.example"})
         self.assertEqual(caught.exception.code, 403)
         caught.exception.close()
+
+    def test_folder_picker_is_protected_and_does_not_register_on_selection(self):
+        with patch.object(self.app.folder_picker, "choose", return_value=str(self.root)) as choose:
+            with self.assertRaises(HTTPError) as caught:
+                self.request("/api/pick-folder", {})
+            self.assertEqual(caught.exception.code, 403)
+            caught.exception.close()
+            choose.assert_not_called()
+            before = self.app.library.listing()
+            _, body = self.request("/api/pick-folder", {}, {"X-Workbench-Token": self.app.token})
+            self.assertEqual(json.loads(body), {"path": str(self.root)})
+            self.assertEqual(before, self.app.library.listing())
+
+    def test_cli_reuses_matching_dashboard_and_rejects_other_storage(self):
+        from release_workbench.interfaces.dashboard import reuse_dashboard
+
+        other = self.root / "another-project"
+        other.mkdir()
+        self.assertTrue(reuse_dashboard(other, self.root / "storage", self.server.server_port))
+        self.assertIn(str(other.resolve()), self.app.library.listing()["projects"])
+        with self.assertRaisesRegex(ValueError, "another Workbench library"):
+            reuse_dashboard(other, self.root / "different-storage", self.server.server_port)
 
     def test_old_workflow_stays_unchanged(self):
         text = "version: 2\nname: Old\nsteps: []\n"

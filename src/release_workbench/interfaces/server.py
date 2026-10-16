@@ -26,6 +26,7 @@ from release_workbench.infrastructure.documents import (
     validate_document_schema,
 )
 from release_workbench.infrastructure.drafts import DraftStore
+from release_workbench.infrastructure.folder_picker import FolderPicker
 from release_workbench.infrastructure.library import Library
 from release_workbench.infrastructure.services import LocalServices
 from release_workbench.infrastructure.sessions import LocalSessions
@@ -35,7 +36,11 @@ class WorkbenchApplication:
     def __init__(self, project: Path, storage: Path):
         self.project, self.storage = project.resolve(), storage.resolve()
         self.library = Library(self.storage, self.project)
+        from release_workbench.infrastructure.projects import register_starters
+
+        register_starters(self.library)
         self.services = LocalServices()
+        self.folder_picker = FolderPicker()
         self.drafts = DraftStore(self.storage / "drafts")
         self.runs: dict[str, Run] = {}
         self.lock = threading.RLock()
@@ -62,6 +67,9 @@ class WorkbenchApplication:
         )
 
     def mutation(self, route: str, key: str, data: dict[str, Any]) -> dict[str, Any]:
+        if route == "pick-folder":
+            # Native dialogs must not block run controls or library requests.
+            return {"path": self.folder_picker.choose()}
         with self.lock:
             if route == "register":
                 path = Path(data["path"]).expanduser()
@@ -245,7 +253,9 @@ def create_server(
             key = parse_qs(parsed.query).get("workflow", [""])[0]
             route = parsed.path
             try:
-                if route == "/api/library":
+                if route == "/api/instance":
+                    self.json({"application": "workflow-workbench-v3", "storage": str(app.storage)})
+                elif route == "/api/library":
                     self.json(app.library.listing())
                 elif route == "/api/catalog":
                     self.json(
@@ -342,14 +352,31 @@ def create_server(
     return server, app
 
 
-def serve(project: Path, storage: Path, port: int = 3104, open_browser: bool = True) -> None:
+def serve(
+    project: Path,
+    storage: Path,
+    port: int = 3104,
+    open_browser: bool = True,
+    workflow: str | None = None,
+) -> None:
+    import webbrowser
+
+    from .dashboard import reuse_dashboard
+
+    url = f"http://127.0.0.1:{port}/" + ("?workflow=" + workflow if workflow else "")
+    if port and reuse_dashboard(project, storage, port):
+        print(f"Opened existing Workbench dashboard: {url}", flush=True)
+        if open_browser:
+            webbrowser.open(url)
+        return
     server, app = create_server(project, storage, port)
     print(f"Workflow Workbench v3 preview: http://127.0.0.1:{port}/", flush=True)
     print(f"Isolated preview storage: {storage}", flush=True)
     if open_browser:
-        import webbrowser
-
-        webbrowser.open(f"http://127.0.0.1:{port}/")
+        webbrowser.open(
+            f"http://127.0.0.1:{server.server_port}/"
+            + ("?workflow=" + workflow if workflow else "")
+        )
     try:
         server.serve_forever()
     except KeyboardInterrupt:

@@ -1,5 +1,25 @@
 # Your first workflow
 
+## Create a project from your terminal
+
+Install Workbench, open a terminal in your project directory, and run:
+
+```bash
+workbench create
+```
+
+Enter the project name and YAML filename (default `workflow-workbench.yaml`).
+The wizard creates a blank Start → Finish workflow **in that directory** and
+opens it in the dashboard. It never overwrites a file. `workbench`, `workbench
+serve` and `workbench run` all open the dashboard without starting card execution.
+Use `workbench run --non-interactive` when you deliberately want terminal execution.
+
+Your default preview library lives in `~/.workbench-preview-v3`. Projects from
+multiple folders share that dashboard; `--storage` selects a separate library.
+Starter examples are installed separately under `<storage>/projects/starter` and
+appear in Home's **Starter** folder. Editing an example does not cause it to be
+overwritten on restart.
+
 ## Choose a starting point
 
 Home is a library of workflow **entry points**, organized into folders across multiple project directories. Folders organize the library; they do not move files on disk. Use **Add project or file** for a local path. **Open YAML** opens the browser file picker and validates uploaded contents before creating a new file in the selected project. Existing files are never overwritten by import.
@@ -62,3 +82,13 @@ In **Edit** view, open **Workflow settings → Global variables**. Enter a name 
 Use **Get** to read the current value, **Set** to replace it, and **Update** to change it during a run. Initial values are restored when a new run starts; Get/Set/Update do not declare new globals.
 
 Validation diagnostics appear after **Save** or **Validate & review**. Editing clears the displayed diagnostics; check again when ready. Run still enforces execution safety, and an invalid flowchart is not started.
+
+
+### Add a project folder
+
+On Home, choose **Add project or file → Choose project folder…**. Finder (macOS),
+File Explorer's folder dialog (Windows), or an available Zenity/KDialog picker
+(Linux) opens on the computer running Workbench. Select a folder, review its
+absolute path, then choose **Add to library**. Cancelling keeps the existing path.
+You can also paste a folder or workflow YAML path. Native Windows selection has
+not yet been verified on Windows. Headless hosts can use the path field.

@@ -32,3 +32,5 @@ jobs:
       - run: npx --prefix frontend playwright install --with-deps chromium
       - run: npm --prefix frontend run test:browser
       - run: python -m build
+      - run: npm --prefix npm/workbench test
+      - run: cd npm/workbench && npm pack
