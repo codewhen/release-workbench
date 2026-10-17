@@ -1,3124 +1,235 @@
 {
-  "oneOf": [
-    {
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/codewhen/release-workbench/schema/v3",
+  "title": "Workflow Workbench v3",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "name",
+    "graphs"
+  ],
+  "properties": {
+    "version": {
+      "const": 3
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "concurrency": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 64
+    },
+    "inputs": {
       "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "version": {
-          "const": 1
-        },
-        "name": {
-          "type": "string",
-          "minLength": 1
-        },
-        "description": {
-          "type": "string"
-        },
-        "concurrency": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 64
-        },
-        "inputs": {
-          "type": "object",
-          "propertyNames": {
-            "pattern": "^[a-z][a-z0-9_]*$"
-          },
-          "additionalProperties": {
-            "type": "object",
-            "additionalProperties": false,
-            "properties": {
-              "label": {
-                "type": "string"
-              },
-              "type": {
-                "enum": [
-                  "string",
-                  "integer",
-                  "boolean",
-                  "choice",
-                  "ipv4",
-                  "usb_serial",
-                  "pid"
-                ]
-              },
-              "default": {
-                "type": [
-                  "string",
-                  "number",
-                  "boolean"
-                ]
-              },
-              "options": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              },
-              "pattern": {
-                "type": "string"
-              },
-              "required": {
-                "type": "boolean"
-              },
-              "minimum": {
-                "type": "number"
-              },
-              "maximum": {
-                "type": "number"
-              }
-            },
-            "required": [
-              "label",
-              "type"
-            ]
-          }
-        },
-        "detect": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "commands": {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "additionalProperties": false,
-                "properties": {
-                  "argv": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    },
-                    "minItems": 1
-                  },
-                  "shell": {
-                    "enum": [
-                      "bash",
-                      "sh",
-                      "powershell",
-                      "cmd"
-                    ]
-                  },
-                  "script": {
-                    "type": "string"
-                  }
-                },
-                "required": [],
-                "oneOf": [
-                  {
-                    "required": [
-                      "argv"
-                    ],
-                    "not": {
-                      "anyOf": [
-                        {
-                          "required": [
-                            "script"
-                          ]
-                        },
-                        {
-                          "required": [
-                            "shell"
-                          ]
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    "required": [
-                      "shell",
-                      "script"
-                    ],
-                    "not": {
-                      "required": [
-                        "argv"
-                      ]
-                    }
-                  }
-                ]
-              }
-            },
-            "timeout": {
-              "type": "number",
-              "exclusiveMinimum": 0
-            }
-          },
-          "required": [
-            "commands"
-          ]
-        },
-        "env": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "string"
-          }
-        },
-        "secret_env": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "report_paths": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "source_paths": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "profiles": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        },
-        "steps": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "additionalProperties": false,
-            "properties": {
-              "id": {
-                "type": "string",
-                "pattern": "^[a-z][a-z0-9_-]*$"
-              },
-              "name": {
-                "type": "string",
-                "minLength": 1
-              },
-              "description": {
-                "type": "string"
-              },
-              "kind": {
-                "enum": [
-                  "command",
-                  "manual",
-                  "condition",
-                  "workflow",
-                  "action",
-                  "loop"
-                ]
-              },
-              "commands": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "properties": {
-                    "argv": {
-                      "type": "array",
-                      "items": {
-                        "type": "string"
-                      },
-                      "minItems": 1
-                    },
-                    "shell": {
-                      "enum": [
-                        "bash",
-                        "sh",
-                        "powershell",
-                        "cmd"
-                      ]
-                    },
-                    "script": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [],
-                  "oneOf": [
-                    {
-                      "required": [
-                        "argv"
-                      ],
-                      "not": {
-                        "anyOf": [
-                          {
-                            "required": [
-                              "script"
-                            ]
-                          },
-                          {
-                            "required": [
-                              "shell"
-                            ]
-                          }
-                        ]
-                      }
-                    },
-                    {
-                      "required": [
-                        "shell",
-                        "script"
-                      ],
-                      "not": {
-                        "required": [
-                          "argv"
-                        ]
-                      }
-                    }
-                  ]
-                }
-              },
-              "platform_commands": {
-                "type": "object",
-                "propertyNames": {
-                  "enum": [
-                    "macos",
-                    "windows",
-                    "linux"
-                  ]
-                },
-                "additionalProperties": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "additionalProperties": false,
-                    "properties": {
-                      "argv": {
-                        "type": "array",
-                        "items": {
-                          "type": "string"
-                        },
-                        "minItems": 1
-                      },
-                      "shell": {
-                        "enum": [
-                          "bash",
-                          "sh",
-                          "powershell",
-                          "cmd"
-                        ]
-                      },
-                      "script": {
-                        "type": "string"
-                      }
-                    },
-                    "required": [],
-                    "oneOf": [
-                      {
-                        "required": [
-                          "argv"
-                        ],
-                        "not": {
-                          "anyOf": [
-                            {
-                              "required": [
-                                "script"
-                              ]
-                            },
-                            {
-                              "required": [
-                                "shell"
-                              ]
-                            }
-                          ]
-                        }
-                      },
-                      {
-                        "required": [
-                          "shell",
-                          "script"
-                        ],
-                        "not": {
-                          "required": [
-                            "argv"
-                          ]
-                        }
-                      }
-                    ]
-                  }
-                }
-              },
-              "cwd": {
-                "type": "string"
-              },
-              "needs": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              },
-              "resources": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              },
-              "requires_inputs": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              },
-              "env": {
-                "type": "object",
-                "additionalProperties": {
-                  "type": "string"
-                }
-              },
-              "secret_env": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              },
-              "mode": {
-                "enum": [
-                  "background",
-                  "interactive"
-                ]
-              },
-              "exclusive": {
-                "type": "boolean"
-              },
-              "enabled": {
-                "type": "boolean"
-              },
-              "required": {
-                "type": "boolean"
-              },
-              "approval": {
-                "type": "boolean"
-              },
-              "timeout": {
-                "type": "number",
-                "exclusiveMinimum": 0
-              },
-              "expected_seconds": {
-                "type": "number",
-                "exclusiveMinimum": 0
-              },
-              "progress": {
-                "type": "object",
-                "additionalProperties": false,
-                "properties": {
-                  "pattern": {
-                    "type": "string"
-                  },
-                  "total": {
-                    "type": "integer",
-                    "minimum": 1
-                  },
-                  "mode": {
-                    "enum": [
-                      "count",
-                      "groups",
-                      "index"
-                    ]
-                  },
-                  "offset": {
-                    "type": "integer"
-                  }
-                },
-                "required": []
-              },
-              "reports": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              },
-              "outputs": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "properties": {
-                    "path": {
-                      "type": "string"
-                    },
-                    "key": {
-                      "type": "string"
-                    },
-                    "input": {
-                      "type": "string"
-                    },
-                    "fresh": {
-                      "type": "boolean"
-                    }
-                  },
-                  "required": [
-                    "path",
-                    "key",
-                    "input"
-                  ]
-                }
-              },
-              "position": {
-                "type": "object",
-                "additionalProperties": false,
-                "properties": {
-                  "x": {
-                    "type": "number"
-                  },
-                  "y": {
-                    "type": "number"
-                  }
-                },
-                "required": [
-                  "x",
-                  "y"
-                ]
-              },
-              "capture": {
-                "enum": [
-                  "text",
-                  "json"
-                ]
-              },
-              "success_codes": {
-                "type": "array",
-                "minItems": 1,
-                "uniqueItems": true,
-                "items": {
-                  "type": "integer",
-                  "minimum": 0,
-                  "maximum": 125
-                }
-              },
-              "join": {
-                "enum": [
-                  "all",
-                  "any"
-                ]
-              },
-              "when": {
-                "type": "object",
-                "additionalProperties": false,
-                "properties": {
-                  "step": {
-                    "type": "string"
-                  },
-                  "equals": {
-                    "type": "boolean"
-                  }
-                },
-                "required": [
-                  "step",
-                  "equals"
-                ]
-              },
-              "condition": {
-                "oneOf": [
-                  {
-                    "type": "object",
-                    "additionalProperties": false,
-                    "properties": {
-                      "source": {
-                        "type": "string"
-                      },
-                      "operator": {
-                        "enum": [
-                          "equals",
-                          "not_equals",
-                          "greater_than",
-                          "less_than",
-                          "contains",
-                          "is_true"
-                        ]
-                      },
-                      "value": {
-                        "type": [
-                          "string",
-                          "number",
-                          "boolean",
-                          "null"
-                        ]
-                      }
-                    },
-                    "required": [
-                      "source",
-                      "operator"
-                    ]
-                  },
-                  {
-                    "type": "object",
-                    "additionalProperties": false,
-                    "required": [
-                      "compute"
-                    ],
-                    "properties": {
-                      "compute": {
-                        "type": "object",
-                        "additionalProperties": false,
-                        "properties": {
-                          "commands": {
-                            "type": "array",
-                            "items": {
-                              "type": "object",
-                              "additionalProperties": false,
-                              "properties": {
-                                "argv": {
-                                  "type": "array",
-                                  "items": {
-                                    "type": "string"
-                                  },
-                                  "minItems": 1
-                                },
-                                "shell": {
-                                  "enum": [
-                                    "bash",
-                                    "sh",
-                                    "powershell",
-                                    "cmd"
-                                  ]
-                                },
-                                "script": {
-                                  "type": "string"
-                                }
-                              },
-                              "required": [],
-                              "oneOf": [
-                                {
-                                  "required": [
-                                    "argv"
-                                  ],
-                                  "not": {
-                                    "anyOf": [
-                                      {
-                                        "required": [
-                                          "script"
-                                        ]
-                                      },
-                                      {
-                                        "required": [
-                                          "shell"
-                                        ]
-                                      }
-                                    ]
-                                  }
-                                },
-                                {
-                                  "required": [
-                                    "shell",
-                                    "script"
-                                  ],
-                                  "not": {
-                                    "required": [
-                                      "argv"
-                                    ]
-                                  }
-                                }
-                              ]
-                            },
-                            "minItems": 1
-                          },
-                          "platform_commands": {
-                            "type": "object",
-                            "propertyNames": {
-                              "enum": [
-                                "macos",
-                                "windows",
-                                "linux"
-                              ]
-                            },
-                            "additionalProperties": {
-                              "type": "array",
-                              "items": {
-                                "type": "object",
-                                "additionalProperties": false,
-                                "properties": {
-                                  "argv": {
-                                    "type": "array",
-                                    "items": {
-                                      "type": "string"
-                                    },
-                                    "minItems": 1
-                                  },
-                                  "shell": {
-                                    "enum": [
-                                      "bash",
-                                      "sh",
-                                      "powershell",
-                                      "cmd"
-                                    ]
-                                  },
-                                  "script": {
-                                    "type": "string"
-                                  }
-                                },
-                                "required": [],
-                                "oneOf": [
-                                  {
-                                    "required": [
-                                      "argv"
-                                    ],
-                                    "not": {
-                                      "anyOf": [
-                                        {
-                                          "required": [
-                                            "script"
-                                          ]
-                                        },
-                                        {
-                                          "required": [
-                                            "shell"
-                                          ]
-                                        }
-                                      ]
-                                    }
-                                  },
-                                  {
-                                    "required": [
-                                      "shell",
-                                      "script"
-                                    ],
-                                    "not": {
-                                      "required": [
-                                        "argv"
-                                      ]
-                                    }
-                                  }
-                                ]
-                              },
-                              "minItems": 1
-                            },
-                            "minProperties": 1
-                          }
-                        },
-                        "anyOf": [
-                          {
-                            "required": [
-                              "commands"
-                            ]
-                          },
-                          {
-                            "required": [
-                              "platform_commands"
-                            ]
-                          }
-                        ]
-                      }
-                    }
-                  },
-                  {
-                    "type": "object",
-                    "additionalProperties": false,
-                    "required": [
-                      "input"
-                    ],
-                    "properties": {
-                      "input": {
-                        "type": "object",
-                        "additionalProperties": false,
-                        "properties": {
-                          "step": {
-                            "type": "string",
-                            "minLength": 1
-                          },
-                          "field": {
-                            "type": "string"
-                          }
-                        }
-                      }
-                    }
-                  }
-                ]
-              },
-              "workflow": {
-                "type": "string",
-                "minLength": 1
-              },
-              "action": {
-                "oneOf": [
-                  {
-                    "type": "object",
-                    "additionalProperties": false,
-                    "properties": {
-                      "type": {
-                        "const": "set_values"
-                      },
-                      "values": {
-                        "type": "object"
-                      }
-                    },
-                    "required": [
-                      "type",
-                      "values"
-                    ]
-                  },
-                  {
-                    "type": "object",
-                    "additionalProperties": false,
-                    "properties": {
-                      "type": {
-                        "const": "calculate"
-                      },
-                      "left": {
-                        "type": [
-                          "number",
-                          "string"
-                        ]
-                      },
-                      "right": {
-                        "type": [
-                          "number",
-                          "string"
-                        ]
-                      },
-                      "operator": {
-                        "enum": [
-                          "add",
-                          "subtract",
-                          "multiply",
-                          "divide"
-                        ]
-                      }
-                    },
-                    "required": [
-                      "type",
-                      "left",
-                      "right",
-                      "operator"
-                    ]
-                  },
-                  {
-                    "type": "object",
-                    "additionalProperties": false,
-                    "properties": {
-                      "type": {
-                        "const": "read_json"
-                      },
-                      "path": {
-                        "type": "string",
-                        "minLength": 1
-                      }
-                    },
-                    "required": [
-                      "type",
-                      "path"
-                    ]
-                  },
-                  {
-                    "type": "object",
-                    "additionalProperties": false,
-                    "properties": {
-                      "type": {
-                        "const": "write_file"
-                      },
-                      "path": {
-                        "type": "string",
-                        "minLength": 1
-                      },
-                      "content": {},
-                      "format": {
-                        "enum": [
-                          "text",
-                          "json"
-                        ]
-                      },
-                      "overwrite": {
-                        "type": "boolean"
-                      },
-                      "create_directories": {
-                        "type": "boolean"
-                      }
-                    },
-                    "required": [
-                      "type",
-                      "path",
-                      "content"
-                    ]
-                  },
-                  {
-                    "type": "object",
-                    "additionalProperties": false,
-                    "properties": {
-                      "type": {
-                        "const": "run_tests"
-                      },
-                      "runner": {
-                        "enum": [
-                          "unittest",
-                          "pytest",
-                          "go",
-                          "flutter",
-                          "npm",
-                          "gradle"
-                        ]
-                      },
-                      "target": {
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "type",
-                      "runner"
-                    ]
-                  },
-                  {
-                    "type": "object",
-                    "additionalProperties": false,
-                    "properties": {
-                      "type": {
-                        "const": "file_exists"
-                      },
-                      "path": {
-                        "type": "string",
-                        "minLength": 1
-                      }
-                    },
-                    "required": [
-                      "type",
-                      "path"
-                    ]
-                  },
-                  {
-                    "type": "object",
-                    "additionalProperties": false,
-                    "properties": {
-                      "type": {
-                        "const": "run_script"
-                      },
-                      "language": {
-                        "enum": [
-                          "python",
-                          "bash",
-                          "powershell"
-                        ]
-                      },
-                      "path": {
-                        "type": "string",
-                        "minLength": 1
-                      },
-                      "arguments": {
-                        "type": "array",
-                        "items": {
-                          "type": "string"
-                        }
-                      }
-                    },
-                    "required": [
-                      "type",
-                      "language",
-                      "path"
-                    ]
-                  }
-                ]
-              },
-              "workflow_inputs": {
-                "type": "object",
-                "additionalProperties": {
-                  "type": [
-                    "string",
-                    "number",
-                    "boolean"
-                  ]
-                }
-              },
-              "loop": {
-                "type": "object",
-                "additionalProperties": false,
-                "required": [
-                  "iterations"
-                ],
-                "properties": {
-                  "iterations": {
-                    "type": "integer",
-                    "minimum": 1,
-                    "maximum": 1000
-                  },
-                  "until": {
-                    "type": "string",
-                    "pattern": "^steps\\.[a-z][a-z0-9_-]*\\.result\\.(json|decision)(\\.[A-Za-z0-9_-]+)*$"
-                  },
-                  "delay": {
-                    "type": "number",
-                    "minimum": 0,
-                    "maximum": 3600
-                  }
-                }
-              }
-            },
-            "required": [
-              "id",
-              "name",
-              "kind"
-            ]
-          }
-        },
-        "workspace": {
-          "type": "string",
-          "minLength": 1,
-          "description": "Project directory relative to the YAML file, including parent folders."
-        }
-      },
-      "required": [
-        "version",
-        "name",
-        "steps"
-      ],
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
-      "$id": "https://github.com/codewhen/release-workbench/schema/v1",
-      "$defs": {
-        "step": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "id": {
-              "type": "string",
-              "pattern": "^[a-z][a-z0-9_-]*$"
-            },
-            "name": {
-              "type": "string",
-              "minLength": 1
-            },
-            "description": {
-              "type": "string"
-            },
-            "kind": {
-              "enum": [
-                "command",
-                "manual",
-                "condition",
-                "workflow",
-                "action",
-                "loop"
-              ]
-            },
-            "commands": {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "additionalProperties": false,
-                "properties": {
-                  "argv": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    },
-                    "minItems": 1
-                  },
-                  "shell": {
-                    "enum": [
-                      "bash",
-                      "sh",
-                      "powershell",
-                      "cmd"
-                    ]
-                  },
-                  "script": {
-                    "type": "string"
-                  }
-                },
-                "required": [],
-                "oneOf": [
-                  {
-                    "required": [
-                      "argv"
-                    ],
-                    "not": {
-                      "anyOf": [
-                        {
-                          "required": [
-                            "script"
-                          ]
-                        },
-                        {
-                          "required": [
-                            "shell"
-                          ]
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    "required": [
-                      "shell",
-                      "script"
-                    ],
-                    "not": {
-                      "required": [
-                        "argv"
-                      ]
-                    }
-                  }
-                ]
-              }
-            },
-            "platform_commands": {
-              "type": "object",
-              "propertyNames": {
-                "enum": [
-                  "macos",
-                  "windows",
-                  "linux"
-                ]
-              },
-              "additionalProperties": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "properties": {
-                    "argv": {
-                      "type": "array",
-                      "items": {
-                        "type": "string"
-                      },
-                      "minItems": 1
-                    },
-                    "shell": {
-                      "enum": [
-                        "bash",
-                        "sh",
-                        "powershell",
-                        "cmd"
-                      ]
-                    },
-                    "script": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [],
-                  "oneOf": [
-                    {
-                      "required": [
-                        "argv"
-                      ],
-                      "not": {
-                        "anyOf": [
-                          {
-                            "required": [
-                              "script"
-                            ]
-                          },
-                          {
-                            "required": [
-                              "shell"
-                            ]
-                          }
-                        ]
-                      }
-                    },
-                    {
-                      "required": [
-                        "shell",
-                        "script"
-                      ],
-                      "not": {
-                        "required": [
-                          "argv"
-                        ]
-                      }
-                    }
-                  ]
-                }
-              }
-            },
-            "cwd": {
-              "type": "string"
-            },
-            "needs": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            },
-            "resources": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            },
-            "requires_inputs": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            },
-            "env": {
-              "type": "object",
-              "additionalProperties": {
-                "type": "string"
-              }
-            },
-            "secret_env": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            },
-            "mode": {
-              "enum": [
-                "background",
-                "interactive"
-              ]
-            },
-            "exclusive": {
-              "type": "boolean"
-            },
-            "enabled": {
-              "type": "boolean"
-            },
-            "required": {
-              "type": "boolean"
-            },
-            "approval": {
-              "type": "boolean"
-            },
-            "timeout": {
-              "type": "number",
-              "exclusiveMinimum": 0
-            },
-            "expected_seconds": {
-              "type": "number",
-              "exclusiveMinimum": 0
-            },
-            "progress": {
-              "type": "object",
-              "additionalProperties": false,
-              "properties": {
-                "pattern": {
-                  "type": "string"
-                },
-                "total": {
-                  "type": "integer",
-                  "minimum": 1
-                },
-                "mode": {
-                  "enum": [
-                    "count",
-                    "groups",
-                    "index"
-                  ]
-                },
-                "offset": {
-                  "type": "integer"
-                }
-              },
-              "required": []
-            },
-            "reports": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            },
-            "outputs": {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "additionalProperties": false,
-                "properties": {
-                  "path": {
-                    "type": "string"
-                  },
-                  "key": {
-                    "type": "string"
-                  },
-                  "input": {
-                    "type": "string"
-                  },
-                  "fresh": {
-                    "type": "boolean"
-                  }
-                },
-                "required": [
-                  "path",
-                  "key",
-                  "input"
-                ]
-              }
-            },
-            "position": {
-              "type": "object",
-              "additionalProperties": false,
-              "properties": {
-                "x": {
-                  "type": "number"
-                },
-                "y": {
-                  "type": "number"
-                }
-              },
-              "required": [
-                "x",
-                "y"
-              ]
-            },
-            "capture": {
-              "enum": [
-                "text",
-                "json"
-              ]
-            },
-            "success_codes": {
-              "type": "array",
-              "minItems": 1,
-              "uniqueItems": true,
-              "items": {
-                "type": "integer",
-                "minimum": 0,
-                "maximum": 125
-              }
-            },
-            "join": {
-              "enum": [
-                "all",
-                "any"
-              ]
-            },
-            "when": {
-              "type": "object",
-              "additionalProperties": false,
-              "properties": {
-                "step": {
-                  "type": "string"
-                },
-                "equals": {
-                  "type": "boolean"
-                }
-              },
-              "required": [
-                "step",
-                "equals"
-              ]
-            },
-            "condition": {
-              "oneOf": [
-                {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "properties": {
-                    "source": {
-                      "type": "string"
-                    },
-                    "operator": {
-                      "enum": [
-                        "equals",
-                        "not_equals",
-                        "greater_than",
-                        "less_than",
-                        "contains",
-                        "is_true"
-                      ]
-                    },
-                    "value": {
-                      "type": [
-                        "string",
-                        "number",
-                        "boolean",
-                        "null"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "source",
-                    "operator"
-                  ]
-                },
-                {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "required": [
-                    "compute"
-                  ],
-                  "properties": {
-                    "compute": {
-                      "type": "object",
-                      "additionalProperties": false,
-                      "properties": {
-                        "commands": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "additionalProperties": false,
-                            "properties": {
-                              "argv": {
-                                "type": "array",
-                                "items": {
-                                  "type": "string"
-                                },
-                                "minItems": 1
-                              },
-                              "shell": {
-                                "enum": [
-                                  "bash",
-                                  "sh",
-                                  "powershell",
-                                  "cmd"
-                                ]
-                              },
-                              "script": {
-                                "type": "string"
-                              }
-                            },
-                            "required": [],
-                            "oneOf": [
-                              {
-                                "required": [
-                                  "argv"
-                                ],
-                                "not": {
-                                  "anyOf": [
-                                    {
-                                      "required": [
-                                        "script"
-                                      ]
-                                    },
-                                    {
-                                      "required": [
-                                        "shell"
-                                      ]
-                                    }
-                                  ]
-                                }
-                              },
-                              {
-                                "required": [
-                                  "shell",
-                                  "script"
-                                ],
-                                "not": {
-                                  "required": [
-                                    "argv"
-                                  ]
-                                }
-                              }
-                            ]
-                          },
-                          "minItems": 1
-                        },
-                        "platform_commands": {
-                          "type": "object",
-                          "propertyNames": {
-                            "enum": [
-                              "macos",
-                              "windows",
-                              "linux"
-                            ]
-                          },
-                          "additionalProperties": {
-                            "type": "array",
-                            "items": {
-                              "type": "object",
-                              "additionalProperties": false,
-                              "properties": {
-                                "argv": {
-                                  "type": "array",
-                                  "items": {
-                                    "type": "string"
-                                  },
-                                  "minItems": 1
-                                },
-                                "shell": {
-                                  "enum": [
-                                    "bash",
-                                    "sh",
-                                    "powershell",
-                                    "cmd"
-                                  ]
-                                },
-                                "script": {
-                                  "type": "string"
-                                }
-                              },
-                              "required": [],
-                              "oneOf": [
-                                {
-                                  "required": [
-                                    "argv"
-                                  ],
-                                  "not": {
-                                    "anyOf": [
-                                      {
-                                        "required": [
-                                          "script"
-                                        ]
-                                      },
-                                      {
-                                        "required": [
-                                          "shell"
-                                        ]
-                                      }
-                                    ]
-                                  }
-                                },
-                                {
-                                  "required": [
-                                    "shell",
-                                    "script"
-                                  ],
-                                  "not": {
-                                    "required": [
-                                      "argv"
-                                    ]
-                                  }
-                                }
-                              ]
-                            },
-                            "minItems": 1
-                          },
-                          "minProperties": 1
-                        }
-                      },
-                      "anyOf": [
-                        {
-                          "required": [
-                            "commands"
-                          ]
-                        },
-                        {
-                          "required": [
-                            "platform_commands"
-                          ]
-                        }
-                      ]
-                    }
-                  }
-                },
-                {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "required": [
-                    "input"
-                  ],
-                  "properties": {
-                    "input": {
-                      "type": "object",
-                      "additionalProperties": false,
-                      "properties": {
-                        "step": {
-                          "type": "string",
-                          "minLength": 1
-                        },
-                        "field": {
-                          "type": "string"
-                        }
-                      }
-                    }
-                  }
-                }
-              ]
-            },
-            "workflow": {
-              "type": "string",
-              "minLength": 1
-            },
-            "action": {
-              "oneOf": [
-                {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "properties": {
-                    "type": {
-                      "const": "set_values"
-                    },
-                    "values": {
-                      "type": "object"
-                    }
-                  },
-                  "required": [
-                    "type",
-                    "values"
-                  ]
-                },
-                {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "properties": {
-                    "type": {
-                      "const": "calculate"
-                    },
-                    "left": {
-                      "type": [
-                        "number",
-                        "string"
-                      ]
-                    },
-                    "right": {
-                      "type": [
-                        "number",
-                        "string"
-                      ]
-                    },
-                    "operator": {
-                      "enum": [
-                        "add",
-                        "subtract",
-                        "multiply",
-                        "divide"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "type",
-                    "left",
-                    "right",
-                    "operator"
-                  ]
-                },
-                {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "properties": {
-                    "type": {
-                      "const": "read_json"
-                    },
-                    "path": {
-                      "type": "string",
-                      "minLength": 1
-                    }
-                  },
-                  "required": [
-                    "type",
-                    "path"
-                  ]
-                },
-                {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "properties": {
-                    "type": {
-                      "const": "write_file"
-                    },
-                    "path": {
-                      "type": "string",
-                      "minLength": 1
-                    },
-                    "content": {},
-                    "format": {
-                      "enum": [
-                        "text",
-                        "json"
-                      ]
-                    },
-                    "overwrite": {
-                      "type": "boolean"
-                    },
-                    "create_directories": {
-                      "type": "boolean"
-                    }
-                  },
-                  "required": [
-                    "type",
-                    "path",
-                    "content"
-                  ]
-                },
-                {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "properties": {
-                    "type": {
-                      "const": "run_tests"
-                    },
-                    "runner": {
-                      "enum": [
-                        "unittest",
-                        "pytest",
-                        "go",
-                        "flutter",
-                        "npm",
-                        "gradle"
-                      ]
-                    },
-                    "target": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "type",
-                    "runner"
-                  ]
-                },
-                {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "properties": {
-                    "type": {
-                      "const": "file_exists"
-                    },
-                    "path": {
-                      "type": "string",
-                      "minLength": 1
-                    }
-                  },
-                  "required": [
-                    "type",
-                    "path"
-                  ]
-                },
-                {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "properties": {
-                    "type": {
-                      "const": "run_script"
-                    },
-                    "language": {
-                      "enum": [
-                        "python",
-                        "bash",
-                        "powershell"
-                      ]
-                    },
-                    "path": {
-                      "type": "string",
-                      "minLength": 1
-                    },
-                    "arguments": {
-                      "type": "array",
-                      "items": {
-                        "type": "string"
-                      }
-                    }
-                  },
-                  "required": [
-                    "type",
-                    "language",
-                    "path"
-                  ]
-                }
-              ]
-            },
-            "workflow_inputs": {
-              "type": "object",
-              "additionalProperties": {
-                "type": [
-                  "string",
-                  "number",
-                  "boolean"
-                ]
-              }
-            },
-            "loop": {
-              "type": "object",
-              "additionalProperties": false,
-              "required": [
-                "iterations"
-              ],
-              "properties": {
-                "iterations": {
-                  "type": "integer",
-                  "minimum": 1,
-                  "maximum": 1000
-                },
-                "until": {
-                  "type": "string",
-                  "pattern": "^steps\\.[a-z][a-z0-9_-]*\\.result\\.(json|decision)(\\.[A-Za-z0-9_-]+)*$"
-                },
-                "delay": {
-                  "type": "number",
-                  "minimum": 0,
-                  "maximum": 3600
-                }
-              }
-            }
-          },
-          "required": [
-            "id",
-            "name",
-            "kind"
-          ]
-        },
-        "command": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "argv": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "minItems": 1
-            },
-            "shell": {
-              "enum": [
-                "bash",
-                "sh",
-                "powershell",
-                "cmd"
-              ]
-            },
-            "script": {
-              "type": "string"
-            }
-          },
-          "required": [],
-          "oneOf": [
-            {
-              "required": [
-                "argv"
-              ],
-              "not": {
-                "anyOf": [
-                  {
-                    "required": [
-                      "script"
-                    ]
-                  },
-                  {
-                    "required": [
-                      "shell"
-                    ]
-                  }
-                ]
-              }
-            },
-            {
-              "required": [
-                "shell",
-                "script"
-              ],
-              "not": {
-                "required": [
-                  "argv"
-                ]
-              }
-            }
-          ]
-        },
-        "input": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "label": {
-              "type": "string"
-            },
-            "type": {
-              "enum": [
-                "string",
-                "integer",
-                "boolean",
-                "choice",
-                "ipv4",
-                "usb_serial",
-                "pid"
-              ]
-            },
-            "default": {
-              "type": [
-                "string",
-                "number",
-                "boolean"
-              ]
-            },
-            "options": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            },
-            "pattern": {
-              "type": "string"
-            },
-            "required": {
-              "type": "boolean"
-            },
-            "minimum": {
-              "type": "number"
-            },
-            "maximum": {
-              "type": "number"
-            }
-          },
-          "required": [
-            "label",
-            "type"
-          ]
-        }
+      "additionalProperties": {
+        "$ref": "#/$defs/parameter"
       }
     },
-    {
+    "globals": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": {
+        "$ref": "#/$defs/global"
+      }
+    },
+    "functions": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/function"
+      }
+    },
+    "graphs": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "$ref": "#/$defs/graph"
+      },
+      "required": [
+        "main"
+      ]
+    },
+    "layout": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/layout"
+      }
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "secrets": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "source_paths": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "$defs": {
+    "parameter": {
+      "type": "object",
       "properties": {
-        "version": {
-          "const": 2
+        "type": {
+          "enum": [
+            "void",
+            "null",
+            "boolean",
+            "number",
+            "string",
+            "array",
+            "object",
+            "json"
+          ]
+        },
+        "default": {},
+        "description": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false
+    },
+    "global": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "enum": [
+            "null",
+            "boolean",
+            "number",
+            "string",
+            "array",
+            "object",
+            "json"
+          ]
+        },
+        "initial": {}
+      },
+      "required": [
+        "type",
+        "initial"
+      ],
+      "additionalProperties": false
+    },
+    "function": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "graph": {
+          "type": "string"
+        },
+        "inputs": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/parameter"
+          }
+        },
+        "returns": {
+          "enum": [
+            "void",
+            "null",
+            "boolean",
+            "number",
+            "string",
+            "array",
+            "object",
+            "json"
+          ]
+        }
+      },
+      "required": [
+        "graph",
+        "returns"
+      ],
+      "additionalProperties": false
+    },
+    "owner": {
+      "type": "object",
+      "properties": {
+        "card": {
+          "type": "string"
+        },
+        "region": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "card",
+        "region"
+      ],
+      "additionalProperties": false
+    },
+    "card": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+        },
+        "kind": {
+          "enum": [
+            "start",
+            "finish",
+            "return",
+            "if",
+            "loop",
+            "variable",
+            "calculate",
+            "break",
+            "continue",
+            "parallel",
+            "join",
+            "try",
+            "python",
+            "bash",
+            "script",
+            "program",
+            "check_path",
+            "read_file",
+            "write_file",
+            "http",
+            "wait",
+            "poll",
+            "manual",
+            "call",
+            "workspace"
+          ]
         },
         "name": {
           "type": "string",
           "minLength": 1
         },
-        "description": {
-          "type": "string"
-        },
-        "concurrency": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 64
+        "config": {
+          "type": "object",
+          "additionalProperties": true
         },
         "inputs": {
           "type": "object",
-          "propertyNames": {
-            "pattern": "^[a-z][a-z0-9_]*$"
-          },
-          "additionalProperties": {
-            "type": "object",
-            "additionalProperties": false,
-            "properties": {
-              "label": {
-                "type": "string"
-              },
-              "type": {
-                "enum": [
-                  "string",
-                  "integer",
-                  "boolean",
-                  "choice",
-                  "ipv4",
-                  "usb_serial",
-                  "pid"
-                ]
-              },
-              "default": {
-                "type": [
-                  "string",
-                  "number",
-                  "boolean"
-                ]
-              },
-              "options": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              },
-              "pattern": {
-                "type": "string"
-              },
-              "required": {
-                "type": "boolean"
-              },
-              "minimum": {
-                "type": "number"
-              },
-              "maximum": {
-                "type": "number"
-              }
-            },
-            "required": [
-              "label",
-              "type"
-            ]
-          }
+          "additionalProperties": true
         },
-        "detect": {
+        "owner": {
+          "$ref": "#/$defs/owner"
+        },
+        "settings": {
           "type": "object",
-          "additionalProperties": false,
           "properties": {
-            "commands": {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "additionalProperties": false,
-                "properties": {
-                  "argv": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    },
-                    "minItems": 1
-                  },
-                  "shell": {
-                    "enum": [
-                      "bash",
-                      "sh",
-                      "powershell",
-                      "cmd"
-                    ]
-                  },
-                  "script": {
-                    "type": "string"
-                  }
-                },
-                "required": [],
-                "oneOf": [
-                  {
-                    "required": [
-                      "argv"
-                    ],
-                    "not": {
-                      "anyOf": [
-                        {
-                          "required": [
-                            "script"
-                          ]
-                        },
-                        {
-                          "required": [
-                            "shell"
-                          ]
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    "required": [
-                      "shell",
-                      "script"
-                    ],
-                    "not": {
-                      "required": [
-                        "argv"
-                      ]
-                    }
-                  }
-                ]
-              }
-            },
             "timeout": {
               "type": "number",
               "exclusiveMinimum": 0
-            }
-          },
-          "required": [
-            "commands"
-          ]
-        },
-        "env": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "string"
-          }
-        },
-        "secret_env": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "report_paths": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "source_paths": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "profiles": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        },
-        "steps": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "additionalProperties": false,
-            "properties": {
-              "id": {
-                "type": "string",
-                "pattern": "^[a-z][a-z0-9_-]*$"
-              },
-              "name": {
-                "type": "string",
-                "minLength": 1
-              },
-              "description": {
-                "type": "string"
-              },
-              "kind": {
-                "enum": [
-                  "command",
-                  "manual",
-                  "condition",
-                  "workflow",
-                  "action",
-                  "loop",
-                  "while",
-                  "until",
-                  "repeat",
-                  "foreach",
-                  "try",
-                  "switch",
-                  "break",
-                  "continue",
-                  "wait",
-                  "poll",
-                  "declare",
-                  "assign",
-                  "update",
-                  "merge",
-                  "handle_error"
-                ]
-              },
-              "commands": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "properties": {
-                    "argv": {
-                      "type": "array",
-                      "items": {
-                        "type": "string"
-                      },
-                      "minItems": 1
-                    },
-                    "shell": {
-                      "enum": [
-                        "bash",
-                        "sh",
-                        "powershell",
-                        "cmd"
-                      ]
-                    },
-                    "script": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [],
-                  "oneOf": [
-                    {
-                      "required": [
-                        "argv"
-                      ],
-                      "not": {
-                        "anyOf": [
-                          {
-                            "required": [
-                              "script"
-                            ]
-                          },
-                          {
-                            "required": [
-                              "shell"
-                            ]
-                          }
-                        ]
-                      }
-                    },
-                    {
-                      "required": [
-                        "shell",
-                        "script"
-                      ],
-                      "not": {
-                        "required": [
-                          "argv"
-                        ]
-                      }
-                    }
-                  ]
-                }
-              },
-              "platform_commands": {
-                "type": "object",
-                "propertyNames": {
-                  "enum": [
-                    "macos",
-                    "windows",
-                    "linux"
-                  ]
-                },
-                "additionalProperties": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "additionalProperties": false,
-                    "properties": {
-                      "argv": {
-                        "type": "array",
-                        "items": {
-                          "type": "string"
-                        },
-                        "minItems": 1
-                      },
-                      "shell": {
-                        "enum": [
-                          "bash",
-                          "sh",
-                          "powershell",
-                          "cmd"
-                        ]
-                      },
-                      "script": {
-                        "type": "string"
-                      }
-                    },
-                    "required": [],
-                    "oneOf": [
-                      {
-                        "required": [
-                          "argv"
-                        ],
-                        "not": {
-                          "anyOf": [
-                            {
-                              "required": [
-                                "script"
-                              ]
-                            },
-                            {
-                              "required": [
-                                "shell"
-                              ]
-                            }
-                          ]
-                        }
-                      },
-                      {
-                        "required": [
-                          "shell",
-                          "script"
-                        ],
-                        "not": {
-                          "required": [
-                            "argv"
-                          ]
-                        }
-                      }
-                    ]
-                  }
-                }
-              },
-              "cwd": {
-                "type": "string"
-              },
-              "needs": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              },
-              "resources": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              },
-              "requires_inputs": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              },
-              "env": {
-                "type": "object",
-                "additionalProperties": {
-                  "type": "string"
-                }
-              },
-              "secret_env": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              },
-              "mode": {
-                "enum": [
-                  "background",
-                  "interactive"
-                ]
-              },
-              "exclusive": {
-                "type": "boolean"
-              },
-              "enabled": {
-                "type": "boolean"
-              },
-              "required": {
-                "type": "boolean"
-              },
-              "approval": {
-                "type": "boolean"
-              },
-              "timeout": {
-                "type": "number",
-                "exclusiveMinimum": 0
-              },
-              "expected_seconds": {
-                "type": "number",
-                "exclusiveMinimum": 0
-              },
-              "progress": {
-                "type": "object",
-                "additionalProperties": false,
-                "properties": {
-                  "pattern": {
-                    "type": "string"
-                  },
-                  "total": {
-                    "type": "integer",
-                    "minimum": 1
-                  },
-                  "mode": {
-                    "enum": [
-                      "count",
-                      "groups",
-                      "index"
-                    ]
-                  },
-                  "offset": {
-                    "type": "integer"
-                  }
-                },
-                "required": []
-              },
-              "reports": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              },
-              "outputs": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "properties": {
-                    "path": {
-                      "type": "string"
-                    },
-                    "key": {
-                      "type": "string"
-                    },
-                    "input": {
-                      "type": "string"
-                    },
-                    "fresh": {
-                      "type": "boolean"
-                    }
-                  },
-                  "required": [
-                    "path",
-                    "key",
-                    "input"
-                  ]
-                }
-              },
-              "position": {
-                "type": "object",
-                "additionalProperties": false,
-                "properties": {
-                  "x": {
-                    "type": "number"
-                  },
-                  "y": {
-                    "type": "number"
-                  }
-                },
-                "required": [
-                  "x",
-                  "y"
-                ]
-              },
-              "capture": {
-                "enum": [
-                  "text",
-                  "json"
-                ]
-              },
-              "success_codes": {
-                "type": "array",
-                "minItems": 1,
-                "uniqueItems": true,
-                "items": {
-                  "type": "integer",
-                  "minimum": 0,
-                  "maximum": 125
-                }
-              },
-              "join": {
-                "enum": [
-                  "all",
-                  "any"
-                ]
-              },
-              "when": {
-                "type": "object",
-                "additionalProperties": false,
-                "properties": {
-                  "step": {
-                    "type": "string"
-                  },
-                  "equals": {
-                    "type": [
-                      "boolean",
-                      "string"
-                    ]
-                  }
-                },
-                "required": [
-                  "step",
-                  "equals"
-                ]
-              },
-              "condition": {
-                "oneOf": [
-                  {
-                    "type": "object",
-                    "additionalProperties": false,
-                    "properties": {
-                      "source": {
-                        "type": "string"
-                      },
-                      "operator": {
-                        "enum": [
-                          "equals",
-                          "not_equals",
-                          "greater_than",
-                          "less_than",
-                          "contains",
-                          "is_true"
-                        ]
-                      },
-                      "value": {
-                        "type": [
-                          "string",
-                          "number",
-                          "boolean",
-                          "null"
-                        ]
-                      }
-                    },
-                    "required": [
-                      "source",
-                      "operator"
-                    ]
-                  },
-                  {
-                    "type": "object",
-                    "additionalProperties": false,
-                    "required": [
-                      "compute"
-                    ],
-                    "properties": {
-                      "compute": {
-                        "type": "object",
-                        "additionalProperties": false,
-                        "properties": {
-                          "commands": {
-                            "type": "array",
-                            "items": {
-                              "type": "object",
-                              "additionalProperties": false,
-                              "properties": {
-                                "argv": {
-                                  "type": "array",
-                                  "items": {
-                                    "type": "string"
-                                  },
-                                  "minItems": 1
-                                },
-                                "shell": {
-                                  "enum": [
-                                    "bash",
-                                    "sh",
-                                    "powershell",
-                                    "cmd"
-                                  ]
-                                },
-                                "script": {
-                                  "type": "string"
-                                }
-                              },
-                              "required": [],
-                              "oneOf": [
-                                {
-                                  "required": [
-                                    "argv"
-                                  ],
-                                  "not": {
-                                    "anyOf": [
-                                      {
-                                        "required": [
-                                          "script"
-                                        ]
-                                      },
-                                      {
-                                        "required": [
-                                          "shell"
-                                        ]
-                                      }
-                                    ]
-                                  }
-                                },
-                                {
-                                  "required": [
-                                    "shell",
-                                    "script"
-                                  ],
-                                  "not": {
-                                    "required": [
-                                      "argv"
-                                    ]
-                                  }
-                                }
-                              ]
-                            },
-                            "minItems": 1
-                          },
-                          "platform_commands": {
-                            "type": "object",
-                            "propertyNames": {
-                              "enum": [
-                                "macos",
-                                "windows",
-                                "linux"
-                              ]
-                            },
-                            "additionalProperties": {
-                              "type": "array",
-                              "items": {
-                                "type": "object",
-                                "additionalProperties": false,
-                                "properties": {
-                                  "argv": {
-                                    "type": "array",
-                                    "items": {
-                                      "type": "string"
-                                    },
-                                    "minItems": 1
-                                  },
-                                  "shell": {
-                                    "enum": [
-                                      "bash",
-                                      "sh",
-                                      "powershell",
-                                      "cmd"
-                                    ]
-                                  },
-                                  "script": {
-                                    "type": "string"
-                                  }
-                                },
-                                "required": [],
-                                "oneOf": [
-                                  {
-                                    "required": [
-                                      "argv"
-                                    ],
-                                    "not": {
-                                      "anyOf": [
-                                        {
-                                          "required": [
-                                            "script"
-                                          ]
-                                        },
-                                        {
-                                          "required": [
-                                            "shell"
-                                          ]
-                                        }
-                                      ]
-                                    }
-                                  },
-                                  {
-                                    "required": [
-                                      "shell",
-                                      "script"
-                                    ],
-                                    "not": {
-                                      "required": [
-                                        "argv"
-                                      ]
-                                    }
-                                  }
-                                ]
-                              },
-                              "minItems": 1
-                            },
-                            "minProperties": 1
-                          }
-                        },
-                        "anyOf": [
-                          {
-                            "required": [
-                              "commands"
-                            ]
-                          },
-                          {
-                            "required": [
-                              "platform_commands"
-                            ]
-                          }
-                        ]
-                      }
-                    }
-                  },
-                  {
-                    "type": "object",
-                    "additionalProperties": false,
-                    "required": [
-                      "input"
-                    ],
-                    "properties": {
-                      "input": {
-                        "type": "object",
-                        "additionalProperties": false,
-                        "properties": {
-                          "step": {
-                            "type": "string",
-                            "minLength": 1
-                          },
-                          "field": {
-                            "type": "string"
-                          }
-                        }
-                      }
-                    }
-                  }
-                ]
-              },
-              "workflow": {
-                "type": "string",
-                "minLength": 1
-              },
-              "action": {
-                "oneOf": [
-                  {
-                    "type": "object",
-                    "additionalProperties": false,
-                    "properties": {
-                      "type": {
-                        "const": "set_values"
-                      },
-                      "values": {
-                        "type": "object"
-                      }
-                    },
-                    "required": [
-                      "type",
-                      "values"
-                    ]
-                  },
-                  {
-                    "type": "object",
-                    "additionalProperties": false,
-                    "properties": {
-                      "type": {
-                        "const": "calculate"
-                      },
-                      "left": {
-                        "type": [
-                          "number",
-                          "string"
-                        ]
-                      },
-                      "right": {
-                        "type": [
-                          "number",
-                          "string"
-                        ]
-                      },
-                      "operator": {
-                        "enum": [
-                          "add",
-                          "subtract",
-                          "multiply",
-                          "divide"
-                        ]
-                      }
-                    },
-                    "required": [
-                      "type",
-                      "left",
-                      "right",
-                      "operator"
-                    ]
-                  },
-                  {
-                    "type": "object",
-                    "additionalProperties": false,
-                    "properties": {
-                      "type": {
-                        "const": "read_json"
-                      },
-                      "path": {
-                        "type": "string",
-                        "minLength": 1
-                      }
-                    },
-                    "required": [
-                      "type",
-                      "path"
-                    ]
-                  },
-                  {
-                    "type": "object",
-                    "additionalProperties": false,
-                    "properties": {
-                      "type": {
-                        "const": "write_file"
-                      },
-                      "path": {
-                        "type": "string",
-                        "minLength": 1
-                      },
-                      "content": {},
-                      "format": {
-                        "enum": [
-                          "text",
-                          "json"
-                        ]
-                      },
-                      "overwrite": {
-                        "type": "boolean"
-                      },
-                      "create_directories": {
-                        "type": "boolean"
-                      }
-                    },
-                    "required": [
-                      "type",
-                      "path",
-                      "content"
-                    ]
-                  },
-                  {
-                    "type": "object",
-                    "additionalProperties": false,
-                    "properties": {
-                      "type": {
-                        "const": "run_tests"
-                      },
-                      "runner": {
-                        "enum": [
-                          "unittest",
-                          "pytest",
-                          "go",
-                          "flutter",
-                          "npm",
-                          "gradle"
-                        ]
-                      },
-                      "target": {
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "type",
-                      "runner"
-                    ]
-                  },
-                  {
-                    "type": "object",
-                    "additionalProperties": false,
-                    "properties": {
-                      "type": {
-                        "const": "file_exists"
-                      },
-                      "path": {
-                        "type": "string",
-                        "minLength": 1
-                      }
-                    },
-                    "required": [
-                      "type",
-                      "path"
-                    ]
-                  },
-                  {
-                    "type": "object",
-                    "additionalProperties": false,
-                    "properties": {
-                      "type": {
-                        "const": "run_script"
-                      },
-                      "language": {
-                        "enum": [
-                          "python",
-                          "bash",
-                          "powershell"
-                        ]
-                      },
-                      "path": {
-                        "type": "string",
-                        "minLength": 1
-                      },
-                      "arguments": {
-                        "type": "array",
-                        "items": {
-                          "type": "string"
-                        }
-                      }
-                    },
-                    "required": [
-                      "type",
-                      "language",
-                      "path"
-                    ]
-                  }
-                ]
-              },
-              "workflow_inputs": {
-                "type": "object",
-                "additionalProperties": {
-                  "type": [
-                    "string",
-                    "number",
-                    "boolean"
-                  ]
-                }
-              },
-              "loop": {
-                "type": "object",
-                "additionalProperties": false,
-                "required": [
-                  "iterations"
-                ],
-                "properties": {
-                  "iterations": {
-                    "type": "integer",
-                    "minimum": 1,
-                    "maximum": 1000
-                  },
-                  "until": {
-                    "type": "string",
-                    "pattern": "^steps\\.[a-z][a-z0-9_-]*\\.result\\.(json|decision)(\\.[A-Za-z0-9_-]+)*$"
-                  },
-                  "delay": {
-                    "type": "number",
-                    "minimum": 0,
-                    "maximum": 3600
-                  }
-                }
-              },
-              "scope": {
-                "type": "string"
-              },
-              "region": {
-                "enum": [
-                  "body",
-                  "condition",
-                  "catch",
-                  "finally"
-                ]
-              },
-              "collapsed": {
-                "type": "boolean"
-              },
-              "size": {
-                "type": "object",
-                "properties": {
-                  "width": {
-                    "type": "number",
-                    "minimum": 300
-                  },
-                  "height": {
-                    "type": "number",
-                    "minimum": 200
-                  }
-                },
-                "required": [
-                  "width",
-                  "height"
-                ],
-                "additionalProperties": false
-              },
-              "control": {
-                "type": "object",
-                "additionalProperties": false,
-                "properties": {
-                  "limit": {
-                    "type": [
-                      "integer",
-                      "null"
-                    ],
-                    "minimum": 1
-                  },
-                  "timeout": {
-                    "type": [
-                      "number",
-                      "null"
-                    ],
-                    "exclusiveMinimum": 0
-                  },
-                  "count": {
-                    "type": "integer",
-                    "minimum": 0
-                  },
-                  "delay": {
-                    "type": "number",
-                    "minimum": 0
-                  },
-                  "parallel": {
-                    "type": "integer",
-                    "minimum": 1,
-                    "maximum": 64
-                  },
-                  "test": {
-                    "type": "object"
-                  },
-                  "items": {},
-                  "outputs": {
-                    "type": "object"
-                  },
-                  "name": {
-                    "type": "string",
-                    "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$"
-                  },
-                  "value": {},
-                  "operator": {
-                    "enum": [
-                      "add",
-                      "subtract",
-                      "multiply",
-                      "append"
-                    ]
-                  },
-                  "cases": {
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "properties": {
-                        "id": {
-                          "type": "string"
-                        },
-                        "value": {}
-                      },
-                      "required": [
-                        "id",
-                        "value"
-                      ],
-                      "additionalProperties": false
-                    }
-                  },
-                  "source": {
-                    "type": "string"
-                  },
-                  "conflicts": {
-                    "enum": [
-                      "error",
-                      "first",
-                      "last"
-                    ]
-                  },
-                  "inputs": {
-                    "type": "object"
-                  }
-                }
-              },
-              "retry": {
-                "type": "object",
-                "additionalProperties": false,
-                "properties": {
-                  "attempts": {
-                    "type": "integer",
-                    "minimum": 1,
-                    "maximum": 100
-                  },
-                  "delay": {
-                    "type": "number",
-                    "minimum": 0
-                  },
-                  "backoff": {
-                    "type": "number",
-                    "minimum": 1
-                  },
-                  "exit_codes": {
-                    "type": "array",
-                    "items": {
-                      "type": "integer"
-                    }
-                  }
-                },
-                "required": [
-                  "attempts"
-                ]
-              },
-              "region_sizes": {
-                "type": "object",
-                "additionalProperties": {
-                  "type": "number",
-                  "minimum": 160
-                }
-              }
-            },
-            "required": [
-              "id",
-              "name",
-              "kind"
-            ]
-          }
-        },
-        "workspace": {
-          "type": "string",
-          "minLength": 1,
-          "description": "Project directory relative to the YAML file, including parent folders."
-        }
-      },
-      "required": [
-        "version",
-        "name",
-        "steps"
-      ],
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
-      "$id": "https://github.com/codewhen/release-workbench/schema/v1",
-      "$defs": {
-        "step": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "id": {
-              "type": "string",
-              "pattern": "^[a-z][a-z0-9_-]*$"
-            },
-            "name": {
-              "type": "string",
-              "minLength": 1
-            },
-            "description": {
-              "type": "string"
-            },
-            "kind": {
-              "enum": [
-                "command",
-                "manual",
-                "condition",
-                "workflow",
-                "action",
-                "loop"
-              ]
-            },
-            "commands": {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "additionalProperties": false,
-                "properties": {
-                  "argv": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    },
-                    "minItems": 1
-                  },
-                  "shell": {
-                    "enum": [
-                      "bash",
-                      "sh",
-                      "powershell",
-                      "cmd"
-                    ]
-                  },
-                  "script": {
-                    "type": "string"
-                  }
-                },
-                "required": [],
-                "oneOf": [
-                  {
-                    "required": [
-                      "argv"
-                    ],
-                    "not": {
-                      "anyOf": [
-                        {
-                          "required": [
-                            "script"
-                          ]
-                        },
-                        {
-                          "required": [
-                            "shell"
-                          ]
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    "required": [
-                      "shell",
-                      "script"
-                    ],
-                    "not": {
-                      "required": [
-                        "argv"
-                      ]
-                    }
-                  }
-                ]
-              }
-            },
-            "platform_commands": {
-              "type": "object",
-              "propertyNames": {
-                "enum": [
-                  "macos",
-                  "windows",
-                  "linux"
-                ]
-              },
-              "additionalProperties": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "properties": {
-                    "argv": {
-                      "type": "array",
-                      "items": {
-                        "type": "string"
-                      },
-                      "minItems": 1
-                    },
-                    "shell": {
-                      "enum": [
-                        "bash",
-                        "sh",
-                        "powershell",
-                        "cmd"
-                      ]
-                    },
-                    "script": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [],
-                  "oneOf": [
-                    {
-                      "required": [
-                        "argv"
-                      ],
-                      "not": {
-                        "anyOf": [
-                          {
-                            "required": [
-                              "script"
-                            ]
-                          },
-                          {
-                            "required": [
-                              "shell"
-                            ]
-                          }
-                        ]
-                      }
-                    },
-                    {
-                      "required": [
-                        "shell",
-                        "script"
-                      ],
-                      "not": {
-                        "required": [
-                          "argv"
-                        ]
-                      }
-                    }
-                  ]
-                }
-              }
-            },
-            "cwd": {
-              "type": "string"
-            },
-            "needs": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
             },
             "resources": {
               "type": "array",
@@ -3126,705 +237,204 @@
                 "type": "string"
               }
             },
-            "requires_inputs": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
+            "exclusive": {
+              "type": "boolean"
             },
-            "env": {
+            "interactive": {
+              "type": "boolean"
+            },
+            "retry": {
+              "type": "object",
+              "properties": {
+                "attempts": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 100
+                },
+                "delay": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "backoff": {
+                  "type": "number",
+                  "minimum": 1
+                },
+                "errors_contain": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              },
+              "required": [
+                "attempts"
+              ],
+              "additionalProperties": false
+            },
+            "cwd": {
+              "type": "string"
+            },
+            "environment": {
               "type": "object",
               "additionalProperties": {
                 "type": "string"
               }
-            },
-            "secret_env": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            },
-            "mode": {
-              "enum": [
-                "background",
-                "interactive"
-              ]
-            },
-            "exclusive": {
-              "type": "boolean"
-            },
-            "enabled": {
-              "type": "boolean"
-            },
-            "required": {
-              "type": "boolean"
-            },
-            "approval": {
-              "type": "boolean"
-            },
-            "timeout": {
-              "type": "number",
-              "exclusiveMinimum": 0
             },
             "expected_seconds": {
               "type": "number",
               "exclusiveMinimum": 0
-            },
-            "progress": {
-              "type": "object",
-              "additionalProperties": false,
-              "properties": {
-                "pattern": {
-                  "type": "string"
-                },
-                "total": {
-                  "type": "integer",
-                  "minimum": 1
-                },
-                "mode": {
-                  "enum": [
-                    "count",
-                    "groups",
-                    "index"
-                  ]
-                },
-                "offset": {
-                  "type": "integer"
-                }
-              },
-              "required": []
-            },
-            "reports": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            },
-            "outputs": {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "additionalProperties": false,
-                "properties": {
-                  "path": {
-                    "type": "string"
-                  },
-                  "key": {
-                    "type": "string"
-                  },
-                  "input": {
-                    "type": "string"
-                  },
-                  "fresh": {
-                    "type": "boolean"
-                  }
-                },
-                "required": [
-                  "path",
-                  "key",
-                  "input"
-                ]
-              }
-            },
-            "position": {
-              "type": "object",
-              "additionalProperties": false,
-              "properties": {
-                "x": {
-                  "type": "number"
-                },
-                "y": {
-                  "type": "number"
-                }
-              },
-              "required": [
-                "x",
-                "y"
-              ]
-            },
-            "capture": {
-              "enum": [
-                "text",
-                "json"
-              ]
-            },
-            "success_codes": {
-              "type": "array",
-              "minItems": 1,
-              "uniqueItems": true,
-              "items": {
-                "type": "integer",
-                "minimum": 0,
-                "maximum": 125
-              }
-            },
-            "join": {
-              "enum": [
-                "all",
-                "any"
-              ]
-            },
-            "when": {
-              "type": "object",
-              "additionalProperties": false,
-              "properties": {
-                "step": {
-                  "type": "string"
-                },
-                "equals": {
-                  "type": "boolean"
-                }
-              },
-              "required": [
-                "step",
-                "equals"
-              ]
-            },
-            "condition": {
-              "oneOf": [
-                {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "properties": {
-                    "source": {
-                      "type": "string"
-                    },
-                    "operator": {
-                      "enum": [
-                        "equals",
-                        "not_equals",
-                        "greater_than",
-                        "less_than",
-                        "contains",
-                        "is_true"
-                      ]
-                    },
-                    "value": {
-                      "type": [
-                        "string",
-                        "number",
-                        "boolean",
-                        "null"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "source",
-                    "operator"
-                  ]
-                },
-                {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "required": [
-                    "compute"
-                  ],
-                  "properties": {
-                    "compute": {
-                      "type": "object",
-                      "additionalProperties": false,
-                      "properties": {
-                        "commands": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "additionalProperties": false,
-                            "properties": {
-                              "argv": {
-                                "type": "array",
-                                "items": {
-                                  "type": "string"
-                                },
-                                "minItems": 1
-                              },
-                              "shell": {
-                                "enum": [
-                                  "bash",
-                                  "sh",
-                                  "powershell",
-                                  "cmd"
-                                ]
-                              },
-                              "script": {
-                                "type": "string"
-                              }
-                            },
-                            "required": [],
-                            "oneOf": [
-                              {
-                                "required": [
-                                  "argv"
-                                ],
-                                "not": {
-                                  "anyOf": [
-                                    {
-                                      "required": [
-                                        "script"
-                                      ]
-                                    },
-                                    {
-                                      "required": [
-                                        "shell"
-                                      ]
-                                    }
-                                  ]
-                                }
-                              },
-                              {
-                                "required": [
-                                  "shell",
-                                  "script"
-                                ],
-                                "not": {
-                                  "required": [
-                                    "argv"
-                                  ]
-                                }
-                              }
-                            ]
-                          },
-                          "minItems": 1
-                        },
-                        "platform_commands": {
-                          "type": "object",
-                          "propertyNames": {
-                            "enum": [
-                              "macos",
-                              "windows",
-                              "linux"
-                            ]
-                          },
-                          "additionalProperties": {
-                            "type": "array",
-                            "items": {
-                              "type": "object",
-                              "additionalProperties": false,
-                              "properties": {
-                                "argv": {
-                                  "type": "array",
-                                  "items": {
-                                    "type": "string"
-                                  },
-                                  "minItems": 1
-                                },
-                                "shell": {
-                                  "enum": [
-                                    "bash",
-                                    "sh",
-                                    "powershell",
-                                    "cmd"
-                                  ]
-                                },
-                                "script": {
-                                  "type": "string"
-                                }
-                              },
-                              "required": [],
-                              "oneOf": [
-                                {
-                                  "required": [
-                                    "argv"
-                                  ],
-                                  "not": {
-                                    "anyOf": [
-                                      {
-                                        "required": [
-                                          "script"
-                                        ]
-                                      },
-                                      {
-                                        "required": [
-                                          "shell"
-                                        ]
-                                      }
-                                    ]
-                                  }
-                                },
-                                {
-                                  "required": [
-                                    "shell",
-                                    "script"
-                                  ],
-                                  "not": {
-                                    "required": [
-                                      "argv"
-                                    ]
-                                  }
-                                }
-                              ]
-                            },
-                            "minItems": 1
-                          },
-                          "minProperties": 1
-                        }
-                      },
-                      "anyOf": [
-                        {
-                          "required": [
-                            "commands"
-                          ]
-                        },
-                        {
-                          "required": [
-                            "platform_commands"
-                          ]
-                        }
-                      ]
-                    }
-                  }
-                },
-                {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "required": [
-                    "input"
-                  ],
-                  "properties": {
-                    "input": {
-                      "type": "object",
-                      "additionalProperties": false,
-                      "properties": {
-                        "step": {
-                          "type": "string",
-                          "minLength": 1
-                        },
-                        "field": {
-                          "type": "string"
-                        }
-                      }
-                    }
-                  }
-                }
-              ]
-            },
-            "workflow": {
-              "type": "string",
-              "minLength": 1
-            },
-            "action": {
-              "oneOf": [
-                {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "properties": {
-                    "type": {
-                      "const": "set_values"
-                    },
-                    "values": {
-                      "type": "object"
-                    }
-                  },
-                  "required": [
-                    "type",
-                    "values"
-                  ]
-                },
-                {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "properties": {
-                    "type": {
-                      "const": "calculate"
-                    },
-                    "left": {
-                      "type": [
-                        "number",
-                        "string"
-                      ]
-                    },
-                    "right": {
-                      "type": [
-                        "number",
-                        "string"
-                      ]
-                    },
-                    "operator": {
-                      "enum": [
-                        "add",
-                        "subtract",
-                        "multiply",
-                        "divide"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "type",
-                    "left",
-                    "right",
-                    "operator"
-                  ]
-                },
-                {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "properties": {
-                    "type": {
-                      "const": "read_json"
-                    },
-                    "path": {
-                      "type": "string",
-                      "minLength": 1
-                    }
-                  },
-                  "required": [
-                    "type",
-                    "path"
-                  ]
-                },
-                {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "properties": {
-                    "type": {
-                      "const": "write_file"
-                    },
-                    "path": {
-                      "type": "string",
-                      "minLength": 1
-                    },
-                    "content": {},
-                    "format": {
-                      "enum": [
-                        "text",
-                        "json"
-                      ]
-                    },
-                    "overwrite": {
-                      "type": "boolean"
-                    },
-                    "create_directories": {
-                      "type": "boolean"
-                    }
-                  },
-                  "required": [
-                    "type",
-                    "path",
-                    "content"
-                  ]
-                },
-                {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "properties": {
-                    "type": {
-                      "const": "run_tests"
-                    },
-                    "runner": {
-                      "enum": [
-                        "unittest",
-                        "pytest",
-                        "go",
-                        "flutter",
-                        "npm",
-                        "gradle"
-                      ]
-                    },
-                    "target": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "type",
-                    "runner"
-                  ]
-                },
-                {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "properties": {
-                    "type": {
-                      "const": "file_exists"
-                    },
-                    "path": {
-                      "type": "string",
-                      "minLength": 1
-                    }
-                  },
-                  "required": [
-                    "type",
-                    "path"
-                  ]
-                },
-                {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "properties": {
-                    "type": {
-                      "const": "run_script"
-                    },
-                    "language": {
-                      "enum": [
-                        "python",
-                        "bash",
-                        "powershell"
-                      ]
-                    },
-                    "path": {
-                      "type": "string",
-                      "minLength": 1
-                    },
-                    "arguments": {
-                      "type": "array",
-                      "items": {
-                        "type": "string"
-                      }
-                    }
-                  },
-                  "required": [
-                    "type",
-                    "language",
-                    "path"
-                  ]
-                }
-              ]
-            },
-            "workflow_inputs": {
-              "type": "object",
-              "additionalProperties": {
-                "type": [
-                  "string",
-                  "number",
-                  "boolean"
-                ]
-              }
-            },
-            "loop": {
-              "type": "object",
-              "additionalProperties": false,
-              "required": [
-                "iterations"
-              ],
-              "properties": {
-                "iterations": {
-                  "type": "integer",
-                  "minimum": 1,
-                  "maximum": 1000
-                },
-                "until": {
-                  "type": "string",
-                  "pattern": "^steps\\.[a-z][a-z0-9_-]*\\.result\\.(json|decision)(\\.[A-Za-z0-9_-]+)*$"
-                },
-                "delay": {
-                  "type": "number",
-                  "minimum": 0,
-                  "maximum": 3600
-                }
-              }
-            }
-          },
-          "required": [
-            "id",
-            "name",
-            "kind"
-          ]
-        },
-        "command": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "argv": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "minItems": 1
-            },
-            "shell": {
-              "enum": [
-                "bash",
-                "sh",
-                "powershell",
-                "cmd"
-              ]
-            },
-            "script": {
-              "type": "string"
             }
           },
           "required": [],
-          "oneOf": [
-            {
-              "required": [
-                "argv"
-              ],
-              "not": {
-                "anyOf": [
-                  {
-                    "required": [
-                      "script"
-                    ]
-                  },
-                  {
-                    "required": [
-                      "shell"
-                    ]
-                  }
-                ]
-              }
-            },
-            {
-              "required": [
-                "shell",
-                "script"
-              ],
-              "not": {
-                "required": [
-                  "argv"
-                ]
-              }
-            }
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "name"
+      ],
+      "additionalProperties": false
+    },
+    "edge": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "target": {
+          "type": "string"
+        },
+        "source_port": {
+          "type": "string"
+        },
+        "target_port": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "flow",
+            "value"
           ]
         },
-        "input": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "label": {
-              "type": "string"
-            },
-            "type": {
-              "enum": [
-                "string",
-                "integer",
-                "boolean",
-                "choice",
-                "ipv4",
-                "usb_serial",
-                "pid"
-              ]
-            },
-            "default": {
-              "type": [
-                "string",
-                "number",
-                "boolean"
-              ]
-            },
-            "options": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            },
-            "pattern": {
-              "type": "string"
-            },
-            "required": {
-              "type": "boolean"
-            },
-            "minimum": {
-              "type": "number"
-            },
-            "maximum": {
-              "type": "number"
-            }
-          },
-          "required": [
-            "label",
-            "type"
-          ]
+        "path": {
+          "type": "string"
         }
-      }
+      },
+      "required": [
+        "id",
+        "source",
+        "target",
+        "kind"
+      ],
+      "additionalProperties": false
+    },
+    "graph": {
+      "type": "object",
+      "properties": {
+        "cards": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/card"
+          }
+        },
+        "edges": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/edge"
+          }
+        }
+      },
+      "required": [
+        "cards",
+        "edges"
+      ],
+      "additionalProperties": false
+    },
+    "point": {
+      "type": "object",
+      "properties": {
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "x",
+        "y"
+      ],
+      "additionalProperties": false
+    },
+    "area": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "area",
+            "collapsible",
+            "annotation"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "position": {
+          "$ref": "#/$defs/point"
+        },
+        "width": {
+          "type": "number",
+          "minimum": 100
+        },
+        "height": {
+          "type": "number",
+          "minimum": 80
+        },
+        "collapsed": {
+          "type": "boolean"
+        },
+        "members": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "name",
+        "position"
+      ],
+      "additionalProperties": false
+    },
+    "layout": {
+      "type": "object",
+      "properties": {
+        "positions": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/point"
+          }
+        },
+        "areas": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/area"
+          }
+        }
+      },
+      "required": [],
+      "additionalProperties": false
     }
-  ]
+  }
 }

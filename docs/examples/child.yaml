@@ -1,0 +1,58 @@
+version: 3
+name: Example child workflow
+concurrency: 4
+inputs:
+  message:
+    type: string
+    default: Hello
+globals: {}
+functions: {}
+graphs:
+  main:
+    cards:
+      - id: start
+        kind: start
+        name: Start
+        config: {}
+      - id: greet
+        kind: python
+        name: Greet
+        config:
+          code: 'return {"greeting": inputs["message"]}'
+          returns: object
+        inputs:
+          message:
+            $ref: input:message
+      - id: finish
+        kind: finish
+        name: Finish
+        config:
+          returns: json
+          value:
+            $ref: card:greet
+    edges:
+      - id: start:next:greet:entry
+        source: start
+        target: greet
+        source_port: next
+        target_port: entry
+        kind: flow
+      - id: greet:next:finish:entry
+        source: greet
+        target: finish
+        source_port: next
+        target_port: entry
+        kind: flow
+layout:
+  main:
+    positions:
+      start:
+        x: 0
+        y: 0
+      greet:
+        x: 340
+        y: 0
+      finish:
+        x: 680
+        y: 0
+    areas: []

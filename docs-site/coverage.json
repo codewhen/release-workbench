@@ -1,0 +1,539 @@
+{
+  "cards": {
+    "start": {
+      "page": "user/cards/start.md",
+      "fields": [],
+      "modes": {},
+      "example": "examples/start.yaml",
+      "screenshot": "assets/screenshots/card-start.png"
+    },
+    "finish": {
+      "page": "user/cards/finish.md",
+      "fields": [
+        "returns",
+        "value"
+      ],
+      "modes": {},
+      "example": "examples/finish.yaml",
+      "screenshot": "assets/screenshots/card-finish.png"
+    },
+    "return": {
+      "page": "user/cards/return.md",
+      "fields": [
+        "returns",
+        "value",
+        "handled"
+      ],
+      "modes": {},
+      "example": "examples/return.yaml",
+      "screenshot": "assets/screenshots/card-return.png"
+    },
+    "if": {
+      "page": "user/cards/if.md",
+      "fields": [
+        "function"
+      ],
+      "modes": {},
+      "example": "examples/if.yaml",
+      "screenshot": "assets/screenshots/card-if.png"
+    },
+    "loop": {
+      "page": "user/cards/loop.md",
+      "fields": [
+        "mode",
+        "count",
+        "function",
+        "limit",
+        "timeout"
+      ],
+      "modes": {
+        "mode": [
+          "count",
+          "while"
+        ]
+      },
+      "example": "examples/loop.yaml",
+      "screenshot": "assets/screenshots/card-loop.png"
+    },
+    "variable": {
+      "page": "user/cards/variable.md",
+      "fields": [
+        "operation",
+        "name",
+        "value",
+        "operator"
+      ],
+      "modes": {
+        "operation": [
+          "get",
+          "set",
+          "update"
+        ],
+        "operator": [
+          "add",
+          "subtract",
+          "multiply",
+          "append"
+        ]
+      },
+      "example": "examples/variable.yaml",
+      "screenshot": "assets/screenshots/card-variable.png"
+    },
+    "calculate": {
+      "page": "user/cards/calculate.md",
+      "fields": [
+        "operator",
+        "left",
+        "right"
+      ],
+      "modes": {
+        "operator": [
+          "add",
+          "subtract",
+          "multiply",
+          "divide",
+          "equals",
+          "not_equals",
+          "less_than",
+          "greater_than",
+          "and",
+          "or",
+          "not"
+        ]
+      },
+      "example": "examples/calculate.yaml",
+      "screenshot": "assets/screenshots/card-calculate.png"
+    },
+    "break": {
+      "page": "user/cards/break.md",
+      "fields": [],
+      "modes": {},
+      "example": "examples/break.yaml",
+      "screenshot": "assets/screenshots/card-break.png"
+    },
+    "continue": {
+      "page": "user/cards/continue.md",
+      "fields": [],
+      "modes": {},
+      "example": "examples/continue.yaml",
+      "screenshot": "assets/screenshots/card-continue.png"
+    },
+    "parallel": {
+      "page": "user/cards/parallel.md",
+      "fields": [
+        "branches"
+      ],
+      "modes": {},
+      "example": "examples/parallel.yaml",
+      "screenshot": "assets/screenshots/card-parallel.png"
+    },
+    "join": {
+      "page": "user/cards/join.md",
+      "fields": [
+        "parallel"
+      ],
+      "modes": {},
+      "example": "examples/join.yaml",
+      "screenshot": "assets/screenshots/card-join.png"
+    },
+    "try": {
+      "page": "user/cards/try.md",
+      "fields": [],
+      "modes": {},
+      "example": "examples/try.yaml",
+      "screenshot": "assets/screenshots/card-try.png"
+    },
+    "python": {
+      "page": "user/cards/python.md",
+      "fields": [
+        "code",
+        "returns"
+      ],
+      "modes": {},
+      "example": "examples/python.yaml",
+      "screenshot": "assets/screenshots/card-python.png"
+    },
+    "bash": {
+      "page": "user/cards/bash.md",
+      "fields": [
+        "code",
+        "capture"
+      ],
+      "modes": {
+        "capture": [
+          "text",
+          "json"
+        ]
+      },
+      "example": "examples/bash.yaml",
+      "screenshot": "assets/screenshots/card-bash.png"
+    },
+    "script": {
+      "page": "user/cards/script.md",
+      "fields": [
+        "language",
+        "path",
+        "arguments",
+        "capture"
+      ],
+      "modes": {
+        "language": [
+          "python",
+          "bash"
+        ],
+        "capture": [
+          "text",
+          "json"
+        ]
+      },
+      "example": "examples/script.yaml",
+      "screenshot": "assets/screenshots/card-script.png"
+    },
+    "program": {
+      "page": "user/cards/program.md",
+      "fields": [
+        "argv",
+        "capture"
+      ],
+      "modes": {
+        "capture": [
+          "text",
+          "json"
+        ]
+      },
+      "example": "examples/program.yaml",
+      "screenshot": "assets/screenshots/card-program.png"
+    },
+    "check_path": {
+      "page": "user/cards/check_path.md",
+      "fields": [
+        "path",
+        "type"
+      ],
+      "modes": {
+        "type": [
+          "exists",
+          "file",
+          "directory"
+        ]
+      },
+      "example": "examples/check_path.yaml",
+      "screenshot": "assets/screenshots/card-check_path.png"
+    },
+    "read_file": {
+      "page": "user/cards/read_file.md",
+      "fields": [
+        "path",
+        "format"
+      ],
+      "modes": {
+        "format": [
+          "text",
+          "json"
+        ]
+      },
+      "example": "examples/read_file.yaml",
+      "screenshot": "assets/screenshots/card-read_file.png"
+    },
+    "write_file": {
+      "page": "user/cards/write_file.md",
+      "fields": [
+        "path",
+        "format",
+        "value",
+        "overwrite"
+      ],
+      "modes": {
+        "format": [
+          "text",
+          "json"
+        ]
+      },
+      "example": "examples/write_file.yaml",
+      "screenshot": "assets/screenshots/card-write_file.png"
+    },
+    "http": {
+      "page": "user/cards/http.md",
+      "fields": [
+        "method",
+        "url",
+        "headers",
+        "body"
+      ],
+      "modes": {
+        "method": [
+          "GET",
+          "POST",
+          "PUT",
+          "PATCH",
+          "DELETE",
+          "HEAD"
+        ]
+      },
+      "example": "examples/http.yaml",
+      "screenshot": "assets/screenshots/card-http.png"
+    },
+    "wait": {
+      "page": "user/cards/wait.md",
+      "fields": [
+        "seconds"
+      ],
+      "modes": {},
+      "example": "examples/wait.yaml",
+      "screenshot": "assets/screenshots/card-wait.png"
+    },
+    "poll": {
+      "page": "user/cards/poll.md",
+      "fields": [
+        "function",
+        "interval",
+        "timeout"
+      ],
+      "modes": {},
+      "example": "examples/poll.yaml",
+      "screenshot": "assets/screenshots/card-poll.png"
+    },
+    "manual": {
+      "page": "user/cards/manual.md",
+      "fields": [
+        "mode",
+        "instructions"
+      ],
+      "modes": {
+        "mode": [
+          "decision",
+          "approval"
+        ]
+      },
+      "example": "examples/manual.yaml",
+      "screenshot": "assets/screenshots/card-manual.png"
+    },
+    "call": {
+      "page": "user/cards/call.md",
+      "fields": [
+        "function"
+      ],
+      "modes": {},
+      "example": "examples/call.yaml",
+      "screenshot": "assets/screenshots/card-call.png"
+    },
+    "workspace": {
+      "page": "user/cards/workspace.md",
+      "fields": [
+        "path",
+        "inputs"
+      ],
+      "modes": {},
+      "example": "examples/workspace.yaml",
+      "screenshot": "assets/screenshots/card-workspace.png"
+    }
+  },
+  "layout": {
+    "area": {
+      "page": "user/cards/area.md",
+      "example": "examples/area.yaml",
+      "screenshot": "assets/screenshots/card-area.png"
+    },
+    "collapsible": {
+      "page": "user/cards/collapsible.md",
+      "example": "examples/collapsible.yaml",
+      "screenshot": "assets/screenshots/card-collapsible.png"
+    },
+    "annotation": {
+      "page": "user/cards/annotation.md",
+      "example": "examples/annotation.yaml",
+      "screenshot": "assets/screenshots/card-annotation.png"
+    }
+  },
+  "features": {
+    "home-projects": {
+      "page": "user/projects.md",
+      "terms": [
+        "Add project or file",
+        "Choose project folder",
+        "Open YAML",
+        "New workflow",
+        "Starter",
+        "Refresh",
+        "Search"
+      ]
+    },
+    "home-organization": {
+      "page": "user/projects.md",
+      "terms": [
+        "rename",
+        "remove",
+        "folder",
+        "project filter"
+      ]
+    },
+    "editor-operations": {
+      "page": "user/editing.md",
+      "terms": [
+        "Add card",
+        "right-click",
+        "duplicate",
+        "delete",
+        "Undo/Redo",
+        "Arrange",
+        "zoom"
+      ]
+    },
+    "representations": {
+      "page": "user/editing.md",
+      "terms": [
+        "Flowchart",
+        "List",
+        "YAML",
+        "Hide details",
+        "Save",
+        "Validate & review",
+        "revision",
+        "draft"
+      ]
+    },
+    "input-sources": {
+      "page": "user/values.md",
+      "terms": [
+        "Named inputs",
+        "value",
+        "source",
+        "nested",
+        "loop",
+        "error",
+        "env:",
+        "Void"
+      ]
+    },
+    "execution": {
+      "page": "user/running.md",
+      "terms": [
+        "Run all",
+        "Overall run",
+        "manual",
+        "Stop all",
+        "Pause",
+        "resume",
+        "retry",
+        "progress",
+        "report"
+      ]
+    },
+    "installation": {
+      "page": "user/installation.md",
+      "terms": [
+        "workbench create",
+        "npm",
+        "npx",
+        "Python",
+        "port",
+        "storage"
+      ]
+    },
+    "storage": {
+      "page": "user/storage.md",
+      "terms": [
+        "library.json",
+        "runs/",
+        "drafts/",
+        "browser-sessions.json",
+        "backup"
+      ]
+    }
+  },
+  "settings": {
+    "timeout": {
+      "page": "user/settings.md"
+    },
+    "resources": {
+      "page": "user/settings.md"
+    },
+    "exclusive": {
+      "page": "user/settings.md"
+    },
+    "interactive": {
+      "page": "user/settings.md"
+    },
+    "retry": {
+      "page": "user/settings.md"
+    },
+    "cwd": {
+      "page": "user/settings.md"
+    },
+    "environment": {
+      "page": "user/settings.md"
+    },
+    "expected_seconds": {
+      "page": "user/settings.md"
+    }
+  },
+  "workflow_fields": {
+    "version": {
+      "page": "user/settings.md"
+    },
+    "name": {
+      "page": "user/settings.md"
+    },
+    "concurrency": {
+      "page": "user/settings.md"
+    },
+    "inputs": {
+      "page": "user/settings.md"
+    },
+    "globals": {
+      "page": "user/settings.md"
+    },
+    "functions": {
+      "page": "user/settings.md"
+    },
+    "graphs": {
+      "page": "user/settings.md"
+    },
+    "layout": {
+      "page": "user/settings.md"
+    },
+    "environment": {
+      "page": "user/settings.md"
+    },
+    "secrets": {
+      "page": "user/settings.md"
+    },
+    "source_paths": {
+      "page": "user/settings.md"
+    }
+  },
+  "reviewed_ui_sources": {
+    "frontend/src/Home.tsx": "7bb34fb15cf7d399d6bc201408a5a6b7b47e5d34059b556e4328960f6e5aef63",
+    "frontend/src/Editor.tsx": "6bb3019b4d696b9e6e4f8b30ed53a7259aadcb44af83b593a6a6704cdb4eeea7",
+    "frontend/src/cards/CardInspector.tsx": "34738476dd230a80fbf9b403ebe604bff900d1561f599ca2bd23efbd2cbaf021",
+    "frontend/src/cards/Fields.tsx": "3ec931b962047bed56c313d3371a800dba611746b7af0523ce9d89b801dcd2a9",
+    "frontend/src/cards/Bindings.tsx": "6a50411308cbcd3fced26e895f9ec77d1404437dee2684811fdca8121d64895d",
+    "frontend/src/cards/TerminalValue.tsx": "febc7075a5c8449a1f0802b41a123ac05c803b4e1681f68147123c77ae3c4d70",
+    "frontend/src/run/RunPanel.tsx": "6115528dce3b5de2b4e8089ffbfdc54a77b9293c9650654b34cd070e4bde2906",
+    "frontend/src/editor/EditorToolbar.tsx": "172e842cd3371a3116abf8ef8317b63b817fc0436b440c733b5fc36a18d4f852",
+    "frontend/src/editor/WorkflowSettings.tsx": "033864b98796f4ac57cadcb025d7ede1d17f544c0817d99de7f58204e48ef906",
+    "frontend/src/editor/ContextMenu.tsx": "fec179818a483c2693af5dabce2699d5fd25db6ca2c25e3baf031badeacd4bdc",
+    "frontend/src/editor/AreaNode.tsx": "870f44b73fae258ec108f543af6366263610ffedc9db5ff94e7289e6b50c6fdd",
+    "frontend/src/style.css": "99db79bbe2317b499bdc220dee214c05983f365431d84bfc9fbb9b94dccb4c57",
+    "frontend/src/cards/CardNode.tsx": "193148b62a955e4e26c71958c4e2ec56c3332ef1b860c8f98657bb7d9b182e42",
+    "frontend/src/cards/ValueInput.tsx": "116268d7b6a003244fd6396f887b78c088aa7d337602c17a1d935ae1abda1095",
+    "frontend/src/cards/Connections.tsx": "3ecab6d11cb1f307f66a061fc350c565c94a210015e4b78a02357a2b2ce93011",
+    "frontend/src/components/Choice.tsx": "f095678d336da28f21e7fcb877b44f63666480610962af3fb42bfa0ab010fc03",
+    "frontend/src/components/Declarations.tsx": "cb109c85022bfa2dab8ccd61976b3a8db80651ba62ec2265868597575eb257ef",
+    "frontend/src/editor/FlowCanvas.tsx": "f50f66ef91ee5f1d0bf90b6561139a962ab12c4e8e69610074c6aa62bae6c4bf"
+  },
+  "retry_fields": {
+    "attempts": {
+      "page": "user/settings.md"
+    },
+    "delay": {
+      "page": "user/settings.md"
+    },
+    "backoff": {
+      "page": "user/settings.md"
+    },
+    "errors_contain": {
+      "page": "user/settings.md"
+    }
+  }
+}

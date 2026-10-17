@@ -1,0 +1,22 @@
+:root {
+  --vp-font-family-base: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --vp-c-brand-1: #17627a;
+  --vp-c-brand-2: #124e62;
+  --vp-c-brand-3: #17627a;
+  --vp-c-brand-soft: #e2eef1;
+  --vp-c-text-1: #192e35;
+  --vp-c-text-2: #536c76;
+  --vp-c-bg-alt: #edf3f5;
+  --vp-c-divider: #c6d5db;
+}
+.dark { --vp-c-brand-1: #88cbdc; --vp-c-brand-2: #a4dbea; --vp-c-text-1: #e4eef1; --vp-c-text-2: #b0c5cd; --vp-c-bg-alt: #18272d; }
+.vp-doc { font-size: 16px; line-height: 1.8; }
+.vp-doc h2 { margin-top: 42px; }
+.vp-doc img { border: 1px solid var(--vp-c-divider); border-radius: 8px; cursor: zoom-in; margin: 20px 0 8px; }
+.vp-doc img:focus-visible, a:focus-visible, button:focus-visible { outline: 3px solid #bd7d16; outline-offset: 3px; }
+.vp-doc table { display: block; overflow-x: auto; }
+.screenshot-dialog { max-width: 96vw; max-height: 96dvh; padding: 16px; border: 1px solid #c6d5db; border-radius: 10px; background: white; }
+.screenshot-dialog::backdrop { background: rgb(10 24 31 / 80%); }
+.screenshot-dialog img { display: block; max-width: 90vw; max-height: 82dvh; object-fit: contain; }
+.screenshot-dialog button { display: block; padding: 10px 16px; margin-bottom: 12px; background: #17627a; color: white; border-radius: 5px; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation: none !important; transition: none !important; } }

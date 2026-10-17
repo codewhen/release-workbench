@@ -1,0 +1,70 @@
+version: 3
+name: 'Card: Read file'
+concurrency: 4
+inputs: {}
+globals: {}
+functions: {}
+graphs:
+  main:
+    cards:
+      - id: start
+        kind: start
+        name: Start
+        config: {}
+      - id: prepare
+        kind: write_file
+        name: Prepare
+        config:
+          path: output/data.json
+          format: json
+          value:
+            count: 3
+          overwrite: true
+      - id: operation
+        kind: read_file
+        name: Operation
+        config:
+          path: output/data.json
+          format: json
+      - id: finish
+        kind: finish
+        name: Finish
+        config:
+          returns: json
+          value:
+            $ref: card:operation
+    edges:
+      - id: start:next:prepare:entry
+        source: start
+        target: prepare
+        source_port: next
+        target_port: entry
+        kind: flow
+      - id: prepare:next:operation:entry
+        source: prepare
+        target: operation
+        source_port: next
+        target_port: entry
+        kind: flow
+      - id: operation:next:finish:entry
+        source: operation
+        target: finish
+        source_port: next
+        target_port: entry
+        kind: flow
+layout:
+  main:
+    positions:
+      start:
+        x: 0
+        y: 0
+      prepare:
+        x: 340
+        y: 0
+      operation:
+        x: 680
+        y: 0
+      finish:
+        x: 1020
+        y: 0
+    areas: []

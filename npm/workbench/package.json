@@ -1,0 +1,12 @@
+{
+  "name": "@codewhen/workbench",
+  "version": "0.18.0-preview.5",
+  "description": "Local visual workflow automation with a bundled Python engine",
+  "license": "MIT",
+  "bin": { "workbench": "bin/workbench.cjs" },
+  "files": ["bin", "runtime", "README.md", "LICENSE"],
+  "engines": { "node": ">=18" },
+  "scripts": { "prepare:runtime": "node scripts/prepare-runtime.cjs", "test": "node --test scripts/launcher.test.cjs", "prepack": "npm run prepare:runtime" },
+  "repository": { "type": "git", "url": "https://github.com/codewhen/release-workbench.git" },
+  "publishConfig": { "access": "public" }
+}

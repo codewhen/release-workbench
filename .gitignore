@@ -6,3 +6,16 @@ dist/
 node_modules/
 .workbench/
 .impeccable/review/
+.workbench-preview/
+frontend/test-results/
+frontend/playwright-report/
+.mypy_cache/
+.ruff_cache/
+
+# Generated npm distribution payload (built from the reviewed Python wheel).
+npm/workbench/runtime/
+npm/workbench/LICENSE
+npm/workbench/*.tgz
+
+# Generated, separately bundled documentation site.
+src/release_workbench/documentation/

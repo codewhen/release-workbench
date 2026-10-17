@@ -1,0 +1,45 @@
+version: 3
+name: 'Layout: Annotation'
+concurrency: 4
+inputs: {}
+globals: {}
+functions: {}
+graphs:
+  main:
+    cards:
+      - id: start
+        kind: start
+        name: Start
+        config: {}
+      - id: finish
+        kind: finish
+        name: Finish
+        config: {}
+    edges:
+      - id: start:next:finish:entry
+        source: start
+        target: finish
+        source_port: next
+        target_port: entry
+        kind: flow
+layout:
+  main:
+    positions:
+      start:
+        x: 0
+        y: 0
+      finish:
+        x: 340
+        y: 0
+    areas:
+      - id: notes
+        kind: annotation
+        name: Prepare the example
+        position:
+          x: -40
+          y: -80
+        width: 660
+        height: 330
+        members:
+          - start
+        collapsed: false

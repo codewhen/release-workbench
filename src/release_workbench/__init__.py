@@ -1,2 +1,3 @@
-"""Release Workbench: project configuration stays in the consuming workspace."""
-__version__ = "0.17.0"
+"""Typed local workflow automation."""
+
+__version__ = "0.18.0a5"

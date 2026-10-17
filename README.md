@@ -1,49 +1,132 @@
-# Workflow Workbench
+# Workflow Workbench — typed flowchart preview
 
-A local visual workflow builder and parallel test/release runner with a multi-project workflow home page. Configure steps in the browser canvas, YAML, or a terminal starter wizard. Runs stay on your own machine. MIT licensed; no subscriptions or hosted service required.
+A free, MIT-licensed local automation workbench. Build flowcharts in the browser, keep them in YAML, execute them with Python, and inspect live output and saved HTML/JSON evidence.
+
+**0.18.0a5 is an intentionally breaking preview. It accepts schema v3 only.** Install it in a separate environment. Do not point it at an older installation's library or run storage. There is no automatic migration and existing files are never converted. The previous stable release remains available separately.
+
+## Run the preview
+
+Python 3.11 or newer is required. End users need neither Node nor a hosted service. This local build produces the wheel and `SHA256SUMS` under `dist/`; it is not published by this change. For a published version, use an artifact actually available in [GitHub Releases](https://github.com/codewhen/release-workbench/releases). With the chosen wheel copied into your current directory and its SHA-256 verified:
 
 ```bash
-python -m pip install https://github.com/codewhen/release-workbench/releases/download/v0.17.0/release_workbench-0.17.0-py3-none-any.whl
-release-workbench init
-release-workbench serve
+python3 -m venv .venv-workbench-preview
+.venv-workbench-preview/bin/python -m pip install ./release_workbench-0.18.0a5-py3-none-any.whl
+.venv-workbench-preview/bin/workbench create --port 3105
 ```
 
-See [Getting started](docs/getting-started.md), [Configuration](docs/configuration.md), [Execution and CI](docs/execution.md), and [Contributing](CONTRIBUTING.md).
+On Windows use `.venv-workbench-preview\Scripts\python.exe` and `.venv-workbench-preview\Scripts\workbench.exe`. Native Windows acceptance is **unverified**. Bash cards additionally require Bash on any platform.
 
-Commands configured in a workflow execute with your user account. Open trusted project configurations only. Remote agents, hosted scheduling and store submission integrations are outside this first version.
+Open `http://127.0.0.1:3105/`. Add projects or existing v3 YAML files to Home. Opening a workflow shows Run view; commands execute only after Run all. Change to Edit to configure cards. Saving configuration does not run commands.
 
-Engine and browser checks ran on macOS. Windows command plans are tested; native Windows and Linux execution still require verification on those hosts. See the execution guide for cancellation limitations.
+## Read the complete manual
 
-Use it for data pipelines, backups, project checks and release workflows. See [general workflows and conditional branching](docs/general-workflows.md). The `workflow-workbench` CLI alias uses the same engine and schema as `release-workbench`.
+Open **Documentation** from Home or the editor to read the bundled manual at
+`/docs/` on your running dashboard. It includes offline search, screenshots,
+per-card instructions and complete downloadable workflows. The inspector also
+links directly to the selected card's guide.
 
-Right-click the canvas to add visually distinct cards. Use Run tests, Run script, value, calculation and file cards to build automation through forms. See [no-code automation](docs/no-code-automation.md).
+The same Markdown is readable here:
 
-### Following a run
+- [Manual home and learning paths](docs/index.md)
+- [Install and create a project](docs/user/installation.md)
+- [Build your first workflow](docs/user/first-workflow.md)
+- [All 25 cards and three layout tools](docs/user/cards/index.md)
+- [Start, Finish and Return](docs/user/tutorials/completion.md)
+- [Functions](docs/user/tutorials/functions.md), [variables](docs/user/tutorials/variables.md) and [loops](docs/user/tutorials/loops.md)
+- [Running, logs and results](docs/user/running.md)
+- [Troubleshooting](docs/user/troubleshooting.md)
+- [Developer guide](docs/developer/index.md)
 
-Workflows open in Run view without starting commands. Run all opens the left-side Overall run panel, showing selected-work progress, parallel jobs, live output and work needing attention. Canvas and List follow the current running card. Selecting a card, panning or scrolling switches to inspection; choose **Overall run · follow active work** to return and resume following. Passed cards are green, failures red and skipped cards grey. A moving green border marks running work; reduced-motion preferences disable its animation.
+For a first operation, create a blank workflow, choose Edit, insert Python between
+Start and Finish, set its return type to object and enter:
 
-In parallel runs the camera stays on one active branch until that job finishes; all active branches remain visible in the overview. Progress counts finished work, including failures and skipped paths; it never implies full release approval.
+```python
+print("Preparing greeting")
+return {"message": "Hello workflow"}
+```
 
-### Organizing workflow entry points
+Connect Start → Python → Finish. On Finish choose Python under **Result source**,
+then Save, Validate & review and Run all. Its log contains Preparing greeting;
+its typed result contains the object. The [illustrated walkthrough](docs/user/first-workflow.md)
+explains each action.
 
-Home has local folders that can contain workflows from multiple registered projects. Choose **New folder**, pick its parent, then name it. Right-click an entry and choose **Move to folder…** to file it; **All workflows** always shows the full catalog. Folder breadcrumbs and the sidebar navigate subfolders. Right-click a folder to rename it, move it to another parent, create a subfolder or remove it and return its entries to **Unfiled**. Removing a folder opens an inline confirmation. Right-click a workflow entry to open it, move it, return it to Unfiled or copy its YAML path. Focus a folder or entry and press **Shift+F10** (or the Context Menu key) for the same actions; arrow keys navigate the menu and Escape closes it. New workflows created while browsing a folder are filed there automatically.
+The GitHub Pages build is prepared from this same source; it is not claimed to be
+published until an authorized deployment actually happens.
 
-This organization is stored atomically in the launcher’s local `library.json`, alongside project registration. It does not rename or move YAML files, modify workflow configuration or run commands. Existing libraries load with all entries Unfiled.
+## CLI
 
-While viewing Overall, panning the canvas or scrolling the list opens the currently running card and pauses automatic navigation, including after that card finishes. Returning to **Overall run** resumes list following and canvas centering/zoom. In parallel runs, inspection chooses the followed card if still running, otherwise another active card.
+```bash
+workbench                  # Open the dashboard for the current folder
+workbench serve            # Same dashboard
+workbench run              # Same dashboard; does not execute cards automatically
+workbench create           # Wizard: blank YAML here, then open it in the dashboard
+workbench create --name "My project" --config my-workflow.yaml
+```
 
-### Stopping jobs
+`create` asks for a project name and YAML filename, writes a Start → Finish
+workflow in the current directory, and opens that workflow. Existing files are
+never overwritten. The default shared preview library is
+`~/.workbench-preview-v3`, so projects opened from different terminal folders
+appear together. Use `--storage PATH` to keep a separate library. `--port 3105`
+and `--no-open` are available for dashboard commands. If a matching dashboard is
+already running on that port, the CLI registers the project and reuses it.
 
-**Stop all** or **Stop selected job** requests cancellation and gives processes up to 30 seconds for device restoration and cleanup. The running panel shows a countdown. While stopping, the button changes to **Force stop**; this terminates remaining processes without waiting for graceful cleanup. If the grace period expires, termination happens automatically. Logs and partial evidence remain saved, and cancelled work is distinct from failed work.
+Examples live in **Starter**, a separate project under
+`<storage>/projects/starter`, and a Starter folder on Home. Startup installs
+missing examples without replacing edited examples or writing sample YAML into
+your project directory.
 
-Process supervision remains active while output pipes drain, including when a shell exits before a child process. On POSIX, cancellation tracks descendants and the managed command’s isolated process group; it does not target other independent workflow jobs. Windows uses targeted process-tree termination and retained descendant handles. Windows native verification remains outstanding.
+Advanced terminal tools remain available:
 
-### Small screens and saved reports
+```bash
+workbench init --template python --name "Write a result" # Create an example without serving
+workbench validate --config workflow-workbench.yaml
+workbench run --config workflow-workbench.yaml --non-interactive --input 'message="Hello"'
+workbench report --storage ~/.workbench-preview-v3 --run RUN_ID
+workbench run --resume RUN_ID --retry-interrupted --non-interactive
+```
 
-On phones, expand **Folders** to browse Home; press and hold a folder or workflow entry for organization actions. The workflow toolbar keeps its primary actions visible and puts secondary actions under **More controls**. List, YAML and the details panel remain available with independent scrolling. Blank workflows offer **Start editing**.
+`workflow-workbench` and `release-workbench` remain aliases. **`run` opens the UI;
+`run --non-interactive` executes YAML in the terminal.** Manual decisions require
+the browser. Exit codes: **0** passed; **1** failed; **2** invalid or waiting for
+evidence; **130** cancelled. A returned Boolean `false` is successful data.
 
-HTML reports include **Jump to a step**, written outcome counts, attempts and artifact checksums. They work without JavaScript and preserve project context when opened through the server. Historical report files remain unchanged; new runs use the updated report layout. See [the interface review](docs/ui-review.md) for coverage and verification limits.
+### npm / npx
 
-## Visual control flow
+An optional launcher is prepared in [npm/workbench](npm/workbench/README.md).
+It bundles the built wheel, verifies its checksum and installs it into an isolated
+Python environment on first launch. Python 3.11+ is still required; npm does not
+replace the Python engine. See its README for local `npm pack`, global installation
+and npx commands. **It has not been published to npm.**
 
-Schema v2 adds on-canvas While/Until/Repeat/For each groups, scoped variables, Switch, Break/Continue, Try/Catch/Finally, retries, Wait and Poll. Start with `release-workbench init --template visual-while --name "While demo"`. See the [control-flow guide](docs/control-flow.md) for browser steps, semantics, compatibility and evidence. Existing v1 files stay supported.
+For a Python-only tool installation from a downloaded wheel:
+
+```bash
+uv tool install ./release_workbench-0.18.0a5-py3-none-any.whl
+workbench
+```
+
+See [npm exec documentation](https://docs.npmjs.com/cli/commands/npm-exec/)
+and [uv tool installation](https://docs.astral.sh/uv/guides/tools/).
+
+## Build from source
+
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install -e '.[dev]'
+npm --prefix frontend ci
+npm --prefix frontend run build
+npm --prefix docs-site ci
+npm --prefix docs-site run check
+npm --prefix docs-site run build
+.venv/bin/python -m unittest discover -v
+.venv/bin/python -m build
+```
+
+See the testing runbook for Ruff, mypy, Vitest, Playwright and clean-wheel verification. Frontend tools are developer dependencies only; the wheel includes built assets. Seven generic starters cover blank flows, Python returns, While, Parallel/Join, manual decisions, polling and recovery.
+
+## Scope
+
+Round ports carry **execution**. Square ports carry **typed values** and never start a card. Explicit Parallel/Join controls concurrency. Functions isolate inputs and intermediate values; declared globals are shared within one run. Layout areas never change execution scope. Commands, scripts and HTTP requests run with the local user's permissions as trusted local configuration; this is not an untrusted-code sandbox.
+
+No paid services, hosted server, remote agents, schedules or multiplayer editing are required. Repeat-until, For-each, Switch and arbitrary Go To are outside this initial catalog. Use functions, While/Repeat count and Python for those automation cases.

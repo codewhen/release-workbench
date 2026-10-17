@@ -1,0 +1,97 @@
+{
+  "python": {
+    "example": "python.yaml",
+    "graph": "main",
+    "card": "operation"
+  },
+  "bash": {
+    "example": "bash.yaml",
+    "graph": "main",
+    "card": "operation"
+  },
+  "script": {
+    "example": "script.yaml",
+    "graph": "main",
+    "card": "operation"
+  },
+  "program": {
+    "example": "program.yaml",
+    "graph": "main",
+    "card": "operation"
+  },
+  "calculate": {
+    "example": "calculate.yaml",
+    "graph": "main",
+    "card": "operation"
+  },
+  "check_path": {
+    "example": "check_path.yaml",
+    "graph": "main",
+    "card": "operation"
+  },
+  "write_file": {
+    "example": "write_file.yaml",
+    "graph": "main",
+    "card": "operation"
+  },
+  "wait": {
+    "example": "wait.yaml",
+    "graph": "main",
+    "card": "operation"
+  },
+  "http": {
+    "example": "http.yaml",
+    "graph": "main",
+    "card": "operation"
+  },
+  "variable": {
+    "example": "variable.yaml",
+    "graph": "main",
+    "card": "operation"
+  },
+  "workspace": {
+    "example": "workspace.yaml",
+    "graph": "main",
+    "card": "operation"
+  },
+  "read_file": {
+    "example": "read_file.yaml",
+    "graph": "main",
+    "card": "operation"
+  },
+  "finish": {
+    "example": "finish.yaml",
+    "graph": "main",
+    "card": "finish"
+  },
+  "start": {
+    "example": "start.yaml",
+    "graph": "main",
+    "card": "start"
+  },
+  "if": {
+    "example": "if.yaml",
+    "graph": "main",
+    "card": "decision"
+  },
+  "manual": {
+    "example": "manual.yaml",
+    "graph": "approval",
+    "card": "ask"
+  },
+  "poll": {
+    "example": "poll.yaml",
+    "graph": "main",
+    "card": "poll"
+  },
+  "call": {
+    "example": "call.yaml",
+    "graph": "main",
+    "card": "operation"
+  },
+  "return": {
+    "example": "return.yaml",
+    "graph": "greeting",
+    "card": "return"
+  }
+}
