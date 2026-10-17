@@ -1,6 +1,7 @@
+import { readRoute } from "../src/navigation/location";
 import { test, expect, type Page } from "@playwright/test";
 async function open(page: Page, name: string) {
-  await page.goto("/");
+  await page.goto("/?folder=*");
   await page
     .locator(".workflow-row")
     .filter({ has: page.getByRole("heading", { name, exact: true }) })
@@ -48,6 +49,13 @@ test("ten-step flowchart can be built, saved, reloaded and run entirely in the b
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByRole("status")).toContainText("saved");
   await page.reload();
+  await expect(
+    page.getByRole("button", { name: "Edit", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await expect(
+    page.getByRole("button", { name: "List", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "Run", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Run all", exact: true }),
   ).toBeVisible();
@@ -213,6 +221,7 @@ test("unfinished cards save and reload as a draft while Run stays blocked", asyn
   await expect(
     page.getByRole("region", { name: "Workflow validation" }),
   ).toHaveCount(0);
+  await page.getByRole("button", { name: "Run", exact: true }).click();
   await page.getByRole("button", { name: "Run all", exact: true }).click();
   await expect(page.getByRole("status")).toContainText("Run not started");
   await expect(
@@ -260,7 +269,7 @@ test("old editor validation failure recovers its unsaved draft on reload", async
   request,
 }) => {
   await open(page, "Unfinished draft");
-  const key = new URL(page.url()).searchParams.get("workflow")!;
+  const key = readRoute(page.url()).workflow!;
   const token = await page
     .locator('meta[name="workbench-token"]')
     .getAttribute("content");
@@ -302,7 +311,7 @@ test("validation appears only on request and is cleared when fields change", asy
   request,
 }) => {
   await open(page, "Blank flowchart");
-  const key = new URL(page.url()).searchParams.get("workflow")!;
+  const key = readRoute(page.url()).workflow!;
   const token = await page
     .locator('meta[name="workbench-token"]')
     .getAttribute("content");
@@ -578,7 +587,7 @@ test("Compare chooses Get Count by name instead of requiring reference JSON", as
   ).toContainText("Ready to run");
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByRole("status")).toContainText("saved");
-  const key = new URL(page.url()).searchParams.get("workflow")!;
+  const key = readRoute(page.url()).workflow!;
   const record = await (
     await request.get("/api/config?workflow=" + key)
   ).json();
@@ -627,7 +636,7 @@ test("Variable card opens global declaration and initialization settings", async
   ).toHaveCount(0);
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByRole("status")).toContainText("saved");
-  const key = new URL(page.url()).searchParams.get("workflow")!;
+  const key = readRoute(page.url()).workflow!;
   const record = await (
     await request.get("/api/config?workflow=" + key)
   ).json();

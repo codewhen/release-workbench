@@ -2,7 +2,7 @@
 
 A free, MIT-licensed local automation workbench. Build flowcharts in the browser, keep them in YAML, execute them with Python, and inspect live output and saved HTML/JSON evidence.
 
-**0.18.0a6 is an intentionally breaking preview. It accepts schema v3 only.** Install it in a separate environment. Do not point it at an older installation's library or run storage. There is no automatic migration and existing files are never converted. The previous stable release remains available separately.
+**0.18.0a7 is an intentionally breaking preview. It accepts schema v3 only.** Install it in a separate environment. Do not point it at an older installation's library or run storage. There is no automatic migration and existing files are never converted. The previous stable release remains available separately.
 
 ## Run the preview
 
@@ -23,7 +23,7 @@ For a Python-only installation, download a wheel and its checksum from [GitHub R
 
 ```bash
 python3 -m venv .venv-workbench-preview
-.venv-workbench-preview/bin/python -m pip install ./release_workbench-0.18.0a6-py3-none-any.whl
+.venv-workbench-preview/bin/python -m pip install ./release_workbench-0.18.0a7-py3-none-any.whl
 .venv-workbench-preview/bin/workbench create --port 3105
 ```
 
@@ -122,7 +122,7 @@ updates, removal and troubleshooting.
 For a Python-only tool installation from a downloaded wheel:
 
 ```bash
-uv tool install ./release_workbench-0.18.0a6-py3-none-any.whl
+uv tool install ./release_workbench-0.18.0a7-py3-none-any.whl
 workbench
 ```
 

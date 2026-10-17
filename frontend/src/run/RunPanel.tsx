@@ -28,6 +28,36 @@ export function RunPanel({
       <button onClick={onOverall} aria-pressed={overall}>
         Overall run
       </button>
+      {!!state.attachments?.length && (
+        <details>
+          <summary>Report files ({state.attachments.length})</summary>
+          {state.attachments.map((file) => (
+            <p key={file.path}>
+              <a href={file.url} target="_blank" rel="noopener noreferrer">
+                {file.path}
+              </a>
+            </p>
+          ))}
+        </details>
+      )}
+      {state.selection && (
+        <p>
+          Run from here · {state.selection.name}. This result does not approve
+          the full workflow.
+        </p>
+      )}
+      {state.input_context && (
+        <details>
+          <summary>
+            Reused earlier results (
+            {Object.keys(state.input_context.results).length})
+          </summary>
+          <p>
+            Source run: {state.input_context.source_run}. Earlier commands were
+            not rerun.
+          </p>
+        </details>
+      )}
       <h2>
         {overall
           ? "Overall run"
@@ -88,7 +118,7 @@ export function RunPanel({
       {state.run_id && (
         <p>
           <a
-            href={`/reports/${state.run_id}/report.html`}
+            href={`${state.report_base ?? `/reports/${state.run_id}`}/report.html`}
             target="_blank"
             rel="noreferrer"
           >
@@ -194,6 +224,29 @@ function ExecutionView({
       {["running", "manual"].includes(e.status) && (
         <button onClick={onStop}>Stop this job</button>
       )}
+      {e.child_status && <p>Child workflow: {e.child_status}</p>}
+      {!!e.child_active?.length && (
+        <p>Child activity: {e.child_active.join(", ")}</p>
+      )}
+      {e.child_progress && (
+        <p>
+          Child stage: {e.child_progress.stage} · {e.child_progress.done}/
+          {e.child_progress.total}
+        </p>
+      )}
+      {e.child_report && state.run_id && (
+        <a
+          href={
+            (state.report_base ?? "/reports/" + state.run_id) +
+            "/" +
+            e.child_report
+          }
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Open child workflow report
+        </a>
+      )}
       <h3>Live output</h3>
       <pre className="logs" aria-label={e.name + " live output"}>
         {expanded
@@ -229,7 +282,7 @@ function ExecutionView({
         <a
           target="_blank"
           rel="noreferrer"
-          href={`/reports/${state.run_id}/${e.log}`}
+          href={`${state.report_base ?? `/reports/${state.run_id}`}/${e.log}`}
         >
           Saved log
         </a>

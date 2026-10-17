@@ -1,3 +1,11 @@
+import { WorkspaceLink } from "./cards/WorkspaceLink";
+import {
+  allowNavigation,
+  blockNavigation,
+  readRoute,
+  navigate,
+} from "./navigation/location";
+import { useEditorLocation } from "./navigation/useEditorLocation";
 import { useRunState } from "./run/useRunState";
 import { EditorToolbar } from "./editor/EditorToolbar";
 import { assertFormValidity } from "./components/validation";
@@ -35,12 +43,12 @@ import {
   type MenuAction,
 } from "./editor/ContextMenu";
 import { CardInspector } from "./cards/CardInspector";
+import { RunInputs } from "./run/RunInputs";
 import { ManualDialog } from "./run/ManualDialog";
 import { WorkflowSettings } from "./editor/WorkflowSettings";
 import { RunPanel } from "./run/RunPanel";
 import { Dialog } from "./components/Dialog";
 import { Choice } from "./components/Choice";
-import { JsonInput } from "./components/JsonInput";
 import { Declarations } from "./components/Declarations";
 export function EditorLoader({
   id,
@@ -85,16 +93,22 @@ function Editor({
     initial.recovery?.workflow ?? initial.workflow,
   );
   const [saved, setSaved] = useState(initial),
-    [graphId, setGraphId] = useState("main"),
-    [view, setView] = useState<"run" | "edit">(
-      initial.recovery ? "edit" : "run",
-    ),
-    [representation, setRepresentation] = useState<"canvas" | "list" | "yaml">(
-      innerWidth < 1000 ? "list" : "canvas",
-    ),
-    [selected, setSelected] = useState<string | null>(null),
-    [overall, setOverall] = useState(true),
-    [following, setFollowing] = useState(true),
+    [overall, setOverall] = useState(!readRoute(location.href).card),
+    [following, setFollowing] = useState(!readRoute(location.href).card),
+    [reveal, setReveal] = useState<{
+      card: string;
+      graph: string;
+      key: string;
+    } | null>(() => {
+      const route = readRoute(location.href);
+      return route.card
+        ? {
+            card: route.card,
+            graph: route.graph ?? "main",
+            key: "open:" + (route.run ?? route.card),
+          }
+        : null;
+    }),
     [error, setError] = useState(""),
     [notice, setNotice] = useState(
       initial.recovery ? "Recovered your unsaved draft. Save to keep it." : "",
@@ -106,13 +120,29 @@ function Editor({
     [menu, setMenu] = useState<MenuState | null>(null),
     [newFunction, setNewFunction] = useState<{ returns: string } | null>(null),
     [functionName, setFunctionName] = useState("New function"),
-    [settings, setSettings] = useState(false),
     [hidden, setHidden] = useState(false),
     [panelWidth, setPanelWidth] = useState(360),
     [leave, setLeave] = useState(false),
     [confirmDelete, setConfirmDelete] = useState<string | null>(null),
     [runInputs, setRunInputs] = useState<Record<string, unknown> | null>(null),
+    [runSelection, setRunSelection] = useState<{
+      graph: string;
+      card: string;
+    } | null>(null),
     [manualId, setManualId] = useState<string | null>(null);
+  const {
+    graphId,
+    setGraphId,
+    view,
+    setView,
+    representation,
+    setRepresentation,
+    selected,
+    setSelected,
+    settings,
+    setSettings,
+  } = useEditorLocation(workflow, !!initial.recovery);
+  const leaveTarget = useRef<(() => void) | null>(null);
   const { state, setState } = useRunState(id, setError);
   const [issues, setIssues] = useState<ValidationIssue[]>([]);
   const [validatedKey, setValidatedKey] = useState<string | null>(null);
@@ -137,8 +167,20 @@ function Editor({
       : undefined,
     dirty =
       yamlDirty || JSON.stringify(workflow) !== JSON.stringify(saved.workflow),
-    locked = state.busy || working,
+    locked = state.busy || working || !!initial.inspection,
     editing = view === "edit" && !locked;
+  useEffect(
+    () =>
+      blockNavigation((next, proceed) => {
+        if (next.workflow !== id && dirty) {
+          leaveTarget.current = proceed;
+          setLeave(true);
+          return false;
+        }
+        return true;
+      }),
+    [dirty, id],
+  );
   const currentFunction = Object.entries(workflow.functions ?? {}).find(
     ([, f]) => f.graph === graphId,
   );
@@ -167,7 +209,7 @@ function Editor({
   }, [signature, manualId]);
   useEffect(() => {
     if (!following || view !== "run" || !active) return;
-    setGraphId(active.graph);
+    setGraphId(active.graph, true);
     setSelected(active.card);
     if (representation === "list")
       requestAnimationFrame(() => {
@@ -177,6 +219,16 @@ function Editor({
           ?.scrollIntoView({ block: "nearest" });
       });
   }, [active?.path, following, view, representation]);
+  useEffect(() => {
+    if (!reveal || representation !== "list") return;
+    const frame = requestAnimationFrame(() => {
+      autoScroll.current = true;
+      list.current
+        ?.querySelector(`[data-card-id="${CSS.escape(reveal.card)}"]`)
+        ?.scrollIntoView({ block: "nearest" });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [reveal?.key, representation, graphId]);
   useEffect(() => {
     const media = matchMedia("(max-width:700px)");
     const update = () => {
@@ -256,7 +308,7 @@ function Editor({
       setFollowing(false);
       if (active) {
         setSelected(active.card);
-        setGraphId(active.graph);
+        setGraphId(active.graph, true);
       }
     }
   }
@@ -422,27 +474,62 @@ function Editor({
       if (andRun && record.runnable !== false) prepareRun(record);
     }, true);
   }
-  function prepareRun(record = saved) {
+  function prepareRun(
+    record = saved,
+    selection: { graph: string; card: string } | null = null,
+  ) {
+    setRunSelection(selection);
+    const definitions =
+      selection && selection.graph !== "main"
+        ? (Object.values(record.workflow.functions ?? {}).find(
+            (f) => f.graph === selection.graph,
+          )?.inputs ?? {})
+        : (record.workflow.inputs ?? {});
     const values = Object.fromEntries(
-      Object.entries(record.workflow.inputs ?? {}).map(([k, v]) => [
-        k,
-        v.default ?? null,
-      ]),
+      Object.entries(definitions).map(([k, v]) => [k, v.default ?? null]),
     );
     if (Object.keys(values).length) {
       setRunInputs(values);
       return;
     }
-    void start(record, {});
+    void start(record, {}, selection);
   }
-  async function start(record: SavedDocument, inputs: Record<string, unknown>) {
+  async function start(
+    record: SavedDocument,
+    inputs: Record<string, unknown>,
+    selection = runSelection,
+  ) {
     await act(async () => {
       assertFormValidity();
-      setState(
-        await api<RunState>("run", { revision: record.revision, inputs }, id),
+      const result = await api<RunState>(
+        "run",
+        { revision: record.revision, inputs, selection },
+        id,
       );
+      if (initial.inspection && selection) {
+        navigate({
+          run: result.run_id,
+          view: "run",
+          graph: selection.graph === "main" ? undefined : selection.graph,
+          card: selection.card,
+          panel: undefined,
+        });
+        return;
+      }
+      setState(result);
       setView("run");
-      showOverall();
+      if (selection) {
+        setGraphId(selection.graph);
+        setSelected(selection.card);
+        setFollowing(false);
+        setReveal({
+          card: selection.card,
+          graph: selection.graph,
+          key: result.run_id ?? String(Date.now()),
+        });
+        setOverall(false);
+        setHidden(false);
+      } else showOverall();
       setRunInputs(null);
     });
   }
@@ -460,7 +547,7 @@ function Editor({
       setYaml(result.yaml);
       setYamlDirty(false);
     }
-    if (next === "yaml" && !yamlDirty)
+    if (next === "yaml" && !yamlDirty && !initial.inspection)
       setYaml(
         (await act(() => api<{ yaml: string }>("draft", { workflow }, id)))
           ?.yaml ?? yaml,
@@ -574,6 +661,33 @@ function Editor({
           </button>
         </div>
       </header>
+      {state.selection && (
+        <div className="alert" role="status">
+          <span>
+            Run from here: {state.selection.name}. Follows connected cards to
+            Finish or Return. Compatible earlier results are reused when
+            available; earlier commands are not rerun.
+          </span>
+        </div>
+      )}
+      {initial.inspection && (
+        <div className="alert" role="status">
+          <span>
+            {state.busy
+              ? "Execution view · Live logs and results. Stop all stops this execution; Pause scheduling affects its shared run."
+              : state.can_run_from_here
+                ? "Execution finished · Select a card and choose Run from here to start a fresh run. Original evidence is preserved."
+                : "Execution view · Waiting for other running work to stop before a fresh run from here can start."}
+          </span>
+          <a
+            href={"/workflows/" + encodeURIComponent(id) + "/edit"}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Open definition
+          </a>
+        </div>
+      )}
       {error && (
         <div className="alert error" role="alert">
           <span>{error}</span>
@@ -639,6 +753,12 @@ function Editor({
         editing={editing}
         locked={locked}
         dirty={dirty}
+        selectedName={card?.name}
+        selectedLocked={
+          working ||
+          state.busy ||
+          (!!initial.inspection && !state.can_run_from_here)
+        }
         canUndo={canUndo}
         canRedo={canRedo}
         hidden={hidden}
@@ -650,6 +770,9 @@ function Editor({
           arrange: () => commit(arrange(workflow, graphId)),
           validate: () => void validate(),
           run: () => prepareRun(),
+          runFromHere: () => {
+            if (card) prepareRun(saved, { graph: graphId, card: card.id });
+          },
           stop: () => void act(() => api("stop", {}, id)),
           pause: () =>
             void act(() => api("pause", { paused: !state.paused }, id)),
@@ -727,20 +850,37 @@ function Editor({
                   onNewFunction={() => setNewFunction({ returns: "void" })}
                 />
               ) : view === "run" ? (
-                <RunPanel
-                  state={state}
-                  selected={selected}
-                  graphId={graphId}
-                  overall={overall}
-                  onOverall={showOverall}
-                  onSelect={(id, g) => {
-                    setGraphId(g);
-                    select(id);
-                  }}
-                  onStop={(path) =>
-                    void act(() => api("stop", { execution: path }, id))
-                  }
-                />
+                <>
+                  {!overall && card?.kind === "workspace" && (
+                    <WorkspaceLink
+                      workflow={workflow}
+                      graphId={graphId}
+                      cardId={card.id}
+                      view="run"
+                      execution={
+                        Object.values(state.executions)
+                          .filter(
+                            (e) => e.card === card.id && e.graph === graphId,
+                          )
+                          .at(-1)?.path
+                      }
+                    />
+                  )}
+                  <RunPanel
+                    state={state}
+                    selected={selected}
+                    graphId={graphId}
+                    overall={overall}
+                    onOverall={showOverall}
+                    onSelect={(id, g) => {
+                      setGraphId(g);
+                      select(id);
+                    }}
+                    onStop={(path) =>
+                      void act(() => api("stop", { execution: path }, id))
+                    }
+                  />
+                </>
               ) : area ? (
                 <>
                   <h2>Layout area</h2>
@@ -918,6 +1058,7 @@ function Editor({
                     : null
               }
               following={view === "edit" || following}
+              reveal={reveal}
               onInspect={inspect}
               onSelect={select}
               onConnect={wire}
@@ -1097,25 +1238,25 @@ function Editor({
         </Dialog>
       )}
       {runInputs && (
-        <Dialog title="Run inputs" onClose={() => setRunInputs(null)}>
-          {Object.entries(runInputs).map(([key, value]) => (
-            <JsonInput
-              key={key}
-              label={key}
-              value={value}
-              onChange={(v) => setRunInputs({ ...runInputs, [key]: v })}
-            />
-          ))}
-          <div className="actions">
-            <button onClick={() => setRunInputs(null)}>Cancel</button>
-            <button
-              className="primary"
-              onClick={() => void start(saved, runInputs)}
-            >
-              Run workflow
-            </button>
-          </div>
-        </Dialog>
+        <RunInputs
+          id={id}
+          workflow={
+            runSelection && runSelection.graph !== "main"
+              ? {
+                  ...saved.workflow,
+                  inputs:
+                    Object.values(saved.workflow.functions ?? {}).find(
+                      (f) => f.graph === runSelection.graph,
+                    )?.inputs ?? {},
+                  input_detection: undefined,
+                }
+              : saved.workflow
+          }
+          values={runInputs}
+          onChange={setRunInputs}
+          onClose={() => setRunInputs(null)}
+          onRun={() => void start(saved, runInputs)}
+        />
       )}
       {currentManual && manualId && (
         <ManualDialog
@@ -1139,13 +1280,35 @@ function Editor({
         />
       )}
       {leave && (
-        <Dialog title="Leave unsaved changes?" onClose={() => setLeave(false)}>
+        <Dialog
+          title="Leave unsaved changes?"
+          onClose={() => {
+            leaveTarget.current = null;
+            setLeave(false);
+          }}
+        >
           <p>
             Your saved configuration and reports stay available. This browser
             draft will be discarded.
           </p>
-          <button onClick={() => setLeave(false)}>Keep editing</button>
-          <button onClick={onHome}>Discard draft and go Home</button>
+          <button
+            onClick={() => {
+              leaveTarget.current = null;
+              setLeave(false);
+            }}
+          >
+            Keep editing
+          </button>
+          <button
+            onClick={() => {
+              const destination = leaveTarget.current ?? onHome;
+              leaveTarget.current = null;
+              setLeave(false);
+              allowNavigation(destination);
+            }}
+          >
+            Discard draft and continue
+          </button>
         </Dialog>
       )}
       {confirmDelete && (

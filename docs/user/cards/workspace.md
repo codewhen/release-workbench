@@ -8,11 +8,25 @@ Work in **Edit** view in a saved project folder. Start with the downloadable exa
 
 ## Behavior and ports
 
-**Workflow YAML path** selects the child; a relative path resolves from the parent workflow's directory. **Workflow inputs** supplies explicit arguments. Download required child files alongside an example. The child uses its own YAML directory as workspace and initializes its own declared globals.
+**Workflow YAML path** selects the child; a relative path resolves from the parent's resolved execution workspace. **Workflow inputs** supplies explicit arguments. Download required child files alongside an example. The child resolves its own optional `workspace` relative to its YAML directory (default `.`) and initializes its own declared globals. Supply child inputs explicitly; the parent's Run inputs dialog and discovery button do not automatically collect child inputs.
 
-Unlike a function, this is a separate workflow with main Start/Finish. It shares the parent run's cancellation and concurrency budget. Recursion through workspaces is rejected. Child evidence is nested beneath the parent; manual prompts surface in the parent browser. The child's Finish result becomes the card's typed value.
+Unlike a function, this is a separate workflow with main Start/Finish. It shares the parent run's cancellation and concurrency budget. Recursion through workspaces is rejected. Child evidence is nested beneath the parent; manual prompts surface in the parent browser. Select the card to inspect forwarded live logs, child status, active operations, **Child stage** progress and **Open child workflow report**. See [nested workflow inspection](../settings.md#inspect-nested-workflows). The child's Finish result becomes the card's typed value.
 
 **Execution outputs:** `next`. **Catalog value contract:** `json`; configuration, declared variables/functions and runtime validation refine the actual type as described above. Inspect the typed return value after running.
+
+## Open the child workflow
+
+In **Edit**, use **Open child workflow** below Workflow YAML path, on the card or in its inspector. In **Run**, the same action is on the canvas card and in its selected-card inspector, including before execution. In Edit it opens the saved definition. In Run, after the caller has started its child, it opens that exact child execution in a new tab. Before execution it opens the definition in Run mode. Opening either page never starts another run. The caller's draft and running work stay open.
+
+The path resolves from the parent's declared execution workspace, not the YAML's containing folder when those differ. Unsaved edits to the path are respected without saving the parent. After a dynamic call executes, Run navigation can use the actual resolved child source. Before that, an unresolved dynamic path produces an explanatory error. Missing/invalid child files show an error beside the action. If the browser blocks a new tab, use the resolved link offered below the button.
+
+The live child tab shows running cards, live logs, return values and manual prompts from the caller's actual execution. You can record a waiting decision there or in the parent. Reloading retains the selected invocation; two parallel calls to the same file have separate execution URLs. **Run all** and editing are disabled in this inspection view, including after completion. After the parent and other work have stopped, select a card and choose **Run from here** to start at that card and follow its flow to Finish or Return. It uses the executed configuration snapshot, reuses compatible successful upstream results and variable changes when available, receives a new run URL and preserves the original evidence. It does not resume the parent. Use **Open definition** for a separate editable tab. Opening a definition does not turn it into a separate running job.
+
+**Stop all** in the child tab cancels that child and its descendants. The parent receives its cancelled/failure result according to its configured recovery behavior. **Pause scheduling** affects the shared coordinator, including sibling work. Completed child results, logs and HTML reports remain accessible while the server session retains the run, even after a new parent run starts. After restarting the server, old live execution URLs show an unavailable-execution message; use saved HTML reports for historical evidence.
+
+![Inspecting the actual child execution and its returned value](../../assets/screenshots/workspace-live-execution.png)
+
+![Opening a child definition while keeping the parent draft](../../assets/screenshots/workspace-navigation-edit.png)
 
 ## Fields and defaults
 

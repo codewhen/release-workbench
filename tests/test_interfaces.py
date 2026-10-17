@@ -33,6 +33,34 @@ class Interfaces(unittest.TestCase):
         with urlopen(req) as response:
             return response.status, response.read()
 
+    def test_application_paths_serve_the_shell_and_unknown_routes_stay_404(self):
+        for path in (
+            "/workspace",
+            "/folders/Automation/Checks",
+            "/folders/Phone%20tests",
+            "/workflows",
+            "/workflows/example",
+            "/workflows/example/edit/list",
+            "/workflows/example/run/canvas/functions/check/cards/result/settings",
+        ):
+            with self.subTest(path=path):
+                status, body = self.request(path)
+                self.assertEqual(status, 200)
+                self.assertIn(self.app.token.encode(), body)
+                self.assertNotIn(b"__TOKEN__", body)
+        for path in (
+            "/workspace/extra",
+            "/workflows/example/unknown",
+            "/folders/../schema.json",
+            "/folders/%2e%2e/schema.json",
+            "/workflows/example/edit/unknown",
+            "/missing-page",
+        ):
+            with self.subTest(path=path), self.assertRaises(HTTPError) as caught:
+                self.request(path)
+            self.assertEqual(caught.exception.code, 404)
+            caught.exception.close()
+
     def test_mutation_token_and_origin_protection(self):
         for headers in (
             {},

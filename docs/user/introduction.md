@@ -38,7 +38,7 @@ Round ports carry execution; square ports supply values. Drawing a dotted area d
 
 Python 3.11+ runs the engine. Node is not required for an installed Python wheel. The optional npm launcher needs Node 18+ and Python; first setup downloads Python dependencies. Bash cards require Bash. Executables and libraries used by a workflow must be installed on its host.
 
-The application and bundled documentation run locally. Commands have your local permissions; this is not a sandbox for hostile scripts. Stop does not undo completed writes or requests. Capture and built-in file payloads are limited to 1 MiB. Native Windows acceptance is unverified; Windows instructions are reviewed guidance, not a statement that all native scenarios passed.
+The application and bundled documentation run locally. Commands have your local permissions; this is not a sandbox for hostile scripts. Stop does not undo completed writes or requests. Command logs stream to disk with bounded returned tails; built-in file payloads and inline Python structured returns are limited to 1 MiB. See [settings](settings.md#large-command-logs). Native Windows acceptance is unverified; Windows instructions are reviewed guidance, not a statement that all native scenarios passed.
 
 The current schema is version 3. Unsupported older YAML is rejected without conversion. Arbitrary Go To cycles, recursive functions/workspaces, For each, Switch, Repeat until, remote agents, schedules, multiplayer editing and dedicated SSH/database cards are not available. Use supported external commands deliberately for operations beyond the built-in catalog.
 

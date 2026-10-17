@@ -55,7 +55,7 @@ export default defineConfig({
         ['Introduction', 'introduction'], ['Install and create a project', 'installation'],
         ['Your first workflow', 'first-workflow'], ['Home and projects', 'projects'],
         ['Edit flowcharts', 'editing'], ['Connections and values', 'values'],
-        ['Run and inspect', 'running'], ['Settings and resources', 'settings'],
+        ['Run inputs and discovery', 'inputs'], ['Run and inspect', 'running'], ['Settings and resources', 'settings'],
         ['Storage and backups', 'storage'], ['CLI reference', 'cli'],
         ['Troubleshooting', 'troubleshooting'], ['Glossary', 'glossary'],
       ].map(([text, slug]) => ({ text, link: '/user/' + slug })) },

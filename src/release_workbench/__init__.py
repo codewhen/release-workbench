@@ -1,3 +1,3 @@
 """Typed local workflow automation."""
 
-__version__ = "0.18.0a6"
+__version__ = "0.18.0a7"

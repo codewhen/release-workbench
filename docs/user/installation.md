@@ -50,8 +50,8 @@ npx @codewhen/workbench@preview run --non-interactive --config checks.yaml
 The commands above explicitly select the `preview` distribution tag. To install an exact published version instead:
 
 ```bash
-npm install -g @codewhen/workbench@0.18.0-preview.6
-npx @codewhen/workbench@0.18.0-preview.6 serve
+npm install -g @codewhen/workbench@0.18.0-preview.7
+npx @codewhen/workbench@0.18.0-preview.7 serve
 ```
 
 The `preview` tag selects preview releases. An untagged command such as `npm install -g @codewhen/workbench` selects `latest`. Tags can refer to different versions; pin an exact version when you need reproducible installations.
@@ -91,7 +91,7 @@ Use Python 3.11 or newer. Download the actual wheel artifact for the version you
 
 ```bash
 python3 -m venv .venv-workbench
-.venv-workbench/bin/python -m pip install ./release_workbench-0.18.0a6-py3-none-any.whl
+.venv-workbench/bin/python -m pip install ./release_workbench-0.18.0a7-py3-none-any.whl
 .venv-workbench/bin/workbench --version
 ```
 

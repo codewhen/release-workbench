@@ -46,17 +46,16 @@ class ProcessAdapter:
             **options,
         )
         streams: dict[str, bytearray] = {"stdout": bytearray(), "stderr": bytearray()}
-        size = 0
+        sizes = {"stdout": 0, "stderr": 0}
 
         async def read(name: str, reader: asyncio.StreamReader | None) -> None:
-            nonlocal size
             assert reader is not None
             decoder = codecs.getincrementaldecoder("utf-8")(errors="replace")
             while chunk := await reader.read(4096):
-                size += len(chunk)
-                if size > MAX_OUTPUT:
-                    raise ContractError("Combined process output exceeds 1 MiB.")
+                sizes[name] += len(chunk)
                 streams[name].extend(chunk)
+                if len(streams[name]) > MAX_OUTPUT // 2:
+                    del streams[name][: -MAX_OUTPUT // 2]
                 log(decoder.decode(chunk))
             remainder = decoder.decode(b"", final=True)
             if remainder:
@@ -102,6 +101,10 @@ class ProcessAdapter:
             await asyncio.gather(*tasks)
             result: dict[str, Any] = {
                 "exit_code": process.returncode,
+                "truncated": any(sizes[name] > len(streams[name]) for name in streams),
+                "stdout_truncated": sizes["stdout"] > len(streams["stdout"]),
+                "stderr_truncated": sizes["stderr"] > len(streams["stderr"]),
+                "output_bytes": dict(sizes),
                 **{key: value.decode("utf-8", "replace") for key, value in streams.items()},
             }
             if process.returncode:

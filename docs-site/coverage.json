@@ -364,7 +364,12 @@
         "rename",
         "remove",
         "folder",
-        "project filter"
+        "project filter",
+        "subfolder",
+        "breadcrumb",
+        "grid",
+        "Move folder",
+        "Shift+F10"
       ]
     },
     "editor-operations": {
@@ -439,6 +444,78 @@
         "browser-sessions.json",
         "backup"
       ]
+    },
+    "input-discovery": {
+      "page": "user/inputs.md",
+      "terms": [
+        "Required without default",
+        "Auto-detect inputs",
+        "input_detection",
+        "runtime:python",
+        "automatic",
+        "warnings",
+        "non-interactive",
+        "detect_inputs.py",
+        "sandbox"
+      ]
+    },
+    "streaming-output": {
+      "page": "user/cards/program.md",
+      "terms": [
+        "512 KiB",
+        "stdout_truncated",
+        "stderr_truncated",
+        "output_bytes",
+        "JSON capture"
+      ]
+    },
+    "nested-evidence": {
+      "page": "user/cards/workspace.md",
+      "terms": [
+        "workspace",
+        "Child stage",
+        "Open child workflow report",
+        "discovery"
+      ]
+    },
+    "url-navigation": {
+      "page": "user/projects.md",
+      "terms": [
+        "My workspace",
+        "URL",
+        "Back/Forward",
+        "/workspace",
+        "/folders/Automation/Checks",
+        "/workflows/ID/edit/list",
+        "functions/condition/cards/result",
+        "/workflows/ID/settings",
+        "Keep editing",
+        "Discard draft and continue"
+      ]
+    },
+    "child-navigation": {
+      "page": "user/cards/workspace.md",
+      "terms": [
+        "Open child workflow",
+        "new tab",
+        "Edit",
+        "Run",
+        "dynamic",
+        "workspace",
+        "draft",
+        "does not turn it into a separate running job"
+      ]
+    },
+    "run-from-here": {
+      "page": "user/running.md",
+      "terms": [
+        "Run from here",
+        "Finish",
+        "Return",
+        "upstream",
+        "compatible",
+        "does not independently approve"
+      ]
     }
   },
   "settings": {
@@ -500,27 +577,42 @@
     },
     "source_paths": {
       "page": "user/settings.md"
+    },
+    "workspace": {
+      "page": "user/settings.md"
+    },
+    "input_detection": {
+      "page": "user/settings.md"
+    },
+    "report_paths": {
+      "page": "user/settings.md"
     }
   },
   "reviewed_ui_sources": {
-    "frontend/src/Home.tsx": "c1388dc70a5450210c1d7cb1a8f5a10c4736480d7796a345826b9a024fbd39c4",
-    "frontend/src/Editor.tsx": "6bb3019b4d696b9e6e4f8b30ed53a7259aadcb44af83b593a6a6704cdb4eeea7",
+    "frontend/src/Home.tsx": "7c92018f4989ecacf32211b35f659f5ba047e8c5858f2d1128aa6d9fb8a42f26",
+    "frontend/src/Editor.tsx": "834d0308bd1cb63cbaf02f7a47b8b7f4e1392277f52bb71a3c72fb77957f7835",
     "frontend/src/cards/CardInspector.tsx": "34738476dd230a80fbf9b403ebe604bff900d1561f599ca2bd23efbd2cbaf021",
-    "frontend/src/cards/Fields.tsx": "3ec931b962047bed56c313d3371a800dba611746b7af0523ce9d89b801dcd2a9",
-    "frontend/src/cards/Bindings.tsx": "6a50411308cbcd3fced26e895f9ec77d1404437dee2684811fdca8121d64895d",
+    "frontend/src/cards/Fields.tsx": "bbef39ff4a4f7210a7930488d18d09778b95a919bb84f90733823d8682b99339",
+    "frontend/src/cards/Bindings.tsx": "fd01bb5588e7744c65be1f3099b1613d4a1d40afaa78b271b0bc08c4ef8b5f0e",
     "frontend/src/cards/TerminalValue.tsx": "febc7075a5c8449a1f0802b41a123ac05c803b4e1681f68147123c77ae3c4d70",
-    "frontend/src/run/RunPanel.tsx": "6115528dce3b5de2b4e8089ffbfdc54a77b9293c9650654b34cd070e4bde2906",
-    "frontend/src/editor/EditorToolbar.tsx": "172e842cd3371a3116abf8ef8317b63b817fc0436b440c733b5fc36a18d4f852",
-    "frontend/src/editor/WorkflowSettings.tsx": "033864b98796f4ac57cadcb025d7ede1d17f544c0817d99de7f58204e48ef906",
+    "frontend/src/run/RunPanel.tsx": "5feaeccf8006428da714e9fde12e6d9702e9ad4630f7fddce985ee9fe9b0737e",
+    "frontend/src/editor/EditorToolbar.tsx": "f06dbb5fcea26be5d8b81f1aeb563109aeac27942fe87616547154463e808101",
+    "frontend/src/editor/WorkflowSettings.tsx": "1c4913091df5489b005edffb3772448b8112dae3d7904e1b1ffee67966e159e6",
     "frontend/src/editor/ContextMenu.tsx": "fec179818a483c2693af5dabce2699d5fd25db6ca2c25e3baf031badeacd4bdc",
     "frontend/src/editor/AreaNode.tsx": "870f44b73fae258ec108f543af6366263610ffedc9db5ff94e7289e6b50c6fdd",
-    "frontend/src/style.css": "99db79bbe2317b499bdc220dee214c05983f365431d84bfc9fbb9b94dccb4c57",
-    "frontend/src/cards/CardNode.tsx": "193148b62a955e4e26c71958c4e2ec56c3332ef1b860c8f98657bb7d9b182e42",
-    "frontend/src/cards/ValueInput.tsx": "116268d7b6a003244fd6396f887b78c088aa7d337602c17a1d935ae1abda1095",
+    "frontend/src/style.css": "baaa7f935299f3b3c8161d71bd35faaf58a7193f0eab3ed1846f6aee135fc4b8",
+    "frontend/src/cards/CardNode.tsx": "9b2861270dd01a35fe2b095db3158890e17f435bd44cdb14816e155550d03f5c",
+    "frontend/src/cards/ValueInput.tsx": "a8c232ca21a0fa1638a0386fe9f2d1d3b6226b8aa89f5ee22abda63ea73eb93d",
     "frontend/src/cards/Connections.tsx": "3ecab6d11cb1f307f66a061fc350c565c94a210015e4b78a02357a2b2ce93011",
     "frontend/src/components/Choice.tsx": "f095678d336da28f21e7fcb877b44f63666480610962af3fb42bfa0ab010fc03",
     "frontend/src/components/Declarations.tsx": "cb109c85022bfa2dab8ccd61976b3a8db80651ba62ec2265868597575eb257ef",
-    "frontend/src/editor/FlowCanvas.tsx": "f50f66ef91ee5f1d0bf90b6561139a962ab12c4e8e69610074c6aa62bae6c4bf"
+    "frontend/src/editor/FlowCanvas.tsx": "4c70bbf8625368f031519159b8f6aab9adbddf8a9fc496f827e991f671672289",
+    "frontend/src/home/LibraryBrowser.tsx": "d5ea053eaa9c7b6175ac8a922fbd793d4684112fac6bc08c9d1d91f17a3c5e13",
+    "frontend/src/home/folders.ts": "ed9c223aa2b50c456563fe16bcfd532516d03e36a9dcdd5d5ed896a1cd0a1d5d",
+    "frontend/src/main.tsx": "d4ecc45f4de48985b1f1a29e36f728fbecfe61f521482355f415389d078b99df",
+    "frontend/src/navigation/location.ts": "526c97ea8518caf6de5bea2fc15ff106db4941bc8168369de7ab12efd57011b1",
+    "frontend/src/navigation/useEditorLocation.ts": "4cc73f655ff49f3b8796214fd33276b079fae406fe3212eeb2f59a3b878936ba",
+    "frontend/src/cards/WorkspaceLink.tsx": "b5a835aeb31f27bb88bf5b883b9d61ef58c45a2c86de676f39dd295679029e45"
   },
   "retry_fields": {
     "attempts": {
@@ -534,6 +626,24 @@
     },
     "errors_contain": {
       "page": "user/settings.md"
+    }
+  },
+  "discovery_fields": {
+    "argv": {
+      "page": "user/inputs.md",
+      "terms": [
+        "argv",
+        "literal argument",
+        "runtime:python"
+      ]
+    },
+    "timeout": {
+      "page": "user/inputs.md",
+      "terms": [
+        "timeout",
+        "30 seconds",
+        "120 seconds"
+      ]
     }
   }
 }

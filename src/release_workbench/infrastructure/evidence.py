@@ -6,6 +6,7 @@ import copy
 import html
 import json
 import threading
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -44,7 +45,22 @@ class EvidenceStore:
         self.masker: Masker = masker
         self.lock = threading.RLock()
         self.pending_logs: dict[str, str] = {}
+        self.observers: list[
+            tuple[Callable[[str, str], None], Callable[[dict[str, Any]], None]]
+        ] = []
         directory.mkdir(parents=True, exist_ok=True)
+
+    def observe(
+        self, log: Callable[[str, str], None], event: Callable[[dict[str, Any]], None]
+    ) -> Callable[[], None]:
+        observer = (log, event)
+        self.observers.append(observer)
+
+        def remove() -> None:
+            if observer in self.observers:
+                self.observers.remove(observer)
+
+        return remove
 
     def emit(self, kind: str, path: str, **data: Any) -> None:
         import datetime
@@ -62,6 +78,8 @@ class EvidenceStore:
                 stream.write(json.dumps(event, allow_nan=False) + "\n")
             self.state.setdefault("events", []).append(event)
             self.state["events"] = self.state["events"][-500:]
+            for _, listener in tuple(self.observers):
+                listener(copy.deepcopy(event))
 
     def snapshot(self) -> dict[str, Any]:
         with self.lock:
@@ -93,6 +111,8 @@ class EvidenceStore:
             if entry is not None:
                 entry["log"] = name
                 entry["tail"] = (entry.get("tail", "") + safe)[-16000:]
+            for listener, _ in tuple(self.observers):
+                listener(path, safe)
 
     def report(self) -> Path:
         # A terminal prefix of a declared secret is also redacted.
@@ -100,6 +120,9 @@ class EvidenceStore:
             if pending:
                 self.pending_logs[path] = ""
                 self.log(path, "[REDACTED]")
+        from .attachments import snapshot_reports
+
+        self.state["attachments"] = snapshot_reports(self.directory, self.state, self.masker)
         self.save()
         state = self.snapshot()
 
@@ -113,6 +136,12 @@ class EvidenceStore:
                 f'<tr><td>{escape(path)}</td><td class="{escape(value["status"])}">{escape(value["status"])}</td><td>{escape(value.get("seconds", ""))}</td><td>{evidence}<pre>{escape(json.dumps(value.get("outcome", value.get("error", "")), indent=2))}</pre></td></tr>'
             )
         page = '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Workflow report</title><style>body{font:16px/1.5 system-ui;background:#f5f8f9;color:#182a30;max-width:1200px;margin:auto;padding:24px}table{width:100%;border-collapse:collapse;background:white}td,th{padding:12px;border-bottom:1px solid #cbd7db;text-align:left;vertical-align:top;overflow-wrap:anywhere}pre{white-space:pre-wrap;max-width:65ch;overflow-wrap:anywhere}.passed,.recorded{color:#146040}.failed{color:#a12424}a{color:#165c73}@media(max-width:700px){table,tr,td{display:block}thead{display:none}body{padding:16px}}</style>'
+        links = "".join(
+            f'<li><a href="{escape(item["snapshot"])}">{escape(item["path"])}</a></li>'
+            for item in state.get("attachments", [])
+            if item.get("snapshot")
+        )
+        page += "<h2>Report attachments</h2><ul>" + links + "</ul>" if links else ""
         page += f"<h1>{escape(state['name'])}</h1><p>{escape(state['status'])} · {escape(state['run_id'])}</p><p>Workflow fingerprint: {escape(state['fingerprint'])}</p><table><thead><tr><th>Execution</th><th>Status</th><th>Seconds</th><th>Evidence / result</th></tr></thead><tbody>{''.join(rows)}</tbody></table></html>"
         atomic_write(self.directory / "report.html", page)
         return self.directory / "report.html"

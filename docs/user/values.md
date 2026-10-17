@@ -42,6 +42,8 @@ Declare workflow/function inputs with a name, type, optional description and opt
 
 A declaration does not automatically pass an argument to every Python/Call card. Select the receiving card, use **Named inputs**, add a name and select its source. Python sees `inputs["name"]`. A function call passes those names to its declaration. Script/Program/Bash receive serialized named inputs through stdin; their command-line argument arrays are separate.
 
+For a step-by-step declaration and automatic candidate discovery example, see [Run inputs and automatic discovery](inputs.md).
+
 ## Advanced reference forms
 
 ```yaml
@@ -50,10 +52,11 @@ inputs:
   ready: {$ref: 'card:request', path: json.ok}
   message: {$ref: 'input:message'}
   token: {$ref: 'env:DEMO_TOKEN'}
+  python: {$ref: 'runtime:python'}
   iteration: {$ref: loop, path: iteration}
   failure: {$ref: error, path: message}
 ```
 
-`card:` references are local to the current graph invocation. `input:` is that graph's declared input. `env:` reads the run/card environment; declare secret environment names for masking. `loop` and `error` only work in the appropriate execution context. Use Variable Get to access globals rather than unsupported direct global references.
+`card:` references are local to the current graph invocation. `input:` is that graph's declared input. `env:` reads the run/card environment; declare secret environment names for masking. `loop` and `error` only work in the appropriate execution context. `runtime:python` returns the Workbench interpreter path, selectable as **Workbench Python executable**. It is the only runtime reference currently supported. Use Variable Get to access globals rather than unsupported direct global references.
 
 Continue with [completion markers](tutorials/completion.md), [functions](tutorials/functions.md) and [variables](tutorials/variables.md).

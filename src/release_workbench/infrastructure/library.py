@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from release_workbench.application.starters import starter
+from release_workbench.domain.library_folders import FolderOrganizer
 
 from .documents import (
     DocumentStore,
@@ -33,6 +34,11 @@ class Library:
 
     def save(self) -> None:
         atomic_write(self.path, json.dumps(self.data, indent=2))
+
+    def organize(self, action: str, key: str, request: dict[str, Any]) -> None:
+        updated = FolderOrganizer(self.data).apply(action, key, request)
+        atomic_write(self.path, json.dumps(updated, indent=2))
+        self.data = updated
 
     def register_project(self, project: Path, *, restore: bool = True) -> None:
         project = project.resolve()

@@ -14,6 +14,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src"))
 from release_workbench.application.runtime import Run  # noqa: E402 — standalone script resolves the checkout before imports.
+from release_workbench.infrastructure.discovery import discover  # noqa: E402 — standalone script resolves the checkout before imports.
 from release_workbench.infrastructure.documents import DocumentStore, compile_document  # noqa: E402 — standalone script resolves the checkout before imports.
 from release_workbench.infrastructure.services import LocalServices  # noqa: E402 — standalone script resolves the checkout before imports.
 
@@ -71,6 +72,18 @@ def main() -> None:
                     if companion.is_file():
                         shutil.copy2(companion, root / companion.name)
                 (root / "ready.txt").write_text("ready", encoding="utf-8")
+                if source.stem == "input-discovery":
+                    raw = DocumentStore(root / source.name).read()["workflow"]
+                    discovered = discover(raw, root, LocalServices())
+                    assert discovered["candidates"]["target"][0]["value"] == "."
+                    workers = discovered["candidates"]["workers"][0]["value"]
+                    assert type(workers) is int and 1 <= workers <= 4
+                    assert len(discovered["candidates"]["profile"]) == 2
+                    assert all(
+                        not candidate["automatic"]
+                        for candidate in discovered["candidates"]["profile"]
+                    )
+                    assert discovered["warnings"]
                 run = asyncio.run(
                     execute(
                         root / source.name, root, f"http://127.0.0.1:{server.server_port}/health"
@@ -83,6 +96,13 @@ def main() -> None:
                     assert state["result"] == {"type": "boolean", "value": False}
                 if source.stem in ("start", "starter-blank"):
                     assert state["result"] == {"type": "void"}
+                if source.stem == "input-discovery":
+                    assert state["result"]["value"] == {
+                        "target": ".",
+                        "workers": 1,
+                        "profile": "quick",
+                        "dry_run": True,
+                    }
                 if source.stem == "http-io":
                     assert state["result"]["value"] == {"ok": True, "service": "documentation"}
                 if source.stem == "workspace":

@@ -1,3 +1,4 @@
+import { WorkspaceLink } from "./WorkspaceLink";
 import { useUpdateNodeInternals } from "@xyflow/react";
 import { useLayoutEffect } from "react";
 import { configuredCard, resultType } from "../shared/cards";
@@ -183,6 +184,14 @@ export function CardNode({ data }: NodeProps<FlowNode>) {
                         "",
                     )}
         </p>
+      )}
+      {!editing && card.kind === "workspace" && (
+        <WorkspaceLink
+          workflow={data.workflow}
+          graphId={data.graphId}
+          cardId={card.id}
+          view="run"
+        />
       )}
       <div className="card-state">
         {data.status === "pending" ? "Ready" : data.status}

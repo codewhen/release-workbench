@@ -8,7 +8,7 @@ Work in **Edit** view in a saved project folder. Start with the downloadable exa
 
 ## Behavior and ports
 
-**File path** is relative to the workflow directory; **Format** is `text` or `json`. Text returns a string. JSON returns the decoded JSON value, so choose compatible downstream types. The file must exist and remain within the workspace after resolving symlinks.
+**File path** is relative to the resolved workspace; **Format** is `text` or `json`. Text returns a string. JSON returns the decoded JSON value, so choose compatible downstream types. The file must exist and remain within the workspace after resolving symlinks.
 
 Reads are bounded at 1 MiB. Missing files, permission errors, invalid UTF-8 text or malformed JSON fail. Read file does not watch or wait for a path; use Check path/Poll until before it when a producer runs asynchronously.
 

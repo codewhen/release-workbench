@@ -9,6 +9,9 @@ test("remove workflows and projects from Home, cancel and restore without deleti
   await page
     .getByLabel("Filename", { exact: true })
     .fill("removal-example.yaml");
+  await expect(
+    page.getByLabel("Project folder", { exact: true }),
+  ).not.toHaveValue("");
   const project = await page
     .getByLabel("Project folder", { exact: true })
     .inputValue();
@@ -16,14 +19,14 @@ test("remove workflows and projects from Home, cancel and restore without deleti
     .getByRole("button", { name: "Create workflow", exact: true })
     .click();
   await page.getByRole("button", { name: "Home", exact: true }).click();
-  const row = page
-    .locator(".workflow-row")
-    .filter({
-      has: page.getByRole("heading", { name: "Removal example", exact: true }),
-    });
-  await row
-    .getByRole("button", { name: "Remove from Home", exact: true })
-    .click();
+  const row = page.locator(".workflow-row").filter({
+    has: page.getByRole("heading", { name: "Removal example", exact: true }),
+  });
+  await expect(
+    row.getByRole("button", { name: "Remove from Home", exact: true }),
+  ).toHaveCount(0);
+  await row.click({ button: "right" });
+  await page.getByRole("menuitem", { name: "Remove from Home" }).click();
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
   await expect(row).toBeVisible();
   await row.click({ button: "right" });

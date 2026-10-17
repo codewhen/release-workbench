@@ -41,6 +41,39 @@ export function WorkflowSettings({
           }
         />
       </label>
+      <label>
+        Workspace root
+        <input
+          disabled={!editing}
+          value={workflow.workspace ?? "."}
+          onChange={(e) => commit({ ...workflow, workspace: e.target.value })}
+        />
+      </label>
+      <p className="muted">
+        Relative to this YAML file. Operation paths stay within this workspace.
+      </p>
+      <details>
+        <summary>Input discovery and report files</summary>
+        <JsonInput
+          label="Input discovery command"
+          value={workflow.input_detection ?? null}
+          disabled={!editing}
+          multiline
+          onChange={(v) => {
+            const next = { ...workflow };
+            if (v === null) delete next.input_detection;
+            else next.input_detection = v as Workflow["input_detection"];
+            commit(next);
+          }}
+        />
+        <JsonInput
+          label="Report path patterns"
+          value={workflow.report_paths ?? []}
+          disabled={!editing}
+          multiline
+          onChange={(v) => commit({ ...workflow, report_paths: v as string[] })}
+        />
+      </details>
       <h3>Workflow inputs</h3>
       <Declarations
         values={workflow.inputs ?? {}}

@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import copy
 import datetime
+import hashlib
 import threading
 import time
 import uuid
@@ -40,13 +41,38 @@ class Run:
         retry: bool = False,
         coordinator: Coordinator | None = None,
         stack: tuple[Path, ...] = (),
+        selection: tuple[str, str] | None = None,
+        checkpoint: dict[str, Any] | None = None,
     ):
         self.workflow, self.root, self.storage = (
             workflow,
-            root.resolve(),
+            (root / workflow.raw.get("workspace", ".")).resolve(),
             storage.resolve(),
         )
-        self.inputs = self.parameters(workflow.inputs, inputs or {})
+        if not self.root.is_dir():
+            raise ValueError("Workflow workspace directory does not exist.")
+        self.selection = selection
+        self.checkpoint = checkpoint
+        definitions = workflow.inputs
+        if selection:
+            if resume:
+                raise ValueError("Start a new Run from here instead of resuming a workflow run.")
+            graph_id, card_id = selection
+            graph = workflow.graphs.get(graph_id)
+            if graph is None or card_id not in graph.cards:
+                raise ValueError("Select an executable card in this workflow.")
+            card = graph.cards[card_id]
+            if card.owner is not None or card.kind in {"break", "continue"}:
+                raise ValueError(
+                    card.name
+                    + " belongs to a controlled body. Start from its enclosing Loop, Parallel or Try card instead."
+                )
+            if graph_id != "main":
+                function = next(
+                    item for item in workflow.functions.values() if item["graph"] == graph_id
+                )
+                definitions = function.get("inputs", {})
+        self.inputs = self.parameters(definitions, inputs or {})
         self.globals = {
             name: copy.deepcopy(value["initial"]) for name, value in workflow.globals.items()
         }
@@ -61,6 +87,11 @@ class Run:
         environment = services.environment(workflow)
         self.environment = environment
         self.fingerprint = services.fingerprint(workflow, self.root, self.inputs)
+        self.base_fingerprint = self.fingerprint
+        if selection:
+            self.fingerprint = hashlib.sha256(
+                (self.fingerprint + "from_here" + repr(selection)).encode()
+            ).hexdigest()
         run_id = (
             resume
             or datetime.datetime.now(datetime.UTC).strftime("%Y%m%dT%H%M%S")
@@ -84,9 +115,27 @@ class Run:
                 "events": [],
                 "manual": {},
             }
+        if selection:
+            state["name"] = (
+                workflow.name
+                + " · Run from: "
+                + workflow.graphs[selection[0]].cards[selection[1]].name
+            )
+            state["selection"] = {
+                "mode": "from_here",
+                "graph": selection[0],
+                "card": selection[1],
+                "name": workflow.graphs[selection[0]].cards[selection[1]].name,
+            }
+        state["base_fingerprint"] = self.base_fingerprint
+        state["report_sources"] = {
+            "workspace": str(self.root),
+            "patterns": workflow.raw.get("report_paths", []),
+        }
         state["manual"] = {}
         self.evidence = services.evidence(directory, state, workflow, environment)
         self.thread: threading.Thread | None = None
+        self._executing = False
 
     @staticmethod
     def parameters(definitions: dict[str, Any], supplied: dict[str, Any]) -> dict[str, Any]:
@@ -110,7 +159,7 @@ class Run:
 
     @property
     def busy(self) -> bool:
-        return self.thread is not None and self.thread.is_alive()
+        return self._executing or (self.thread is not None and self.thread.is_alive())
 
     def stop(self, path: str | None = None) -> None:
         if path:
@@ -144,21 +193,36 @@ class Run:
                 raise ExecutionFailure("Configured time limit exceeded at " + parent)
 
     async def execute(self) -> int:
+        self._executing = True
         self.evidence.state.pop("error", None)
         self.evidence.state.update(status="running", started=time.time())
         self.evidence.save()
         try:
-            frame = Frame(self, self.workflow.graphs["main"], self.inputs, "root/main")
-            outcome = await self.walk(frame)
-            if outcome.signal != "finish":
-                raise ExecutionFailure("Main execution must reach Finish.")
+            graph_id = self.selection[0] if self.selection else "main"
+            graph = self.workflow.graphs[graph_id]
+            frame = Frame(self, graph, self.inputs, "root/" + graph_id)
+            if self.selection and self.checkpoint:
+                from .start_context import restore_context
+
+                restore_context(self, frame, self.selection[1], self.checkpoint)
+            outcome = await self.walk(frame, self.selection[1] if self.selection else None)
+            expected = "finish" if graph_id == "main" else "return"
+            if outcome.signal != expected:
+                raise ExecutionFailure(
+                    "Run from here must reach " + ("Finish." if expected == "finish" else "Return.")
+                )
+            if graph_id != "main":
+                function = next(
+                    item for item in self.workflow.functions.values() if item["graph"] == graph_id
+                )
+                TypedValue.checked(outcome.value.value, function["returns"])
             self.evidence.state.update(status="passed", result=outcome.value.to_dict())
             visited = {
                 entry["card"]
                 for entry in self.evidence.state["executions"].values()
                 if entry["graph"] == "main"
             }
-            for card in self.workflow.graphs["main"].cards.values():
+            for card in [] if self.selection else self.workflow.graphs["main"].cards.values():
                 if card.id not in visited:
                     path = "root/main/" + card.id
                     self.evidence.state["executions"][path] = {
@@ -184,7 +248,10 @@ class Run:
                 finished=time.time(), globals=self.evidence.masker.object(self.globals)
             )
             self.evidence.state["manual"] = {}
-            self.evidence.report()
+            try:
+                self.evidence.report()
+            finally:
+                self._executing = False
         return {"passed": 0, "failed": 1, "blocked": 2, "cancelled": 130}[
             self.evidence.state["status"]
         ]

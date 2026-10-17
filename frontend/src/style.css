@@ -84,6 +84,8 @@ input[type="checkbox"] {
 }
 label {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
   gap: 5px;
   font-size: 13px;
   font-weight: 600;
@@ -686,8 +688,14 @@ pre {
 .layout-area.collapsed {
   background: #fff;
 }
+.choice {
+  min-width: 0;
+  max-width: 100%;
+}
 .choice-trigger {
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
   display: flex;
   justify-content: space-between;
   text-align: left;
@@ -695,6 +703,7 @@ pre {
   min-height: 44px;
 }
 .choice-trigger span {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -719,6 +728,13 @@ pre {
   width: 100%;
   border-radius: 4px;
   min-height: 40px;
+}
+.choice-menu [role="option"] span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.choice-menu [role="option"] svg {
+  flex-shrink: 0;
 }
 .choice-menu [role="option"][aria-selected="true"] {
   background: #e3f0f4;
@@ -821,13 +837,13 @@ pre {
   gap: 32px;
   padding-bottom: 40px;
 }
-.library-layout nav {
+.library-sidebar {
   display: flex;
   flex-direction: column;
   align-items: stretch;
   gap: 6px;
 }
-.library-layout nav h3 {
+.library-sidebar h3 {
   font-size: 12px;
   color: var(--muted);
   margin: 0 0 6px;
@@ -1034,13 +1050,13 @@ pre {
   .library-layout {
     display: block;
   }
-  .library-layout nav {
+  .library-sidebar {
     flex-direction: row;
     flex-wrap: wrap;
     margin-bottom: 20px;
     gap: 5px;
   }
-  .library-layout nav h3 {
+  .library-sidebar h3 {
     width: 100%;
   }
   .library-layout nav button {
@@ -1226,9 +1242,12 @@ pre {
 
 .terminal-result {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
   gap: 8px;
 }
 .terminal-result small {
+  overflow-wrap: anywhere;
   display: block;
   line-height: 1.5;
 }
@@ -1247,6 +1266,8 @@ pre {
 
 .value-input {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
   gap: 8px;
 }
 .value-input details {
@@ -1263,4 +1284,177 @@ pre {
 .documentation-link:focus-visible {
   outline: 3px solid #ca8a20;
   outline-offset: 3px;
+}
+
+/* Drive-style library: logical folders and workflow documents share one grid. */
+.library-content {
+  min-width: 0;
+}
+.library-sidebar .folder-button span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.library-sidebar .folder-button svg {
+  flex-shrink: 0;
+}
+.library-breadcrumbs {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 4px 0 22px;
+}
+.library-breadcrumbs button {
+  border-color: transparent;
+  background: transparent;
+  padding: 6px 8px;
+  min-height: 36px;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+.library-breadcrumbs [aria-current="page"] {
+  color: var(--teal);
+  font-weight: 700;
+}
+.breadcrumb-part {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
+.breadcrumb-part svg,
+.library-breadcrumbs > svg {
+  flex-shrink: 0;
+  color: var(--muted);
+}
+.library-group {
+  margin-bottom: 28px;
+}
+.library-group > h3 {
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.folder-grid,
+.workflow-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr));
+  gap: 14px;
+}
+.folder-tile {
+  display: flex;
+  justify-content: flex-start;
+  gap: 13px;
+  padding: 16px;
+  text-align: left;
+  border-radius: 10px;
+  min-height: 88px;
+}
+.folder-tile > svg {
+  flex-shrink: 0;
+  color: var(--teal);
+}
+.folder-tile > span {
+  min-width: 0;
+}
+.folder-tile strong {
+  display: block;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+}
+.folder-tile small {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+}
+.workflow-tile {
+  margin: 0;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 12px;
+  min-width: 0;
+  min-height: 220px;
+  border-radius: 10px;
+}
+.workflow-tile:hover {
+  border-color: #91adb8;
+}
+.workflow-tile:focus-visible {
+  outline: 3px solid #ca8a20;
+  outline-offset: 3px;
+}
+.workflow-tile-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.workflow-tile-heading svg {
+  color: var(--teal);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.workflow-tile h3 {
+  font-size: 15px;
+  overflow-wrap: anywhere;
+  line-height: 1.4;
+  margin: 0;
+}
+.workflow-tile .path {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin: 0;
+  line-height: 1.6;
+}
+.workflow-tile > small {
+  overflow-wrap: anywhere;
+}
+.workflow-tile .actions {
+  margin-top: auto;
+  padding-top: 6px;
+}
+.workflow-tile .actions button {
+  width: 100%;
+}
+.library-content .empty {
+  text-align: center;
+  padding: 42px 20px;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+}
+.library-content .empty > svg {
+  color: var(--muted);
+}
+.library-content .empty h3 {
+  margin-top: 12px;
+}
+@media (max-width: 700px) {
+  .library-layout .library-breadcrumbs {
+    flex-direction: row;
+    align-items: center;
+  }
+  .library-breadcrumbs {
+    margin-top: 12px;
+  }
+  .workflow-tile {
+    min-height: 200px;
+  }
+}
+
+.workspace-navigation {
+  min-width: 0;
+  margin: 10px 0;
+}
+.workspace-navigation small {
+  display: block;
+  margin-top: 7px;
+  overflow-wrap: anywhere;
+}
+.workspace-navigation .error {
+  margin-top: 8px;
+  overflow-wrap: anywhere;
 }

@@ -30,3 +30,4 @@ global-exclude *.py[cod]
 
 recursive-include npm/workbench *.json *.md *.cjs
 prune npm/workbench/runtime
+recursive-include tools *.py

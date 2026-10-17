@@ -7,6 +7,7 @@ This section explains implementation and maintenance. A user should not need to 
 - [Schema reference](schema.md): YAML contract and generated TypeScript types.
 - [Testing](testing.md): backend, frontend, browser and clean-install checks.
 - [Packaging and release](packaging.md): UI/docs/wheel/npm ordering and publication boundaries.
+- [Project integration boundaries](project-integrations.md): generic contracts versus project-owned scripts, tools and evidence.
 - [Documentation maintenance](documentation.md): screenshots, examples and coverage checks.
 
 Historical review/acceptance records remain in the repository. They describe the tested revision, not an automatic certification of later changes. Native Windows acceptance remains unverified until the native suite actually passes.

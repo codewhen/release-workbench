@@ -1,0 +1,36 @@
+version: 3
+name: Input discovery example
+inputs:
+  target: {type: string, description: Project directory to inspect, default: .}
+  workers: {type: number, default: 1}
+  profile: {type: string, default: quick}
+  dry_run: {type: boolean, default: true}
+input_detection:
+  argv:
+    - {$ref: 'runtime:python'}
+    - detect_inputs.py
+  timeout: 30
+graphs:
+  main:
+    cards:
+      - {id: start, kind: start, name: Start}
+      - id: review
+        kind: python
+        name: Review selected inputs
+        config:
+          code: return inputs
+          returns: object
+        inputs:
+          target: {$ref: 'input:target'}
+          workers: {$ref: 'input:workers'}
+          profile: {$ref: 'input:profile'}
+          dry_run: {$ref: 'input:dry_run'}
+      - id: finish
+        kind: finish
+        name: Finish
+        config:
+          returns: object
+          value: {$ref: 'card:review'}
+    edges:
+      - {id: start-review, kind: flow, source: start, target: review, source_port: next, target_port: entry}
+      - {id: review-finish, kind: flow, source: review, target: finish, source_port: next, target_port: entry}

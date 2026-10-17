@@ -50,7 +50,12 @@ class CardSpec(ABC):
                     )
                 continue
             if descriptor.get("items") == "string" and (
-                not isinstance(value, list) or any(not isinstance(item, str) for item in value)
+                not isinstance(value, list)
+                or any(
+                    not isinstance(item, str)
+                    and not (isinstance(item, dict) and isinstance(item.get("$ref"), str))
+                    for item in value
+                )
             ):
                 errors.append(f"{card.id}: {descriptor['key']} must be an array of strings.")
             if descriptor["widget"] == "select" and value not in descriptor["options"]:

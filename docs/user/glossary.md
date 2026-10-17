@@ -36,6 +36,6 @@
 | Starter | A separate example workflow to learn/copy from |
 | Value connection | Square-port wire supplying data; never starts execution |
 | Void | Successful completion with no payload, distinct from null |
-| Workspace | Directory context for a workflow; child calls select their own YAML directory |
+| Workspace | Directory context for a workflow; selected by `workspace` relative to each YAML directory; defaults to `.` |
 
 See [connections and values](values.md) and [completion markers](tutorials/completion.md) for worked explanations rather than just definitions.

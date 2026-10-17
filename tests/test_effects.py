@@ -96,7 +96,7 @@ class Effects(RunCase):
 
     async def test_output_limit_and_invalid_program_json(self):
         for code, capture in (
-            ("print('x' * 1100000)", "text"),
+            ("print('x' * 1100000)", "json"),
             ("print('hello')", "json"),
             ("raise SystemExit(3)", "text"),
         ):

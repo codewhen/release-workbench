@@ -73,8 +73,8 @@ The default dashboard port is 3104. Follow the URL printed in your terminal. Use
 `@preview` selects the preview release channel. An untagged package name selects `latest`. To pin a version:
 
 ```bash
-npm install -g @codewhen/workbench@0.18.0-preview.6
-npx @codewhen/workbench@0.18.0-preview.6 serve
+npm install -g @codewhen/workbench@0.18.0-preview.7
+npx @codewhen/workbench@0.18.0-preview.7 serve
 ```
 
 Update to the current preview release or uninstall the global command:

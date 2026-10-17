@@ -58,8 +58,17 @@ layout:
 | environment | Explicit string environment overrides. Prefer environment references over stored credentials. |
 | secrets | Environment names whose literal values must be masked in logs/reports. |
 | source_paths | Relative source glob patterns included in run fingerprints. Add application source here when commands depend on it. |
+| workspace | Execution root relative to this YAML directory; default `.`. Child YAML paths resolve from the parent root, then children resolve their own root. |
+| input_detection | Optional `{argv: [...], timeout: 30}` command for the explicit Auto-detect inputs button; timeout maximum 120 seconds. |
+| report_paths | Workspace-relative report globs; traversal and symlink escapes rejected. |
 
 Card IDs are stable and unique within a graph. A card has kind, name, config, inputs, optional owner and settings. Connections have stable unique IDs, source/target, source_port/target_port, kind flow/value and optional value path. Main ordinary connections are acyclic; only a legal owned body → next_iteration loop-back closes a structured loop.
+
+## Runtime bindings, discovery and report contracts
+
+`{$ref: "runtime:python"}` resolves to the engine interpreter. Program argument arrays accept literal strings or references resolving to strings; values are not interpolated into shell source. Workflow inputs are typed declarations, not application-specific IP/device validation.
+
+The [input guide](../user/inputs.md) documents the discovery JSON protocol and candidate selection, including omitted fields, ambiguity, defaults and CLI/child behavior. [Settings](../user/settings.md) documents report attachment bounds, log truncation flags and child evidence. These are reusable contracts: application detectors and release-specific validation belong in the consuming project.
 
 ## Execution settings
 

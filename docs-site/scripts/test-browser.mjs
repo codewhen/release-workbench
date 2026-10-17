@@ -57,7 +57,15 @@ try {
   for (const [route,status] of [['/docs/',200],['/docs/user/cards/loop',200],['/docs/examples/python.yaml',200],['/docs/examples/demo_script.py',200],['/docs/no-such-page.html',404],['/docs/%2e%2e%2fschema.json',404]]) {
     assert.equal((await fetch(base+route)).status,status,route);
   }
-  console.log('Passed local docs: deep links, downloads, search/empty results, copy, image keyboard access, mobile navigation and real 404/path boundaries.');
+  await page.goto(base+'/docs/user/inputs.html');
+  await expect(page.locator('.vp-doc h1')).toHaveText('Run inputs and automatic discovery');
+  await expect(page.locator('#detector-output-contract')).toBeVisible();
+  for (const route of ['/docs/examples/input-discovery.yaml','/docs/examples/detect_inputs.py','/docs/developer/project-integrations.html']) {
+    assert.equal((await fetch(base+route)).status,200,route);
+  }
+  await page.setViewportSize({width:390,height:844});
+  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'Input guide overflows on mobile');
+  console.log('Passed local docs: deep links, discovery guide/downloads, search/empty results, copy, image keyboard access, mobile navigation and real 404/path boundaries.');
   if(server) {
     await page.setViewportSize({width:1440,height:1000});
     const entry=library.entries.find(e=>e.name==='Card: Calculate');

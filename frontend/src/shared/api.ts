@@ -1,3 +1,4 @@
+import { readRoute } from "../navigation/location";
 import type { ValidationIssue } from "./types";
 export class ApiError extends Error {
   constructor(
@@ -17,8 +18,26 @@ export async function api<T>(
   workflow?: string,
   signal?: AbortSignal,
 ): Promise<T> {
+  const params = new URLSearchParams();
+  if (workflow) params.set("workflow", workflow);
+  const current = readRoute(location.href);
+  if (
+    workflow === current.workflow &&
+    current.run &&
+    [
+      "config",
+      "state",
+      "run",
+      "stop",
+      "pause",
+      "record",
+      "open-workspace",
+      "draft",
+    ].includes(route)
+  )
+    params.set("run", current.run);
   const response = await fetch(
-    `/api/${route}${workflow ? "?workflow=" + encodeURIComponent(workflow) : ""}`,
+    `/api/${route}${params.size ? "?" + params.toString() : ""}`,
     {
       signal,
       method: body === undefined ? "GET" : "POST",
