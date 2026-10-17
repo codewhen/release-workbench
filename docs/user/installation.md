@@ -1,22 +1,8 @@
 # Install and create a project
 
-## Install the Python package
-
-Use Python 3.11 or newer. Download the actual wheel artifact for the version you intend to install and verify its published SHA-256 when available. The following assumes that wheel is in your current directory; replace its version with your downloaded artifact.
-
-```bash
-python3 -m venv .venv-workbench
-.venv-workbench/bin/python -m pip install ./release_workbench-0.18.0a5-py3-none-any.whl
-.venv-workbench/bin/workbench --version
-```
-
-On Windows, use `python` if that is your Python command, and the corresponding `.venv-workbench\Scripts\python.exe` and `.venv-workbench\Scripts\workbench.exe`. Native Windows execution remains unverified. Activate the environment, use its explicit executable path, or install the wheel with a Python tool manager to expose `workbench` on PATH.
-
 ## Install with npm
 
 Prerequisites: **Node.js 18+**, npm and **Python 3.11+** on the computer running Workbench. The npm package supplies the `workbench` executable; Python runs the workflow engine.
-
-**Publication requirement:** these commands install from the public npm registry. The package version must be published under `@codewhen/workbench`, with the `preview` tag pointing to that version. A local build alone does not make registry installation available.
 
 Install globally so you can use Workbench from any project folder:
 
@@ -64,11 +50,11 @@ npx @codewhen/workbench@preview run --non-interactive --config checks.yaml
 The commands above explicitly select the `preview` distribution tag. To install an exact published version instead:
 
 ```bash
-npm install -g @codewhen/workbench@0.18.0-preview.5
-npx @codewhen/workbench@0.18.0-preview.5 serve
+npm install -g @codewhen/workbench@0.18.0-preview.6
+npx @codewhen/workbench@0.18.0-preview.6 serve
 ```
 
-The exact version must exist in the registry. An untagged command such as `npm install -g @codewhen/workbench` selects `latest`; use it only after a release has been published with that tag. `preview` and `latest` can refer to different versions.
+The `preview` tag selects preview releases. An untagged command such as `npm install -g @codewhen/workbench` selects `latest`. Tags can refer to different versions; pin an exact version when you need reproducible installations.
 
 Update a global installation to the version currently tagged preview, or remove it:
 
@@ -87,17 +73,29 @@ If Python discovery chooses the wrong interpreter, set `WORKBENCH_PYTHON` to the
 
 ## If registry installation fails
 
-- **ETARGET / No matching version found:** the requested version/tag is not available. This can happen before the first publication or when preview has not been assigned.
+- **ETARGET / No matching version found:** the requested version or distribution tag cannot be resolved. Check the available versions and tags with the command below, and confirm your npm registry with `npm config get registry`.
 - **E404:** the package is not available to your account in the selected registry, or the package/scope name is wrong.
 - **workbench: command not found after global install:** check `npm prefix -g` and ensure npm's global executable directory is on PATH, then reopen your terminal. You can use npx instead.
 
-Inspect the public registry rather than assuming a build was published:
+List available releases and distribution tags:
 
 ```bash
 npm view @codewhen/workbench dist-tags versions --json
 ```
 
-Publishing is a maintainer action, documented separately in [Packaging and release](../developer/packaging.md). End users do not need to run npm login to install a public package.
+You do not need to run `npm login` to install this public package. Maintainers can find release procedures in [Packaging and release](../developer/packaging.md).
+
+## Install the Python package
+
+Use Python 3.11 or newer. Download the actual wheel artifact for the version you intend to install and verify its published SHA-256 when available. The following assumes that wheel is in your current directory; replace its version with your downloaded artifact.
+
+```bash
+python3 -m venv .venv-workbench
+.venv-workbench/bin/python -m pip install ./release_workbench-0.18.0a6-py3-none-any.whl
+.venv-workbench/bin/workbench --version
+```
+
+On Windows, use `python` if that is your Python command, and the corresponding `.venv-workbench\Scripts\python.exe` and `.venv-workbench\Scripts\workbench.exe`. Native Windows execution remains unverified. Activate the environment, use its explicit executable path, or install the wheel with a Python tool manager to expose `workbench` on PATH.
 
 ## Create a blank project here
 

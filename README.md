@@ -2,15 +2,28 @@
 
 A free, MIT-licensed local automation workbench. Build flowcharts in the browser, keep them in YAML, execute them with Python, and inspect live output and saved HTML/JSON evidence.
 
-**0.18.0a5 is an intentionally breaking preview. It accepts schema v3 only.** Install it in a separate environment. Do not point it at an older installation's library or run storage. There is no automatic migration and existing files are never converted. The previous stable release remains available separately.
+**0.18.0a6 is an intentionally breaking preview. It accepts schema v3 only.** Install it in a separate environment. Do not point it at an older installation's library or run storage. There is no automatic migration and existing files are never converted. The previous stable release remains available separately.
 
 ## Run the preview
 
-Python 3.11 or newer is required. End users need neither Node nor a hosted service. This local build produces the wheel and `SHA256SUMS` under `dist/`; it is not published by this change. For a published version, use an artifact actually available in [GitHub Releases](https://github.com/codewhen/release-workbench/releases). With the chosen wheel copied into your current directory and its SHA-256 verified:
+Install with npm (Node.js 18+ and Python 3.11+ required):
+
+```bash
+npm install -g @codewhen/workbench
+workbench create
+```
+
+Or run without a global installation:
+
+```bash
+npx @codewhen/workbench create
+```
+
+For a Python-only installation, download a wheel and its checksum from [GitHub Releases](https://github.com/codewhen/release-workbench/releases). Node is not required for this method. With the chosen wheel copied into your current directory and its SHA-256 verified:
 
 ```bash
 python3 -m venv .venv-workbench-preview
-.venv-workbench-preview/bin/python -m pip install ./release_workbench-0.18.0a5-py3-none-any.whl
+.venv-workbench-preview/bin/python -m pip install ./release_workbench-0.18.0a6-py3-none-any.whl
 .venv-workbench-preview/bin/workbench create --port 3105
 ```
 
@@ -50,8 +63,7 @@ then Save, Validate & review and Run all. Its log contains Preparing greeting;
 its typed result contains the object. The [illustrated walkthrough](docs/user/first-workflow.md)
 explains each action.
 
-The GitHub Pages build is prepared from this same source; it is not claimed to be
-published until an authorized deployment actually happens.
+The same Markdown also builds as a searchable documentation site for GitHub Pages.
 
 ## CLI
 
@@ -93,16 +105,24 @@ evidence; **130** cancelled. A returned Boolean `false` is successful data.
 
 ### npm / npx
 
-An optional launcher is prepared in [npm/workbench](npm/workbench/README.md).
-It bundles the built wheel, verifies its checksum and installs it into an isolated
-Python environment on first launch. Python 3.11+ is still required; npm does not
-replace the Python engine. See its README for local `npm pack`, global installation
-and npx commands. **It has not been published to npm.**
+Install the [npm launcher](npm/workbench/README.md) globally or use npx:
+
+```bash
+npm install -g @codewhen/workbench
+workbench
+# Or without a global install:
+npx @codewhen/workbench
+```
+
+Node.js 18+ and Python 3.11+ are required. The launcher bundles the engine wheel,
+verifies its checksum and sets up an isolated Python environment on first launch.
+See the [installation guide](docs/user/installation.md) for version pinning,
+updates, removal and troubleshooting.
 
 For a Python-only tool installation from a downloaded wheel:
 
 ```bash
-uv tool install ./release_workbench-0.18.0a5-py3-none-any.whl
+uv tool install ./release_workbench-0.18.0a6-py3-none-any.whl
 workbench
 ```
 
