@@ -2,15 +2,15 @@
 
 A free, MIT-licensed local automation workbench. Build flowcharts in the browser, keep them in YAML, execute them with Python, and inspect live output and saved HTML/JSON evidence.
 
-**0.18.0a4 is an intentionally breaking preview. It accepts schema v3 only.** Install it in a separate environment. Do not point it at an older installation's library or run storage. There is no automatic migration and existing files are never converted. The previous stable release remains available separately.
+**0.18.0a5 is an intentionally breaking preview. It accepts schema v3 only.** Install it in a separate environment. Do not point it at an older installation's library or run storage. There is no automatic migration and existing files are never converted. The previous stable release remains available separately.
 
 ## Run the preview
 
-Python 3.11 or newer is required. End users need neither Node nor a hosted service. Download the preview wheel from [GitHub Releases](https://github.com/codewhen/release-workbench/releases), verify its SHA-256 against `SHA256SUMS`, then:
+Python 3.11 or newer is required. End users need neither Node nor a hosted service. This local build produces the wheel and `SHA256SUMS` under `dist/`; it is not published by this change. For a published version, use an artifact actually available in [GitHub Releases](https://github.com/codewhen/release-workbench/releases). With the chosen wheel copied into your current directory and its SHA-256 verified:
 
 ```bash
 python3 -m venv .venv-workbench-preview
-.venv-workbench-preview/bin/python -m pip install ./release_workbench-0.18.0a4-py3-none-any.whl
+.venv-workbench-preview/bin/python -m pip install ./release_workbench-0.18.0a5-py3-none-any.whl
 .venv-workbench-preview/bin/workbench create --port 3105
 ```
 
@@ -18,16 +18,40 @@ On Windows use `.venv-workbench-preview\Scripts\python.exe` and `.venv-workbench
 
 Open `http://127.0.0.1:3105/`. Add projects or existing v3 YAML files to Home. Opening a workflow shows Run view; commands execute only after Run all. Change to Edit to configure cards. Saving configuration does not run commands.
 
-## Start here
+## Read the complete manual
 
-- [First workflow: browser and CLI](docs/getting-started.md)
-- [Card catalog and typed data](docs/cards.md)
-- [Functions, main-canvas loops and recovery](docs/control-flow.md)
-- [Schema v3 reference](docs/configuration.md)
-- [Execution, cancellation, retries and evidence](docs/execution.md)
-- [Architecture and contribution guide](docs/architecture.md)
-- [Testing and preview release runbook](docs/testing.md)
-- [Preview acceptance record and limits](docs/acceptance.md)
+Open **Documentation** from Home or the editor to read the bundled manual at
+`/docs/` on your running dashboard. It includes offline search, screenshots,
+per-card instructions and complete downloadable workflows. The inspector also
+links directly to the selected card's guide.
+
+The same Markdown is readable here:
+
+- [Manual home and learning paths](docs/index.md)
+- [Install and create a project](docs/user/installation.md)
+- [Build your first workflow](docs/user/first-workflow.md)
+- [All 25 cards and three layout tools](docs/user/cards/index.md)
+- [Start, Finish and Return](docs/user/tutorials/completion.md)
+- [Functions](docs/user/tutorials/functions.md), [variables](docs/user/tutorials/variables.md) and [loops](docs/user/tutorials/loops.md)
+- [Running, logs and results](docs/user/running.md)
+- [Troubleshooting](docs/user/troubleshooting.md)
+- [Developer guide](docs/developer/index.md)
+
+For a first operation, create a blank workflow, choose Edit, insert Python between
+Start and Finish, set its return type to object and enter:
+
+```python
+print("Preparing greeting")
+return {"message": "Hello workflow"}
+```
+
+Connect Start → Python → Finish. On Finish choose Python under **Result source**,
+then Save, Validate & review and Run all. Its log contains Preparing greeting;
+its typed result contains the object. The [illustrated walkthrough](docs/user/first-workflow.md)
+explains each action.
+
+The GitHub Pages build is prepared from this same source; it is not claimed to be
+published until an authorized deployment actually happens.
 
 ## CLI
 
@@ -78,7 +102,7 @@ and npx commands. **It has not been published to npm.**
 For a Python-only tool installation from a downloaded wheel:
 
 ```bash
-uv tool install ./release_workbench-0.18.0a4-py3-none-any.whl
+uv tool install ./release_workbench-0.18.0a5-py3-none-any.whl
 workbench
 ```
 
@@ -92,6 +116,9 @@ python3 -m venv .venv
 .venv/bin/python -m pip install -e '.[dev]'
 npm --prefix frontend ci
 npm --prefix frontend run build
+npm --prefix docs-site ci
+npm --prefix docs-site run check
+npm --prefix docs-site run build
 .venv/bin/python -m unittest discover -v
 .venv/bin/python -m build
 ```

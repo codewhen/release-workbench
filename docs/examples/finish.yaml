@@ -1,0 +1,52 @@
+version: 3
+name: 'Card: Finish'
+concurrency: 4
+inputs: {}
+globals: {}
+functions: {}
+graphs:
+  main:
+    cards:
+      - id: start
+        kind: start
+        name: Start
+        config: {}
+      - id: answer
+        kind: python
+        name: Answer
+        config:
+          code: return False
+          returns: boolean
+      - id: finish
+        kind: finish
+        name: Finish
+        config:
+          returns: boolean
+          value:
+            $ref: card:answer
+    edges:
+      - id: start:next:answer:entry
+        source: start
+        target: answer
+        source_port: next
+        target_port: entry
+        kind: flow
+      - id: answer:next:finish:entry
+        source: answer
+        target: finish
+        source_port: next
+        target_port: entry
+        kind: flow
+layout:
+  main:
+    positions:
+      start:
+        x: 0
+        y: 0
+      answer:
+        x: 340
+        y: 0
+      finish:
+        x: 680
+        y: 0
+    areas: []

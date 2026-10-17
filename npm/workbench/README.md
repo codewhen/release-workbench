@@ -13,7 +13,7 @@ python -m build --wheel
 npm --prefix npm/workbench test
 cd npm/workbench
 npm pack
-npm install -g ./codewhen-workbench-0.18.0-preview.4.tgz
+npm install -g ./codewhen-workbench-0.18.0-preview.5.tgz
 workbench
 workbench create
 ```
@@ -21,7 +21,7 @@ workbench create
 Or execute the local archive without a global install:
 
 ```bash
-npx --package ./codewhen-workbench-0.18.0-preview.4.tgz workbench serve
+npx --package ./codewhen-workbench-0.18.0-preview.5.tgz workbench serve
 ```
 
 After publication under the configured scope, these will be available:

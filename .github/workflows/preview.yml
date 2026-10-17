@@ -31,6 +31,17 @@ jobs:
       - run: npm --prefix frontend run build
       - run: npx --prefix frontend playwright install --with-deps chromium
       - run: npm --prefix frontend run test:browser
+      - run: npm --prefix docs-site ci
+      - run: npm --prefix docs-site run check
+      - run: npm --prefix docs-site run examples
+      - run: npm --prefix docs-site run build
+      - run: npm --prefix docs-site run build:pages
+      - run: npm --prefix docs-site run test:browser
       - run: python -m build
+      - name: Verify bundled documentation from clean wheel
+        run: |
+          python -m venv "$RUNNER_TEMP/workbench-docs-wheel"
+          "$RUNNER_TEMP/workbench-docs-wheel/bin/python" -m pip install dist/*.whl
+          python docs-site/scripts/check_installed.py --python "$RUNNER_TEMP/workbench-docs-wheel/bin/python"
       - run: npm --prefix npm/workbench test
       - run: cd npm/workbench && npm pack

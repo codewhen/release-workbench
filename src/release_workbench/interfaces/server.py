@@ -253,7 +253,29 @@ def create_server(
             key = parse_qs(parsed.query).get("workflow", [""])[0]
             route = parsed.path
             try:
-                if route == "/api/instance":
+                if route == "/docs":
+                    self.send_response(308)
+                    self.send_header("Location", "/docs/")
+                    self.send_header("Content-Length", "0")
+                    self.end_headers()
+                elif route.startswith("/docs/"):
+                    from .documentation import documentation_file
+
+                    file, status = documentation_file(unquote(route[len("/docs/") :]))
+                    if file is None:
+                        self.json(
+                            {
+                                "error": "Documentation page not found. Build the bundled manual first."
+                            },
+                            404,
+                        )
+                    else:
+                        self.send(
+                            file.read_bytes(),
+                            status,
+                            mimetypes.guess_type(file.name)[0] or "application/octet-stream",
+                        )
+                elif route == "/api/instance":
                     self.json({"application": "workflow-workbench-v3", "storage": str(app.storage)})
                 elif route == "/api/library":
                     self.json(app.library.listing())

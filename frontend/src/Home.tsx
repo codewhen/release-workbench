@@ -106,6 +106,14 @@ export function Home({
           </p>
         </div>
         <div className="actions">
+          <a
+            className="documentation-link"
+            href="/docs/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Documentation
+          </a>
           <button onClick={() => input.current?.click()}>
             <Upload size={17} />
             Open YAML

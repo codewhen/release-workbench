@@ -541,6 +541,14 @@ function Editor({
           </div>
         </div>
         <div className="actions">
+          <a
+            className="documentation-link"
+            href="/docs/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Documentation
+          </a>
           <button onClick={() => (dirty ? setLeave(true) : onHome())}>
             Home
           </button>

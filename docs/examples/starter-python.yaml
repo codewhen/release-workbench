@@ -1,0 +1,74 @@
+version: 3
+name: 'Starter: Python return and file output'
+concurrency: 4
+inputs:
+  message:
+    type: string
+    default: Hello workflow
+globals: {}
+functions: {}
+graphs:
+  main:
+    cards:
+      - id: start
+        kind: start
+        name: Start
+        config: {}
+      - id: compute
+        kind: python
+        name: Compute
+        config:
+          code: "print(\"This is a log\")\nreturn {\"message\": inputs[\"message\"\
+            ]}"
+          returns: object
+        inputs:
+          message:
+            $ref: input:message
+      - id: write
+        kind: write_file
+        name: Write
+        config:
+          path: output/result.json
+          format: json
+          value:
+            $ref: card:compute
+          overwrite: true
+      - id: finish
+        kind: finish
+        name: Finish
+        config: {}
+    edges:
+      - id: start:next:compute:entry
+        source: start
+        target: compute
+        source_port: next
+        target_port: entry
+        kind: flow
+      - id: compute:next:write:entry
+        source: compute
+        target: write
+        source_port: next
+        target_port: entry
+        kind: flow
+      - id: write:next:finish:entry
+        source: write
+        target: finish
+        source_port: next
+        target_port: entry
+        kind: flow
+layout:
+  main:
+    positions:
+      start:
+        x: 0
+        y: 0
+      compute:
+        x: 340
+        y: 0
+      write:
+        x: 680
+        y: 0
+      finish:
+        x: 1020
+        y: 0
+    areas: []

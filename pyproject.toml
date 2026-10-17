@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "release-workbench"
-version = "0.18.0a4"
+version = "0.18.0a5"
 description = "Local workflow canvas, parallel test runner and release evidence workbench"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -22,7 +22,7 @@ release-workbench = "release_workbench.interfaces.cli:main"
 workflow-workbench = "release_workbench.interfaces.cli:main"
 
 [tool.setuptools.package-data]
-release_workbench = ["schema.json", "NOTICE.txt", "THIRD_PARTY_NOTICES.txt", "static/**/*", "static/*"]
+release_workbench = ["schema.json", "NOTICE.txt", "THIRD_PARTY_NOTICES.txt", "THIRD_PARTY_DOCUMENTATION_NOTICES.txt", "static/**/*", "static/*", "documentation/**/*", "documentation/*"]
 
 [project.optional-dependencies]
 dev = ["build>=1,<2", "ruff>=0.14,<1", "mypy>=1.18,<2", "types-jsonschema", "types-psutil"]
@@ -40,3 +40,6 @@ check_untyped_defs = true
 disallow_untyped_defs = true
 warn_unused_ignores = true
 no_implicit_optional = true
+
+[tool.setuptools.exclude-package-data]
+release_workbench = ["**/__pycache__/*", "**/*.pyc"]

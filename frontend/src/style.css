@@ -1252,3 +1252,15 @@ pre {
 .value-input details {
   font-size: 12px;
 }
+
+.documentation-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 8px 13px;
+}
+.documentation-link:focus-visible {
+  outline: 3px solid #ca8a20;
+  outline-offset: 3px;
+}

@@ -1,0 +1,55 @@
+version: 3
+name: 'Card: Write file'
+concurrency: 4
+inputs: {}
+globals: {}
+functions: {}
+graphs:
+  main:
+    cards:
+      - id: start
+        kind: start
+        name: Start
+        config: {}
+      - id: operation
+        kind: write_file
+        name: Operation
+        config:
+          path: output/message.json
+          format: json
+          value:
+            message: Hello
+          overwrite: true
+      - id: finish
+        kind: finish
+        name: Finish
+        config:
+          returns: json
+          value:
+            $ref: card:operation
+    edges:
+      - id: start:next:operation:entry
+        source: start
+        target: operation
+        source_port: next
+        target_port: entry
+        kind: flow
+      - id: operation:next:finish:entry
+        source: operation
+        target: finish
+        source_port: next
+        target_port: entry
+        kind: flow
+layout:
+  main:
+    positions:
+      start:
+        x: 0
+        y: 0
+      operation:
+        x: 340
+        y: 0
+      finish:
+        x: 680
+        y: 0
+    areas: []

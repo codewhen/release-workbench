@@ -1,0 +1,61 @@
+version: 3
+name: Bounded retry
+concurrency: 4
+inputs: {}
+globals: {}
+functions: {}
+graphs:
+  main:
+    cards:
+      - id: start
+        kind: start
+        name: Start
+        config: {}
+      - id: attempt
+        kind: python
+        name: Attempt
+        config:
+          code: "from pathlib import Path\np = Path(\"output/attempt.txt\")\np.parent.mkdir(exist_ok=True)\n\
+            n = int(p.read_text()) + 1 if p.exists() else 1\np.write_text(str(n))\n\
+            if n < 2: raise ValueError(\"temporarily unavailable\")\nreturn n"
+          returns: number
+        settings:
+          retry:
+            attempts: 3
+            delay: 0.01
+            backoff: 1
+            errors_contain:
+              - temporarily unavailable
+      - id: finish
+        kind: finish
+        name: Finish
+        config:
+          returns: json
+          value:
+            $ref: card:attempt
+    edges:
+      - id: start:next:attempt:entry
+        source: start
+        target: attempt
+        source_port: next
+        target_port: entry
+        kind: flow
+      - id: attempt:next:finish:entry
+        source: attempt
+        target: finish
+        source_port: next
+        target_port: entry
+        kind: flow
+layout:
+  main:
+    positions:
+      start:
+        x: 0
+        y: 0
+      attempt:
+        x: 340
+        y: 0
+      finish:
+        x: 680
+        y: 0
+    areas: []

@@ -16,3 +16,6 @@ frontend/playwright-report/
 npm/workbench/runtime/
 npm/workbench/LICENSE
 npm/workbench/*.tgz
+
+# Generated, separately bundled documentation site.
+src/release_workbench/documentation/

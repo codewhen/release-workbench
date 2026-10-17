@@ -1,0 +1,136 @@
+version: 3
+name: 'Card: Parallel'
+concurrency: 4
+inputs: {}
+globals: {}
+functions: {}
+graphs:
+  main:
+    cards:
+      - id: start
+        kind: start
+        name: Start
+        config: {}
+      - id: parallel
+        kind: parallel
+        name: Parallel
+        config:
+          branches:
+            - first
+            - second
+      - id: join
+        kind: join
+        name: Join
+        config:
+          parallel: parallel
+      - id: finish
+        kind: finish
+        name: Finish
+        config: {}
+      - id: first
+        kind: python
+        name: First
+        config:
+          code: return "first completed"
+          returns: string
+        owner:
+          card: parallel
+          region: first
+      - id: first-return
+        kind: return
+        name: First Return
+        config:
+          value:
+            $ref: card:first
+        owner:
+          card: parallel
+          region: first
+      - id: second
+        kind: python
+        name: Second
+        config:
+          code: return "second completed"
+          returns: string
+        owner:
+          card: parallel
+          region: second
+      - id: second-return
+        kind: return
+        name: Second Return
+        config:
+          value:
+            $ref: card:second
+        owner:
+          card: parallel
+          region: second
+    edges:
+      - id: start:next:parallel:entry
+        source: start
+        target: parallel
+        source_port: next
+        target_port: entry
+        kind: flow
+      - id: parallel:done:join:entry
+        source: parallel
+        target: join
+        source_port: done
+        target_port: entry
+        kind: flow
+      - id: join:next:finish:entry
+        source: join
+        target: finish
+        source_port: next
+        target_port: entry
+        kind: flow
+      - id: parallel:first:first:entry
+        source: parallel
+        target: first
+        source_port: first
+        target_port: entry
+        kind: flow
+      - id: first:next:first-return:entry
+        source: first
+        target: first-return
+        source_port: next
+        target_port: entry
+        kind: flow
+      - id: parallel:second:second:entry
+        source: parallel
+        target: second
+        source_port: second
+        target_port: entry
+        kind: flow
+      - id: second:next:second-return:entry
+        source: second
+        target: second-return
+        source_port: next
+        target_port: entry
+        kind: flow
+layout:
+  main:
+    positions:
+      start:
+        x: 0
+        y: 0
+      parallel:
+        x: 340
+        y: 0
+      join:
+        x: 680
+        y: 0
+      finish:
+        x: 1020
+        y: 0
+      first:
+        x: 340
+        y: 380
+      first-return:
+        x: 680
+        y: 380
+      second:
+        x: 340
+        y: 760
+      second-return:
+        x: 680
+        y: 760
+    areas: []

@@ -16,3 +16,17 @@ recursive-include frontend/e2e *.ts *.py
 recursive-include tests *.py
 
 include src/release_workbench/THIRD_PARTY_NOTICES.txt
+
+recursive-include docs *.png *.yaml *.py
+recursive-include docs-site *.json *.mjs *.py *.mts *.ts *.css *.md
+prune docs-site/node_modules
+prune docs-site/.vitepress/cache
+prune docs-site/.vitepress/dist
+recursive-include src/release_workbench/documentation *
+
+include src/release_workbench/THIRD_PARTY_DOCUMENTATION_NOTICES.txt
+
+global-exclude *.py[cod]
+
+recursive-include npm/workbench *.json *.md *.cjs
+prune npm/workbench/runtime

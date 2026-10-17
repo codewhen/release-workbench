@@ -1,0 +1,17 @@
+{
+  "name": "workbench-documentation",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "dev": "vitepress dev . --host 127.0.0.1",
+    "build": "node scripts/notices.mjs && vitepress build . --base /docs/ && node scripts/bundle.mjs",
+    "build:pages": "vitepress build . --base /release-workbench/ && node scripts/bundle.mjs --pages-only",
+    "preview": "vitepress preview . --host 127.0.0.1",
+    "check": "python scripts/check_docs.py",
+    "examples": "python scripts/check_examples.py",
+    "screenshots": "node scripts/screenshots.mjs",
+    "test:browser": "node scripts/test-browser.mjs"
+  },
+  "devDependencies": { "vitepress": "1.6.4" }
+}

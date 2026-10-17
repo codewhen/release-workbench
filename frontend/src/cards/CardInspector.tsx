@@ -43,6 +43,13 @@ export function CardInspector({
   return (
     <>
       <h2>{card.name}</h2>
+      <a
+        href={`/docs/user/cards/${card.kind}.html`}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        Read this card’s guide
+      </a>
       <label>
         Card name
         <input

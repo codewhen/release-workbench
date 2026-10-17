@@ -1,0 +1,90 @@
+version: 3
+name: HTTP and file processing
+concurrency: 4
+inputs:
+  url:
+    type: string
+    default: http://127.0.0.1:8765/health
+globals: {}
+functions: {}
+graphs:
+  main:
+    cards:
+      - id: start
+        kind: start
+        name: Start
+        config: {}
+      - id: request
+        kind: http
+        name: Request
+        config:
+          url:
+            $ref: input:url
+          method: GET
+      - id: save
+        kind: write_file
+        name: Save
+        config:
+          path: output/health.json
+          format: json
+          value:
+            $ref: card:request
+            path: json
+          overwrite: true
+      - id: read
+        kind: read_file
+        name: Read
+        config:
+          path: output/health.json
+          format: json
+      - id: finish
+        kind: finish
+        name: Finish
+        config:
+          returns: json
+          value:
+            $ref: card:read
+    edges:
+      - id: start:next:request:entry
+        source: start
+        target: request
+        source_port: next
+        target_port: entry
+        kind: flow
+      - id: request:next:save:entry
+        source: request
+        target: save
+        source_port: next
+        target_port: entry
+        kind: flow
+      - id: save:next:read:entry
+        source: save
+        target: read
+        source_port: next
+        target_port: entry
+        kind: flow
+      - id: read:next:finish:entry
+        source: read
+        target: finish
+        source_port: next
+        target_port: entry
+        kind: flow
+layout:
+  main:
+    positions:
+      start:
+        x: 0
+        y: 0
+      request:
+        x: 340
+        y: 0
+      save:
+        x: 680
+        y: 0
+      read:
+        x: 1020
+        y: 0
+      finish:
+        x: 1360
+        y: 0
+    areas: []

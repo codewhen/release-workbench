@@ -20,4 +20,7 @@ jobs:
       - run: npm --prefix frontend run build
       - run: npx --prefix frontend playwright install chromium
       - run: npm --prefix frontend run test:browser
+      - run: npm --prefix docs-site ci
+      - run: npm --prefix docs-site run check
+      - run: npm --prefix docs-site run build
       - run: python -m build

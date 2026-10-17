@@ -1,0 +1,65 @@
+version: 3
+name: 'Card: Continue'
+concurrency: 4
+inputs: {}
+globals: {}
+functions: {}
+graphs:
+  main:
+    cards:
+      - id: start
+        kind: start
+        name: Start
+        config: {}
+      - id: loop
+        kind: loop
+        name: Loop
+        config:
+          mode: count
+          count: 3
+      - id: operation
+        kind: continue
+        name: Operation
+        config: {}
+        owner:
+          card: loop
+          region: body
+      - id: finish
+        kind: finish
+        name: Finish
+        config: {}
+    edges:
+      - id: start:next:loop:entry
+        source: start
+        target: loop
+        source_port: next
+        target_port: entry
+        kind: flow
+      - id: loop:body:operation:entry
+        source: loop
+        target: operation
+        source_port: body
+        target_port: entry
+        kind: flow
+      - id: loop:done:finish:entry
+        source: loop
+        target: finish
+        source_port: done
+        target_port: entry
+        kind: flow
+layout:
+  main:
+    positions:
+      start:
+        x: 0
+        y: 0
+      loop:
+        x: 340
+        y: 0
+      finish:
+        x: 680
+        y: 0
+      operation:
+        x: 340
+        y: 380
+    areas: []
