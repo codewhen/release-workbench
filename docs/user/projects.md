@@ -27,7 +27,17 @@ To edit an existing file in place, register its absolute path with **Add project
 
 Use **New folder** to add a library organization label. Right-click a folder to rename/remove it, or an entry to move it to a library folder. Removing an organization folder unfiles its entries; it does not delete their YAML or project directory. Project filtering uses actual registered directories, independently of Home folders.
 
-Search finds workflow names and paths. **Refresh** rescans known projects and reloads entries. Invalid or missing files remain visible with an explanatory error instead of appearing runnable. Correct the file/path before opening it again.
+Search finds workflow names and paths. **Refresh** reloads registered entries. Register a project again to discover newly added YAML files. Invalid or missing files remain visible with an explanatory error instead of appearing runnable. Correct the file/path before opening it again.
+
+## Remove workflows or projects from Home
+
+Choose **Remove from Home** on a workflow row, or right-click the row and choose the same action. Review the confirmation, then choose **Remove from Home** again. **Cancel** keeps the entry.
+
+To remove an entire project, select it in the **Project** filter, then choose **Remove project from Home**. Confirmation removes its workflow entries, including registered files within nested folders.
+
+These actions only remove library entries. YAML files, project directories, saved drafts and historical run reports remain on disk. Removed entries stay hidden after refresh or restart, including Starter entries. To restore them, use **Add project or file** with the original path; adding a project again discovers its top-level YAML files. Stop active runs before removing their workflow or project.
+
+Workbench does not delete files or directories from disk through these controls. Use your file manager if you also want to delete physical files.
 
 ## Starter versus personal workflows
 

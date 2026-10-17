@@ -16,4 +16,4 @@ Instructions use the actual browser labels. Screenshots come from disposable pro
 
 Every card page links a complete YAML workflow. Download it into a separate project directory and follow its prerequisites before running. Examples that write files use an `output/` folder within that disposable project. Review commands before running them: Workbench executes trusted local automation with your user permissions.
 
-The site works locally under **Documentation** in the application, including search without an internet connection. Markdown is also readable in the repository. A GitHub Pages build is prepared separately; a prepared deployment workflow does not mean the website has been published.
+The site works locally under **Documentation** in the application, including search without an internet connection. Markdown is also readable in the repository. The same Markdown also builds as a searchable site for GitHub Pages.
