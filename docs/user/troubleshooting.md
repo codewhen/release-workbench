@@ -27,6 +27,7 @@ Start with the card name, graph and execution path in the error. Save a draft, c
 | Old error list persists after repairs | Last explicit check described old draft | Edit clears stale issues; run Validate again |
 | Invalid local request token/origin | Stale/incorrect local session or origin | Use the printed localhost URL; preserve session file, save/recover drafts before reload |
 | Native folder picker unavailable | Headless host/missing Linux picker | Paste absolute path instead |
+| npm install reports ETARGET | Requested registry version/tag is unavailable | Check npm view @codewhen/workbench dist-tags versions --json; a local build is not a publication |
 | npm launcher needs Python | npm wrapper still uses Python engine | Install Python 3.11+ or set WORKBENCH_PYTHON |
 | Runtime setup already running | Concurrent bootstrap or interrupted lock | Wait; only remove the named lock after confirming setup stopped |
 | Same-name workflows on Home | Different project paths/Starter copy | Filter by project/folder and inspect full path |

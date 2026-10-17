@@ -24,13 +24,31 @@ Or execute the local archive without a global install:
 npx --package ./codewhen-workbench-0.18.0-preview.5.tgz workbench serve
 ```
 
-After publication under the configured scope, these will be available:
+## Install from the public registry
+
+After a maintainer publishes the package with the preview tag:
 
 ```bash
-npx @codewhen/workbench
-npm install -g @codewhen/workbench
+npm install -g @codewhen/workbench@preview
+workbench
 workbench create
 ```
+
+Or run without a global install:
+
+```bash
+npx @codewhen/workbench@preview
+npx @codewhen/workbench@preview serve
+npx @codewhen/workbench@preview create
+```
+
+These commands require a published version and preview tag. ETARGET means the requested version/tag cannot be resolved. Check availability with:
+
+```bash
+npm view @codewhen/workbench dist-tags versions --json
+```
+
+See the [full installation guide](https://github.com/codewhen/release-workbench/blob/codex/typed-flowcharts-preview/docs/user/installation.md) for exact versions, updates, removal and first-launch requirements.
 
 First launch verifies the bundled wheel SHA-256, creates an isolated venv under
 `~/.cache/codewhen-workbench/<wheel checksum>/`, and installs that wheel and its
