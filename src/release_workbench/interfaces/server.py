@@ -77,6 +77,13 @@ class WorkbenchApplication:
                     self.library.register_project(path)
                     return self.library.listing()
                 return self.library.register(path)
+            if route == "remove":
+                project = data.get("project", "")
+                keys = self.library.removal_keys(key=key, project=project)
+                if any(self.runs[item].busy for item in keys if item in self.runs):
+                    raise ValueError("Stop active runs before removing this workflow or project.")
+                self.library.remove(key=key, project=project)
+                return self.library.listing()
             if route == "create":
                 return self.library.create(
                     Path(data.get("project", self.project)),

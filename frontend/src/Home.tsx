@@ -40,6 +40,11 @@ export function Home({
       filename: string;
       yaml: string;
     } | null>(null),
+    [removal, setRemoval] = useState<{
+      id?: string;
+      project?: string;
+      name: string;
+    } | null>(null),
     [working, setWorking] = useState(false),
     [pickingFolder, setPickingFolder] = useState(false);
   const input = useRef<HTMLInputElement>(null);
@@ -318,6 +323,11 @@ export function Home({
                 ]}
               />
             </label>
+            {project !== "*" && (
+              <button onClick={() => setRemoval({ project, name: project })}>
+                Remove project from Home
+              </button>
+            )}
             <button onClick={() => void load()}>Refresh</button>
           </div>
           {!entries.length && (
@@ -338,16 +348,74 @@ export function Home({
                 <p className="path">{entry.path}</p>
                 <small>{entry.error ?? (entry.folder || "Unfiled")}</small>
               </div>
-              <button
-                disabled={!entry.supported}
-                onClick={() => onOpen(entry.id)}
-              >
-                Open workflow
-              </button>
+              <div className="actions">
+                <button
+                  onClick={() => setRemoval({ id: entry.id, name: entry.name })}
+                >
+                  Remove from Home
+                </button>
+                <button
+                  disabled={!entry.supported}
+                  onClick={() => onOpen(entry.id)}
+                >
+                  Open workflow
+                </button>
+              </div>
             </article>
           ))}
         </section>
       </div>
+      {removal && (
+        <Dialog
+          title={
+            removal.project
+              ? "Remove project from Home?"
+              : "Remove workflow from Home?"
+          }
+          onClose={() => {
+            if (!working) setRemoval(null);
+          }}
+        >
+          <p className="path">{removal.name}</p>
+          <p>
+            {removal.project
+              ? "This removes the project and its workflow entries from Home."
+              : "This removes the workflow entry from Home."}{" "}
+            Files on disk, saved drafts and previous run reports are kept. You
+            can add them again using Add project or file.
+          </p>
+          {error && (
+            <p role="alert" className="error">
+              {error}
+            </p>
+          )}
+          <div className="actions">
+            <button disabled={working} onClick={() => setRemoval(null)}>
+              Cancel
+            </button>
+            <button
+              disabled={working}
+              onClick={() =>
+                void act(async () => {
+                  const value = await api<Library>(
+                    "remove",
+                    { project: removal.project },
+                    removal.id,
+                  );
+                  setLibrary(value);
+                  if (removal.project) {
+                    setProject("*");
+                    setNewProject(value.projects[0] || "");
+                  }
+                  setRemoval(null);
+                })
+              }
+            >
+              {working ? "Removing…" : "Remove from Home"}
+            </button>
+          </div>
+        </Dialog>
+      )}
       {importFile && (
         <Dialog title="Open YAML workflow" onClose={() => setImportFile(null)}>
           {error && (
@@ -409,10 +477,23 @@ export function Home({
                     description: "Keep its workflows in Unfiled",
                   },
                 ]
-              : [{ id: "move", label: "Move to folder" }]
+              : [
+                  { id: "move", label: "Move to folder" },
+                  {
+                    id: "remove_entry",
+                    label: "Remove from Home",
+                    description: "Keep the YAML file and reports on disk",
+                  },
+                ]
           }
           onClose={() => setMenu(null)}
           onChoose={(action) => {
+            if (action === "remove_entry") {
+              const entry = library.entries.find((item) => item.id === menu.id);
+              if (entry) setRemoval({ id: entry.id, name: entry.name });
+              setMenu(null);
+              return;
+            }
             setOrganize({ action, id: menu.id, old: menu.id });
             setFolderName(action === "rename_folder" ? (menu.id ?? "") : "");
             setMenu(null);

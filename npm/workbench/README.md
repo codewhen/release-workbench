@@ -1,64 +1,115 @@
-# Workbench npm launcher
+# Workflow Workbench
 
-Optional npm/npx entry point for the MIT-licensed Python Workbench engine.
-**This package is prepared locally; it has not been published to npm.**
-Python 3.11+ and Node 18+ are required. Windows acceptance remains unverified.
+A free, MIT-licensed visual automation workbench. Build workflows in your browser, save them as YAML, and inspect live logs, typed results and run reports. Everything runs locally; no hosted service or subscription is required.
 
-## Local package
+## Requirements
 
-From the repository root, after building the bundled frontend:
+- **Node.js 18+** and npm (which includes npx).
+- **Python 3.11+**, available on PATH. Python runs the bundled workflow engine.
+- Internet access for the first installation and Python dependency setup.
+- Bash installed separately if your workflow uses Bash cards.
 
-```bash
-python -m build --wheel
-npm --prefix npm/workbench test
-cd npm/workbench
-npm pack
-npm install -g ./codewhen-workbench-0.18.0-preview.5.tgz
-workbench
-workbench create
-```
+Native Windows acceptance remains unverified.
 
-Or execute the local archive without a global install:
-
-```bash
-npx --package ./codewhen-workbench-0.18.0-preview.5.tgz workbench serve
-```
-
-## Install from the public registry
-
-After a maintainer publishes the package with the preview tag:
+## Install globally with npm
 
 ```bash
 npm install -g @codewhen/workbench@preview
+workbench --version
 workbench
+```
+
+Run `workbench` from your project directory. It opens the local dashboard and registers that folder. The package is named `@codewhen/workbench`; the command is `workbench`.
+
+Create your first workflow in the current directory:
+
+```bash
+mkdir workflow-demo
+cd workflow-demo
 workbench create
 ```
 
-Or run without a global install:
+The wizard asks for a project name and YAML filename, creates a blank Start → Finish flowchart and opens it in the dashboard. Existing files are never overwritten.
+
+## Run with npx
+
+Use npx without installing a global command:
 
 ```bash
 npx @codewhen/workbench@preview
-npx @codewhen/workbench@preview serve
-npx @codewhen/workbench@preview create
 ```
 
-These commands require a published version and preview tag. ETARGET means the requested version/tag cannot be resolved. Check availability with:
+Pass commands and options after the package name:
+
+```bash
+npx @codewhen/workbench@preview serve
+npx @codewhen/workbench@preview create
+npx @codewhen/workbench@preview --version
+```
+
+The first invocation may ask permission to download the package. No subcommand, `serve`, and `run` all open the dashboard. They do not execute workflow cards automatically.
+
+To execute a saved workflow directly in the terminal:
+
+```bash
+npx @codewhen/workbench@preview run --non-interactive --config checks.yaml
+```
+
+## Common commands
+
+```bash
+workbench                          # Open or reuse the local dashboard
+workbench serve --port 3105         # Choose a dashboard port
+workbench run                       # Open the dashboard
+workbench create                    # Create a workflow in this directory
+workbench validate --config checks.yaml
+workbench run --non-interactive --config checks.yaml
+```
+
+The default dashboard port is 3104. Follow the URL printed in your terminal. Use Ctrl+C in the serving terminal to stop the server and cancel active work. Manual decisions require the browser.
+
+## Versions, updates and removal
+
+`@preview` selects the preview release channel. An untagged package name selects `latest`. To pin a version:
+
+```bash
+npm install -g @codewhen/workbench@0.18.0-preview.6
+npx @codewhen/workbench@0.18.0-preview.6 serve
+```
+
+Update to the current preview release or uninstall the global command:
+
+```bash
+npm install -g @codewhen/workbench@preview
+npm uninstall -g @codewhen/workbench
+```
+
+Uninstalling the npm command leaves your project files and Workbench library/run storage in place.
+
+## First-launch setup
+
+The launcher verifies its bundled wheel SHA-256, creates an isolated Python environment under `~/.cache/codewhen-workbench/<wheel checksum>/`, and installs the engine and its Python dependencies. Later launches reuse that environment. Global Python packages are not changed, and there is no npm install/postinstall script.
+
+Set `WORKBENCH_PYTHON` to a Python executable's full path if you need to choose a specific interpreter. Updating the bundled engine creates a separate runtime cache. Do not delete a runtime while its dashboard is running.
+
+Workflow commands run with your local user's permissions. Only run configurations you trust. The bundled manual and search are available offline at **Documentation** in the dashboard after setup.
+
+## Troubleshooting installation
+
+- **ETARGET:** check available versions and tags, then select the intended release.
+- **E404:** confirm the package name and npm registry with `npm config get registry`.
+- **Python not found:** install Python 3.11+ or set `WORKBENCH_PYTHON`.
+- **workbench: command not found:** check `npm prefix -g` and add npm's global executable directory to PATH, reopen your terminal, or use npx.
 
 ```bash
 npm view @codewhen/workbench dist-tags versions --json
 ```
 
-See the [full installation guide](https://github.com/codewhen/release-workbench/blob/codex/typed-flowcharts-preview/docs/user/installation.md) for exact versions, updates, removal and first-launch requirements.
+## Documentation and source
 
-First launch verifies the bundled wheel SHA-256, creates an isolated venv under
-`~/.cache/codewhen-workbench/<wheel checksum>/`, and installs that wheel and its
-Python dependencies using pip. Dependencies need network access on first setup;
-subsequent launches reuse the venv. No global Python installation is changed.
-The launcher has no install/postinstall script. `WORKBENCH_PYTHON` can point to a
-specific Python executable. npm update installs a new bundled wheel with a new
-cache identity. Do not delete a runtime while it is serving a dashboard.
+- [Installation and first project](https://github.com/codewhen/release-workbench/blob/main/docs/user/installation.md)
+- [Complete user manual](https://github.com/codewhen/release-workbench/blob/main/docs/index.md)
+- [Packaging and contributor instructions](https://github.com/codewhen/release-workbench/blob/main/docs/developer/packaging.md)
+- [Source code and issues](https://github.com/codewhen/release-workbench)
 
-The checksum detects accidental payload changes; package/release provenance must
-still be trusted. Runtime caches are separate from projects and reports. All
-arguments go directly to the Python CLI without a shell. Commands run with the
-current user's permissions. Publishing remains a separate authorized action.
+You can also open **Documentation** from Home or the editor without leaving your workflow.
