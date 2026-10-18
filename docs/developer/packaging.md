@@ -20,7 +20,7 @@ npm pack
 
 Screenshots are committed source assets; regenerate them when the UI/example changes, inspect them and run docs checks before packing. The Python package includes schema, app static assets, licenses and documentation HTML/search/assets/downloads. The source archive also includes Markdown, screenshots, fixtures and docs build tooling.
 
-The npm prepack step bundles the exact built wheel and records its SHA-256. Keep Python version metadata, wheel filename and npm preview version aligned. It has no install/postinstall hook; first launch bootstraps an isolated Python environment and forwards CLI arguments without a shell. Scope publication is not performed by packing.
+The npm prepack step bundles the exact built wheel and records its SHA-256. Keep Python version metadata, wheel filename and npm version aligned. It has no install/postinstall hook; first launch bootstraps an isolated Python environment and forwards CLI arguments without a shell. Scope publication is not performed by packing.
 
 ## Clean installation acceptance
 

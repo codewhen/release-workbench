@@ -105,7 +105,7 @@ class Library:
     def file(self, key: str) -> Path:
         entry = next((item for item in self.data["entries"] if item["id"] == key), None)
         if not entry:
-            raise ValueError("Workflow is not registered in this preview library.")
+            raise ValueError("Workflow is not registered in this library.")
         return Path(entry["path"])
 
     def listing(self) -> dict[str, Any]:
@@ -122,7 +122,7 @@ class Library:
                         "supported": supported,
                         "error": None
                         if supported
-                        else "Unsupported version; this preview requires schema v3.",
+                        else "Unsupported version; Workbench requires schema v3.",
                     }
                 )
             except Exception as error:

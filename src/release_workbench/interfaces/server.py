@@ -539,8 +539,10 @@ def serve(
             webbrowser.open(url)
         return
     server, app = create_server(project, storage, port)
-    print(f"Workflow Workbench v3 preview: http://127.0.0.1:{port}/", flush=True)
-    print(f"Isolated preview storage: {storage}", flush=True)
+    from release_workbench import __version__
+
+    print(f"Workflow Workbench {__version__}: http://127.0.0.1:{port}/", flush=True)
+    print(f"Storage: {storage}", flush=True)
     if open_browser:
         webbrowser.open(f"http://127.0.0.1:{server.server_port}/" + page)
     try:
