@@ -1,10 +1,10 @@
-# Workflow Workbench — typed flowchart preview
+# Workflow Workbench
 
 A free, MIT-licensed local automation workbench. Build flowcharts in the browser, keep them in YAML, execute them with Python, and inspect live output and saved HTML/JSON evidence.
 
-**0.18.0a6 is an intentionally breaking preview. It accepts schema v3 only.** Install it in a separate environment. Do not point it at an older installation's library or run storage. There is no automatic migration and existing files are never converted. The previous stable release remains available separately.
+**Stable release 0.18.0 uses workflow schema v3.** Earlier workflow schemas are not converted automatically. Keep their files and historical evidence separate.
 
-## Run the preview
+## Install and run
 
 Install with npm (Node.js 18+ and Python 3.11+ required):
 
@@ -22,12 +22,12 @@ npx @codewhen/workbench create
 For a Python-only installation, download a wheel and its checksum from [GitHub Releases](https://github.com/codewhen/release-workbench/releases). Node is not required for this method. With the chosen wheel copied into your current directory and its SHA-256 verified:
 
 ```bash
-python3 -m venv .venv-workbench-preview
-.venv-workbench-preview/bin/python -m pip install ./release_workbench-0.18.0a6-py3-none-any.whl
-.venv-workbench-preview/bin/workbench create --port 3105
+python3 -m venv .venv-workbench
+.venv-workbench/bin/python -m pip install ./release_workbench-0.18.0-py3-none-any.whl
+.venv-workbench/bin/workbench create --port 3105
 ```
 
-On Windows use `.venv-workbench-preview\Scripts\python.exe` and `.venv-workbench-preview\Scripts\workbench.exe`. Native Windows acceptance is **unverified**. Bash cards additionally require Bash on any platform.
+On Windows use `.venv-workbench\Scripts\python.exe` and `.venv-workbench\Scripts\workbench.exe`. Native Windows acceptance is **unverified**. Bash cards additionally require Bash on any platform.
 
 Open `http://127.0.0.1:3105/`. Add projects or existing v3 YAML files to Home. Opening a workflow shows Run view; commands execute only after Run all. Change to Edit to configure cards. Saving configuration does not run commands.
 
@@ -77,7 +77,7 @@ workbench create --name "My project" --config my-workflow.yaml
 
 `create` asks for a project name and YAML filename, writes a Start → Finish
 workflow in the current directory, and opens that workflow. Existing files are
-never overwritten. The default shared preview library is
+never overwritten. The default shared library is
 `~/.workbench-preview-v3`, so projects opened from different terminal folders
 appear together. Use `--storage PATH` to keep a separate library. `--port 3105`
 and `--no-open` are available for dashboard commands. If a matching dashboard is
@@ -122,7 +122,7 @@ updates, removal and troubleshooting.
 For a Python-only tool installation from a downloaded wheel:
 
 ```bash
-uv tool install ./release_workbench-0.18.0a6-py3-none-any.whl
+uv tool install ./release_workbench-0.18.0-py3-none-any.whl
 workbench
 ```
 

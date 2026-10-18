@@ -30,4 +30,4 @@ For a variable check: declare count, then inside the condition wire Start → Va
 
 Recursion is unsupported, including indirect recursion. A function cannot Break/Continue a loop owned by its caller. Put repetition in main-canvas loop wiring or inside the function's own legal loop. Returned data must be JSON-compatible and match the function declaration.
 
-To run another project's complete workflow, use [External workspace](../cards/workspace.md): it starts its own globals and uses its own YAML directory. Functions instead remain within the same run/workspace and share run globals.
+To run another project's complete workflow, use [External workspace](../cards/workspace.md): it starts its own globals and resolves its optional `workspace` from its YAML directory (default `.`). Functions instead remain within the same run/workspace and share run globals.

@@ -41,7 +41,14 @@ class Frame:
 
     def reference(self, reference: str, path: str = "") -> Any:
         if reference.startswith("card:"):
-            value = self.results[reference[5:]]
+            card_id = reference[5:]
+            if card_id not in self.results:
+                name = self.graph.cards[card_id].name if card_id in self.graph.cards else card_id
+                raise ContractError(
+                    f'No result is available from "{name}" in this execution. '
+                    "Run from here does not execute earlier cards. Start from the producing card or supply explicit inputs; compatible earlier results can be reused from a previous run."
+                )
+            value = self.results[card_id]
             if value.type == ValueType.VOID:
                 raise ContractError("Void has no value to bind.")
             result = value.value
@@ -49,6 +56,10 @@ class Frame:
             result = self.inputs[reference[6:]]
         elif reference.startswith("env:"):
             result = self.run.environment[reference[4:]]
+        elif reference == "runtime:python":
+            import sys
+
+            result = sys.executable
         elif reference == "loop":
             result = self.loop
         elif reference == "error":
@@ -210,10 +221,37 @@ class Frame:
             reverse=True,
         )
         self.run.children.append((self.path, child))
+        entry = self.run.evidence.state["executions"][self.path]
+        entry["child_source"] = str(file)
+        entry["child_report"] = str(
+            (child.evidence.directory / "report.html").relative_to(self.run.evidence.directory)
+        )
+
+        def forward_log(path: str, text: str) -> None:
+            self.run.evidence.log(self.path, f"[{workflow.name} · {path}] " + text)
+
+        def forward_event(event: dict[str, Any]) -> None:
+            path = self.path + "/child/" + event["execution"]
+            payload = {
+                key: value
+                for key, value in event.items()
+                if key not in ("kind", "execution", "time")
+            }
+            self.run.evidence.emit("child_" + event["kind"], path, **payload)
+            if event["kind"].endswith("progress"):
+                entry["child_progress"] = payload
+
+        unsubscribe = child.evidence.observe(forward_log, forward_event)
         task = asyncio.create_task(child.execute())
         try:
             while not task.done():
                 self.check()
+                entry["child_status"] = child.evidence.state["status"]
+                entry["child_active"] = [
+                    value["name"]
+                    for value in child.evidence.state["executions"].values()
+                    if value["status"] in ("running", "queued", "manual")
+                ]
                 self.run.evidence.state["executions"][self.path]["child_run"] = str(
                     child.evidence.directory
                 )
@@ -230,15 +268,25 @@ class Frame:
                         self.run.evidence.state["manual"].pop(key, None)
                 await self.run.clock.sleep(0.03)
             code = await task
+            entry["child_status"] = child.evidence.state["status"]
+            entry["child_active"] = []
+            if code == 130:
+                raise asyncio.CancelledError("Child workflow was cancelled.")
             if code == 2:
                 raise EvidenceRequired("Child workflow requires evidence.")
             if code:
-                raise ExecutionFailure("Child workflow did not pass.")
+                raise ExecutionFailure(
+                    "Child “"
+                    + workflow.name
+                    + "” did not pass: "
+                    + child.evidence.state.get("error", "inspect child report")
+                )
             return Outcome(TypedValue.from_dict(child.evidence.state["result"]))
         finally:
             if not task.done():
                 child.stop()
                 await asyncio.gather(task, return_exceptions=True)
+            unsubscribe()
             for key in list(self.run.evidence.state["manual"]):
                 if key.startswith(self.path + "/child/"):
                     self.run.evidence.state["manual"].pop(key, None)

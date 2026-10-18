@@ -8,7 +8,7 @@ Work in **Edit** view in a saved project folder. Start with the downloadable exa
 
 ## Behavior and ports
 
-Choose **Language** `python` or `bash`, set **Script path**, and optionally enter **Arguments** as an array of strings. The resolved script path must remain inside the workflow directory. Bash requires an installed Bash executable. Python scripts use the Workbench Python interpreter.
+Choose **Language** `python` or `bash`, set **Script path**, and optionally enter **Arguments** as an array of strings. The resolved script path must remain inside the resolved workspace. Bash requires an installed Bash executable. Python scripts use the Workbench Python interpreter.
 
 This is a normal script file: print its output and exit normally; a bare top-level `return` is invalid Python. The result/capture contract is the same as Program/Bash: exit_code, stdout, stderr, plus `json` in JSON mode. Named inputs arrive on stdin as `{"inputs":{...}}`; command-line Arguments arrive separately.
 
@@ -20,7 +20,7 @@ This is a normal script file: print its output and exit normally; a bare top-lev
 |---|---|---|---|
 | Language | `language` | `"python"` | Options: `python`, `bash` |
 | Script path | `path` | `""` | Required |
-| Arguments | `arguments` | `[]` | Advanced; Array items must be strings |
+| Arguments | `arguments` | `[]` | Advanced; Items are strings or references resolving to strings |
 | Capture | `capture` | `"text"` | Advanced; Options: `text`, `json` |
 
 This operation supports resource locks, interactive/exclusive scheduling and a configured timeout. Retry is supported but off by default. Use it only when repeating the operation is safe. See [common execution settings](../settings.md) for field-by-field configuration, cancellation and evidence.
@@ -56,6 +56,8 @@ config:
 ```
 
 Bindings such as `$ref` in this YAML are represented by named value choices in the browser. They supply values and never start execution. Save your own edits, validate, and compare **Run** evidence with the behavior described above.
+
+Large output uses the same [streaming logs and bounded result contract](../settings.md#large-command-logs) as Program, including per-stream truncation flags. JSON capture requires intact stdout.
 
 ## Common mistakes and recovery
 

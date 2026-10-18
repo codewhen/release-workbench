@@ -41,6 +41,8 @@ class ProgramHandler(OperationHandler):
             card.settings.get("timeout", 3600),
         )
         if card.config.get("capture") == "json":
+            if result.get("stdout_truncated", result.get("truncated", False)):
+                raise ContractError("JSON capture was truncated; write large results to a file.")
             try:
                 result["json"] = json.loads(result["stdout"])
             except ValueError as error:

@@ -45,3 +45,5 @@ jobs:
           python docs-site/scripts/check_installed.py --python "$RUNNER_TEMP/workbench-docs-wheel/bin/python"
       - run: npm --prefix npm/workbench test
       - run: cd npm/workbench && npm pack
+      - name: Verify generic distribution boundaries
+        run: python tools/verify_distribution.py dist/*.whl dist/*.tar.gz npm/workbench/*.tgz

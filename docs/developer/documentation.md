@@ -32,7 +32,7 @@ The scripts use `python` from PATH; activate `.venv` or set WORKBENCH_PYTHON for
 
 ## Coverage contract
 
-`coverage.json` maps registered cards, modes, fields, common execution settings (including retry subfields), workflow fields and visible feature groups to pages. Reviewed UI source hashes force a documentation/screenshot review when those interface modules change; update hashes only after that review. A card/mode/field missing from that manifest fails check. Pages must include their referenced examples/screenshots and the documented sections. The checker resolves local links and heading anchors; VitePress also checks Markdown targets.
+`coverage.json` maps registered cards, modes, fields, common execution settings (including retry subfields), workflow fields, discovery subfields and visible feature groups to pages. The downloadable discovery example is also exercised against the real discovery service, checking typed candidates and explicit selection for ambiguous profiles. Reviewed UI source hashes force a documentation/screenshot review when those interface modules change; update hashes only after that review. A card/mode/field missing from that manifest fails check. Pages must include their referenced examples/screenshots and the documented sections. The checker resolves local links and heading anchors; VitePress also checks Markdown targets.
 
 Editorial accuracy is still a review responsibility. Inventory coverage does not prove a paragraph teaches a concept correctly. Use exact UI labels and verify the described action in the app. Do not imply Windows execution from reviewed commands or synthetic screenshots.
 

@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from release_workbench.application.starters import starter
+from release_workbench.domain.library_folders import FolderOrganizer
 
 from .documents import (
     DocumentStore,
@@ -33,6 +34,11 @@ class Library:
 
     def save(self) -> None:
         atomic_write(self.path, json.dumps(self.data, indent=2))
+
+    def organize(self, action: str, key: str, request: dict[str, Any]) -> None:
+        updated = FolderOrganizer(self.data).apply(action, key, request)
+        atomic_write(self.path, json.dumps(updated, indent=2))
+        self.data = updated
 
     def register_project(self, project: Path, *, restore: bool = True) -> None:
         project = project.resolve()
@@ -99,7 +105,7 @@ class Library:
     def file(self, key: str) -> Path:
         entry = next((item for item in self.data["entries"] if item["id"] == key), None)
         if not entry:
-            raise ValueError("Workflow is not registered in this preview library.")
+            raise ValueError("Workflow is not registered in this library.")
         return Path(entry["path"])
 
     def listing(self) -> dict[str, Any]:
@@ -116,7 +122,7 @@ class Library:
                         "supported": supported,
                         "error": None
                         if supported
-                        else "Unsupported version; this preview requires schema v3.",
+                        else "Unsupported version; Workbench requires schema v3.",
                     }
                 )
             except Exception as error:

@@ -15,7 +15,7 @@ Start with the card name, graph and execution path in the error. Save a draft, c
 | Global variable missing | Get/Set/Update does not declare it | Add type and initial value in Workflow settings |
 | Parallel reports global conflict | Branches read/write overlapping state | Sequence work or return isolated values through Join |
 | Returned value unavailable | Producer did not execute on every path | Move it earlier, pass function arguments, or use Join outputs |
-| File not found in poll/read | Wrong project folder or missing companion | Use YAML directory; download scripts/child files too |
+| File not found in poll/read | Wrong project folder or missing companion | Check the resolved `workspace`; download scripts/child files too |
 | Write fails on second run | Overwrite existing defaults false | Enable only for intended generated replacements |
 | Program cannot be found | Executable/PATH mismatch | Separate executable/arguments; select installed interpreter |
 | Program JSON capture fails | Stdout is not one JSON value | Use text capture, or emit only JSON and log to stderr |

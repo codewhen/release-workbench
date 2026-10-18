@@ -65,7 +65,7 @@ class LocalServices:
                         except (ValueError, OSError):
                             # Validation belongs to the selected child's execution, not an unselected branch.
                             continue
-                        collect(child, file.parent)
+                        collect(child, (file.parent / child.raw.get("workspace", ".")).resolve())
 
         collect(workflow, root)
         return digest(

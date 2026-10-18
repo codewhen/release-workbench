@@ -1,3 +1,4 @@
+import { WorkspaceLink } from "./WorkspaceLink";
 import { TerminalValue } from "./TerminalValue";
 import { Choice } from "../components/Choice";
 import { ValueInput } from "./ValueInput";
@@ -56,6 +57,54 @@ export function FieldEditor({
     );
   const value = card.config?.[field.key];
   const change = (v: unknown) => onChange(field.key, v);
+  if (card.kind === "workspace" && field.key === "path")
+    return (
+      <div>
+        <label>
+          {field.label}
+          <input
+            className="nodrag"
+            aria-label={field.label}
+            disabled={disabled}
+            value={typeof value === "string" ? value : JSON.stringify(value)}
+            onChange={(event) => change(event.target.value)}
+          />
+        </label>
+        <WorkspaceLink
+          workflow={workflow}
+          graphId={graphId}
+          cardId={card.id}
+          view="edit"
+        />
+      </div>
+    );
+  if (card.kind === "program" && field.key === "argv")
+    return (
+      <div>
+        <ValueInput
+          field={field}
+          card={card}
+          workflow={workflow}
+          graphId={graphId}
+          catalog={catalog}
+          disabled={disabled}
+          onChange={change}
+          onInvalid={onInvalid}
+        />
+        <button
+          className="nodrag"
+          disabled={disabled}
+          onClick={() =>
+            change([
+              { $ref: "runtime:python" },
+              ...(Array.isArray(value) ? value.slice(1) : []),
+            ])
+          }
+        >
+          Use Workbench Python
+        </button>
+      </div>
+    );
   if (field.widget === "function") {
     const options = Object.entries(workflow.functions ?? {})
       .filter(([, f]) => !field.returns || f.returns === field.returns)

@@ -9,7 +9,7 @@ import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
-from urllib.parse import parse_qs, unquote, urlsplit
+from urllib.parse import parse_qs, quote, unquote, urlsplit
 
 from release_workbench.application.compiler import CompilationError
 from release_workbench.application.runtime import Run
@@ -43,17 +43,59 @@ class WorkbenchApplication:
         self.folder_picker = FolderPicker()
         self.drafts = DraftStore(self.storage / "drafts")
         self.runs: dict[str, Run] = {}
+        self.run_roots: dict[str, Run] = {}
         self.lock = threading.RLock()
         self.sessions = LocalSessions(self.storage / "browser-sessions.json")
         self.token = self.sessions.token
 
-    def state(self, key: str) -> dict[str, Any]:
-        run = self.runs.get(key)
+    def selected_run(self, key: str, context: str = "") -> Run | None:
+        """Resolve an exact invocation, never alias children by their workflow ID."""
+        if not context:
+            return self.runs.get(key)
+        source = self.library.file(key).resolve()
+        pending = list(self.run_roots.values())
+        while pending:
+            run = pending.pop()
+            if run.evidence.state["run_id"] == context:
+                if not run.stack or run.stack[-1].resolve() != source:
+                    raise ValueError("This execution belongs to a different workflow.")
+                return run
+            pending.extend(child for _, child in run.children)
+        raise ValueError(
+            "This execution is no longer available in this server session. Open the workflow definition or its saved report."
+        )
+
+    def configuration(self, key: str, context: str = "") -> dict[str, Any]:
+        if context:
+            run = self.selected_run(key, context)
+            assert run is not None
+            raw = run.workflow.raw
+            return {
+                "workflow": raw,
+                "yaml": render_document(raw),
+                "revision": run.fingerprint,
+                "path": str(self.library.file(key)),
+                "inspection": context,
+                **document_readiness(raw),
+            }
+        record = DocumentStore(self.library.file(key)).read()
+        return {
+            **record,
+            **document_readiness(record["workflow"]),
+            "recovery": self.drafts.matching(key, record["revision"]),
+        }
+
+    def state(self, key: str, context: str = "") -> dict[str, Any]:
+        run = self.selected_run(key, context)
         return (
             {
                 **run.evidence.snapshot(),
                 "busy": run.busy,
+                "can_run_from_here": not run.busy
+                and not any(item.busy for item in self.runs.values()),
                 "paused": run.coordinator.paused,
+                "report_base": "/reports/"
+                + quote(str(run.evidence.directory.relative_to(self.storage / "runs")), safe="/"),
             }
             if run
             else {
@@ -66,7 +108,24 @@ class WorkbenchApplication:
             }
         )
 
-    def mutation(self, route: str, key: str, data: dict[str, Any]) -> dict[str, Any]:
+    def mutation(
+        self, route: str, key: str, data: dict[str, Any], context: str = ""
+    ) -> dict[str, Any]:
+        if (
+            context
+            and route not in {"open-workspace", "stop", "pause", "record"}
+            and not (route == "run" and data.get("selection"))
+        ):
+            raise ValueError(
+                "This page inspects an existing execution. Open its definition to edit or start a new run."
+            )
+        if route == "detect-inputs":
+            from release_workbench.infrastructure.discovery import discover
+
+            if any(run.busy for run in self.runs.values()):
+                raise ValueError("Input discovery is disabled during execution.")
+            file = self.library.file(key)
+            return discover(DocumentStore(file).read()["workflow"], file.parent, self.services)
         if route == "pick-folder":
             # Native dialogs must not block run controls or library requests.
             return {"path": self.folder_picker.choose()}
@@ -92,36 +151,7 @@ class WorkbenchApplication:
                     data.get("template", "blank"),
                 )
             if route == "organize":
-                action = data["action"]
-                if action == "new_folder":
-                    folder = data["name"].strip()
-                    if not folder or folder in self.library.data["folders"]:
-                        raise ValueError("Choose a unique folder name.")
-                    self.library.data["folders"].append(folder)
-                elif action == "rename_folder":
-                    old, new = data["old"], data["name"].strip()
-                    if not new or new in self.library.data["folders"]:
-                        raise ValueError("Choose a unique folder name.")
-                    self.library.data["folders"] = [
-                        new if item == old else item for item in self.library.data["folders"]
-                    ]
-                    for entry in self.library.data["entries"]:
-                        if entry["folder"] == old:
-                            entry["folder"] = new
-                elif action == "move":
-                    if data["folder"] and data["folder"] not in self.library.data["folders"]:
-                        raise ValueError("Folder does not exist.")
-                    for entry in self.library.data["entries"]:
-                        if entry["id"] == key:
-                            entry["folder"] = data["folder"]
-                elif action == "remove_folder":
-                    self.library.data["folders"] = [
-                        f for f in self.library.data["folders"] if f != data["name"]
-                    ]
-                    for entry in self.library.data["entries"]:
-                        if entry["folder"] == data["name"]:
-                            entry["folder"] = ""
-                self.library.save()
+                self.library.organize(data["action"], key, data)
                 return self.library.listing()
             if route == "import":
                 raw = parse_document(data["yaml"])
@@ -136,6 +166,42 @@ class WorkbenchApplication:
                 return entry
             file = self.library.file(key)
             store = DocumentStore(file)
+            if route == "open-workspace":
+                from .workspace_navigation import child_definition
+
+                raw = data.get("workflow") or store.read()["workflow"]
+                run = self.selected_run(key, context)
+                if context and run:
+                    raw = run.workflow.raw
+                execution_id = data.get("execution")
+                if not execution_id and data.get("view") == "run" and run:
+                    matching = [
+                        path
+                        for path, item in run.evidence.state["executions"].items()
+                        if item.get("card") == data["card"] and item.get("graph") == data["graph"]
+                    ]
+                    execution_id = matching[-1] if matching else None
+                execution = None
+                if execution_id:
+                    if not run or execution_id not in run.evidence.state["executions"]:
+                        raise ValueError("The selected child execution is no longer available.")
+                    execution = run.evidence.state["executions"][execution_id]
+                child = child_definition(file, raw, data["graph"], data["card"], execution)
+                entry = self.library.register(child)
+                view = "edit" if data.get("view") == "edit" else "run"
+                url = "/workflows/" + quote(entry["id"], safe="") + "/" + view
+                if view == "run" and run and execution_id:
+                    child_run = next(
+                        (
+                            child
+                            for path, child in reversed(getattr(run, "children", []))
+                            if path == execution_id
+                        ),
+                        None,
+                    )
+                    if child_run:
+                        url += "?run=" + quote(child_run.evidence.state["run_id"], safe="")
+                return {"id": entry["id"], "url": url}
             if route in ("validate", "save", "draft", "diagnostics"):
                 if any(run.busy for run in self.runs.values()):
                     raise ValueError("Editing is disabled during execution.")
@@ -190,10 +256,18 @@ class WorkbenchApplication:
                     raise ValueError(
                         "Another workflow is executing. Stop it or wait before starting another."
                     )
-                record = store.read()
+                record = self.configuration(key, context) if context else store.read()
                 if data.get("revision") != record["revision"]:
                     raise ValueError("Configuration changed. Save/reload before running.")
                 workflow = compile_document(record["workflow"])
+                selection = data.get("selection")
+                if selection is not None and (
+                    not isinstance(selection, dict)
+                    or not isinstance(selection.get("graph"), str)
+                    or not isinstance(selection.get("card"), str)
+                ):
+                    raise ValueError("Select a graph and executable card.")
+                previous = self.selected_run(key, context) if selection else None
                 run = Run(
                     workflow,
                     file.parent,
@@ -204,18 +278,36 @@ class WorkbenchApplication:
                     resume=data.get("resume"),
                     retry=data.get("retry", False),
                     stack=(file,),
+                    selection=(selection["graph"], selection["card"]) if selection else None,
                 )
+                if selection:
+                    from release_workbench.application.start_context import compatible
+                    from release_workbench.infrastructure.run_checkpoints import latest_checkpoint
+
+                    candidate = (
+                        previous.evidence.snapshot()
+                        if previous
+                        else latest_checkpoint(self.storage / "runs", run.base_fingerprint)
+                    )
+                    if candidate and compatible(candidate, run.base_fingerprint):
+                        run.checkpoint = candidate
                 self.runs[key] = run
+                self.run_roots[run.evidence.state["run_id"]] = run
                 run.start()
-            elif route == "stop":
-                self.runs[key].stop(data.get("execution"))
-            elif route == "pause":
-                self.runs[key].coordinator.paused = bool(data["paused"])
-            elif route == "record":
-                self.runs[key].record(data["execution"], data["note"], data.get("decision"))
+                return self.state(key)
+            elif route in {"stop", "pause", "record"}:
+                selected = self.selected_run(key, context)
+                if selected is None:
+                    raise ValueError("No execution is available.")
+                if route == "stop":
+                    selected.stop(data.get("execution"))
+                elif route == "pause":
+                    selected.coordinator.paused = bool(data["paused"])
+                else:
+                    selected.record(data["execution"], data["note"], data.get("decision"))
             else:
                 raise ValueError("Unknown action.")
-            return self.state(key)
+            return self.state(key, context)
 
 
 def create_server(
@@ -258,6 +350,7 @@ def create_server(
                 return
             parsed = urlsplit(self.path)
             key = parse_qs(parsed.query).get("workflow", [""])[0]
+            context = parse_qs(parsed.query).get("run", [""])[0]
             route = parsed.path
             try:
                 if route == "/docs":
@@ -297,16 +390,57 @@ def create_server(
                 elif route == "/api/schema":
                     self.json(SCHEMA)
                 elif route == "/api/config":
-                    record = DocumentStore(app.library.file(key)).read()
-                    self.json(
-                        {
-                            **record,
-                            **document_readiness(record["workflow"]),
-                            "recovery": app.drafts.matching(key, record["revision"]),
-                        }
-                    )
+                    self.json(app.configuration(key, context))
                 elif route == "/api/state":
-                    self.json(app.state(key))
+                    from release_workbench.infrastructure.attachments import attachments
+
+                    state = app.state(key, context)
+                    run = app.selected_run(key, context)
+                    if run:
+                        state["attachments"] = attachments(
+                            run.root,
+                            run.workflow.raw,
+                            key,
+                            run.evidence.state.get("started", 0),
+                        )
+                    if context:
+                        for attachment in state.get("attachments", []):
+                            attachment["url"] += "&run=" + quote(context, safe="")
+                    self.json(state)
+                elif route == "/api/attachment":
+                    from release_workbench.infrastructure.attachments import report_files
+
+                    run = app.selected_run(key, context)
+                    name = parse_qs(parsed.query).get("path", [""])[0]
+                    files = (
+                        report_files(
+                            run.root,
+                            run.workflow.raw.get("report_paths", []),
+                            run.evidence.state.get("started", 0),
+                        )
+                        if run
+                        else {}
+                    )
+                    file = files.get(name)
+                    if file is None:
+                        self.json({"error": "Report not found."}, 404)
+                    else:
+                        content = file.read_bytes()
+                        if file.suffix.lower() in {".json", ".html", ".log", ".txt", ".csv"}:
+                            assert run is not None
+                            content = run.evidence.masker.text(
+                                content.decode("utf-8", "replace")
+                            ).encode("utf-8")
+                        self.send_response(200)
+                        self.send_header(
+                            "Content-Type",
+                            mimetypes.guess_type(file.name)[0] or "application/octet-stream",
+                        )
+                        self.send_header("Content-Length", str(len(content)))
+                        self.send_header("Content-Security-Policy", "sandbox allow-scripts")
+                        self.send_header("X-Content-Type-Options", "nosniff")
+                        self.end_headers()
+                        self.wfile.write(content)
                 elif route == "/api/history":
                     records = []
                     for file in sorted((app.storage / "runs").glob("*/summary.json"), reverse=True):
@@ -324,6 +458,10 @@ def create_server(
                         if route.startswith("/reports/")
                         else route.lstrip("/") or "index.html"
                     )
+                    from .application_routes import application_page
+
+                    if application_page(route):
+                        name = "index.html"
                     file = (base / name).resolve()
                     if not file.is_relative_to(base.resolve()) or not file.is_file():
                         self.json({"error": "File not found."}, 404)
@@ -366,7 +504,8 @@ def create_server(
                 data = json.loads(self.rfile.read(size))
                 parsed = urlsplit(self.path)
                 key = parse_qs(parsed.query).get("workflow", [""])[0]
-                self.json(app.mutation(parsed.path.removeprefix("/api/"), key, data))
+                context = parse_qs(parsed.query).get("run", [""])[0]
+                self.json(app.mutation(parsed.path.removeprefix("/api/"), key, data, context))
             except Exception as error:
                 self.json(
                     {
@@ -392,20 +531,20 @@ def serve(
 
     from .dashboard import reuse_dashboard
 
-    url = f"http://127.0.0.1:{port}/" + ("?workflow=" + workflow if workflow else "")
+    page = "workflows/" + quote(workflow, safe="") if workflow else "workspace"
+    url = f"http://127.0.0.1:{port}/" + page
     if port and reuse_dashboard(project, storage, port):
         print(f"Opened existing Workbench dashboard: {url}", flush=True)
         if open_browser:
             webbrowser.open(url)
         return
     server, app = create_server(project, storage, port)
-    print(f"Workflow Workbench v3 preview: http://127.0.0.1:{port}/", flush=True)
-    print(f"Isolated preview storage: {storage}", flush=True)
+    from release_workbench import __version__
+
+    print(f"Workflow Workbench {__version__}: http://127.0.0.1:{port}/", flush=True)
+    print(f"Storage: {storage}", flush=True)
     if open_browser:
-        webbrowser.open(
-            f"http://127.0.0.1:{server.server_port}/"
-            + ("?workflow=" + workflow if workflow else "")
-        )
+        webbrowser.open(f"http://127.0.0.1:{server.server_port}/" + page)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

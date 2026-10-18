@@ -52,6 +52,8 @@ config:
 
 Bindings such as `$ref` in this YAML are represented by named value choices in the browser. They supply values and never start execution. Save your own edits, validate, and compare **Run** evidence with the behavior described above.
 
+Large output uses the same [streaming logs and bounded result contract](../settings.md#large-command-logs) as Program, including per-stream truncation flags. JSON capture requires intact stdout.
+
 ## Common mistakes and recovery
 
 `exit 1` fails even if stdout contains valid JSON. Progress/log lines on stdout make JSON capture invalid; use text capture or keep stdout strictly JSON. Quoting is Bash syntax. Do not concatenate untrusted inputs into shell commands; prefer Program arguments for literal values.

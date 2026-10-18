@@ -7,7 +7,7 @@ Prerequisites: **Node.js 18+**, npm and **Python 3.11+** on the computer running
 Install globally so you can use Workbench from any project folder:
 
 ```bash
-npm install -g @codewhen/workbench@preview
+npm install -g @codewhen/workbench
 workbench --version
 workbench
 ```
@@ -25,16 +25,16 @@ The package name is `@codewhen/workbench`; the installed command is `workbench`.
 Use npx when you do not want a global installation:
 
 ```bash
-npx @codewhen/workbench@preview
+npx @codewhen/workbench
 ```
 
 Pass Workbench commands after the package name:
 
 ```bash
-npx @codewhen/workbench@preview serve
-npx @codewhen/workbench@preview run
-npx @codewhen/workbench@preview create
-npx @codewhen/workbench@preview --version
+npx @codewhen/workbench serve
+npx @codewhen/workbench run
+npx @codewhen/workbench create
+npx @codewhen/workbench --version
 ```
 
 The first invocation may ask permission to download the npm package. `serve`, `run` without `--non-interactive`, and no subcommand all open the dashboard; they do not execute workflow cards automatically. `create` starts the project wizard.
@@ -42,24 +42,24 @@ The first invocation may ask permission to download the npm package. `serve`, `r
 To deliberately execute a saved workflow in the terminal:
 
 ```bash
-npx @codewhen/workbench@preview run --non-interactive --config checks.yaml
+npx @codewhen/workbench run --non-interactive --config checks.yaml
 ```
 
 ## Versions, updates and removal
 
-The commands above explicitly select the `preview` distribution tag. To install an exact published version instead:
+The commands above install the stable `latest` release. To install version 0.18.0 exactly:
 
 ```bash
-npm install -g @codewhen/workbench@0.18.0-preview.6
-npx @codewhen/workbench@0.18.0-preview.6 serve
+npm install -g @codewhen/workbench@0.18.0
+npx @codewhen/workbench@0.18.0 serve
 ```
 
-The `preview` tag selects preview releases. An untagged command such as `npm install -g @codewhen/workbench` selects `latest`. Tags can refer to different versions; pin an exact version when you need reproducible installations.
+Unversioned npm and npx commands select `latest`. Pin an exact version when you need reproducible installations.
 
-Update a global installation to the version currently tagged preview, or remove it:
+Update a global installation to the current stable version, or remove it:
 
 ```bash
-npm install -g @codewhen/workbench@preview
+npm install -g @codewhen/workbench
 npm uninstall -g @codewhen/workbench
 ```
 
@@ -91,7 +91,7 @@ Use Python 3.11 or newer. Download the actual wheel artifact for the version you
 
 ```bash
 python3 -m venv .venv-workbench
-.venv-workbench/bin/python -m pip install ./release_workbench-0.18.0a6-py3-none-any.whl
+.venv-workbench/bin/python -m pip install ./release_workbench-0.18.0-py3-none-any.whl
 .venv-workbench/bin/workbench --version
 ```
 

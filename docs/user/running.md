@@ -2,9 +2,31 @@
 
 ## Start a fresh run
 
-Save and validate your workflow, then choose **Run → Run all**. Review the declared workflow inputs in the dialog when present. A fresh run starts at main Start, resets globals to initial values, and can repeat all external side effects. Opening the project or choosing Run view alone does not execute cards.
+Save and validate your workflow, then choose **Run → Run all**. Review the declared workflow inputs in the dialog when present. [Run inputs and discovery](inputs.md) explains required/default values and the optional **Auto-detect inputs** button. A fresh run starts at main Start, resets globals to initial values, and can repeat all external side effects. Opening the project or choosing Run view alone does not execute cards.
 
 Execution follows wires, not canvas positions. If selects one path; While may run zero iterations; Parallel is the only explicit concurrent fan-out. Editing is locked during active execution.
+
+## Run from a selected card
+
+1. Save and validate the workflow, then open **Run**.
+2. Select an executable card on the Flowchart or in List view.
+3. Choose **Run from here** beside **Run all**.
+4. Review inputs when prompted. Cards inside a function use that function's declared inputs.
+5. Workbench starts at this card and follows execution connections to **Finish**, or **Return** in a function. It centers and zooms to the starting card; List scrolls to it. You can pan or scroll freely afterward.
+
+This is a new partial run, not a single-card test. Next, True/False and Done connections are followed normally. Functions, child workflows, loops, Parallel and recovery regions execute with their usual behavior. Cards reached after the starting point execute again, even if they succeeded in the previous run; they may repeat external side effects. Earlier commands do not run automatically.
+
+When inspecting a stopped/completed execution, Workbench can reuse its successful upstream results and recorded variable changes. The workflow, source files, inputs, secrets and workspace must match. In a normal saved-workflow tab with no current execution, it can find the latest compatible saved evidence. Failed, redacted, downstream and incompatible results are excluded. The left panel's **Reused earlier results** section and report record where reused data came from. Globals begin at their declared values, then eligible upstream changes are restored; the old run's final globals are not copied wholesale.
+
+For example, run **Parallel race checks**, then stop before a later stage. Select **Collect race results** (Join) and choose **Run from here**: the Join collects the completed Parallel output and proceeds to its next card, without rerunning the race commands. If that Parallel never passed or its output no longer matches the current configuration, the error names the missing producer. Start from the producing Parallel card instead. Missing earlier outputs are never replaced with assumed success.
+
+Break, Continue and cards inside controlled bodies need their enclosing control-flow context. Start from the owning Loop, Parallel or Try instead. Layout areas cannot run. The button is disabled without a selected card, while any workflow is executing or for unsaved edits.
+
+In a stopped child execution tab, **Run from here** uses its configuration snapshot, opens the new run URL in the same tab and preserves the old evidence. It does not resume the parent. **Open definition** opens the current saved file for editing. Stop, manual prompts, resource locks, timeout, retries and live logs remain available.
+
+Partial reports identify their starting card and any reused evidence. Passing the remaining path does not independently approve the entire release workflow. A partial report cannot be silently resumed as a full-workflow approval.
+
+![Running forward from a selected card and inspecting its result](../assets/screenshots/run-selected-card.png)
 
 ## Overall and selected inspection
 

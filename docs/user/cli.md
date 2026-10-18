@@ -24,7 +24,7 @@ workbench run --non-interactive --config checks.yaml --storage ./evidence --inpu
 
 Inputs use NAME=JSON_OR_TEXT. JSON Booleans/numbers/objects keep their types; unparseable JSON is treated as text. Quote according to your shell. Pass required inputs again for resume. No browser is opened. Manual decisions/approvals block without recorded evidence.
 
-Run resolves its workspace from the config YAML's parent directory. `--resume RUN_ID` selects saved evidence under the same storage; `--retry-interrupted` permits deliberate retry of unsuccessful/interrupted work. Read [running](running.md) before using it on side effects.
+Run resolves optional `workspace` relative to the config YAML's parent directory; omitting it uses that directory. CLI execution does not invoke `input_detection`; pass values with `--input` or use defaults. `--resume RUN_ID` selects saved evidence under the same storage; `--retry-interrupted` permits deliberate retry of unsuccessful/interrupted work. Read [running](running.md) before using it on side effects.
 
 ## Advanced utilities
 

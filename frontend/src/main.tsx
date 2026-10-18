@@ -6,25 +6,16 @@ import { api } from "./shared/api";
 import type { Catalog } from "./shared/types";
 import { Home } from "./Home";
 import { EditorLoader } from "./Editor";
+import { navigate, useLocation } from "./navigation/location";
 function App() {
   const [catalog, setCatalog] = useState<Catalog | null>(null),
-    [error, setError] = useState(""),
-    [workflow, setWorkflow] = useState(
-      new URLSearchParams(location.search).get("workflow"),
-    );
+    [error, setError] = useState("");
+  const { workflow, run } = useLocation();
   useEffect(() => {
     api<Catalog>("catalog")
       .then(setCatalog)
       .catch((e) => setError(e.message));
   }, []);
-  function navigate(id: string | null) {
-    history.replaceState(
-      null,
-      "",
-      id ? "?workflow=" + encodeURIComponent(id) : location.pathname,
-    );
-    setWorkflow(id);
-  }
   if (!catalog)
     return (
       <main className="loading">
@@ -36,13 +27,34 @@ function App() {
     );
   return workflow ? (
     <EditorLoader
-      key={workflow}
+      key={workflow + ":" + (run ?? "latest")}
       id={workflow}
       catalog={catalog}
-      onHome={() => navigate(null)}
+      onHome={() =>
+        navigate({
+          workflow: null,
+          view: undefined,
+          graph: undefined,
+          display: undefined,
+          card: undefined,
+          panel: undefined,
+        })
+      }
     />
   ) : (
-    <Home catalog={catalog} onOpen={(id) => navigate(id)} />
+    <Home
+      catalog={catalog}
+      onOpen={(id) =>
+        navigate({
+          workflow: id,
+          view: undefined,
+          graph: undefined,
+          display: undefined,
+          card: undefined,
+          panel: undefined,
+        })
+      }
+    />
   );
 }
 createRoot(document.getElementById("root")!).render(<App />);

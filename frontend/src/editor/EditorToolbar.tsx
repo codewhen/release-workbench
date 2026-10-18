@@ -18,6 +18,8 @@ interface EditorToolbarProps {
   editing: boolean;
   locked: boolean;
   dirty: boolean;
+  selectedName?: string;
+  selectedLocked?: boolean;
   canUndo: boolean;
   canRedo: boolean;
   hidden: boolean;
@@ -29,6 +31,7 @@ interface EditorToolbarProps {
     arrange: () => void;
     validate: () => void;
     run: () => void;
+    runFromHere: () => void;
     stop: () => void;
     pause: () => void;
     overall: () => void;
@@ -44,6 +47,8 @@ export function EditorToolbar({
   editing,
   locked,
   dirty,
+  selectedName,
+  selectedLocked,
   canUndo,
   canRedo,
   hidden,
@@ -102,6 +107,18 @@ export function EditorToolbar({
             >
               <Play size={17} />
               Run all
+            </button>
+            <button
+              disabled={(selectedLocked ?? locked) || dirty || !selectedName}
+              onClick={actions.runFromHere}
+              title={
+                selectedName
+                  ? `Start at ${selectedName} and follow its flow to Finish or Return`
+                  : "Select a card to run it"
+              }
+            >
+              <Play size={17} />
+              Run from here
             </button>
             <button disabled={!state.busy} onClick={actions.stop}>
               <Square size={17} />

@@ -77,12 +77,17 @@ def main() -> None:
         set(manifest["workflow_fields"]) == set(SCHEMA["properties"]),
         "Workflow field coverage differs from schema.",
     )
+    discovery_fields = SCHEMA["properties"]["input_detection"]["properties"]
+    require(
+        set(manifest["discovery_fields"]) == set(discovery_fields),
+        "Input discovery setting coverage differs from schema.",
+    )
     retry_fields = settings["retry"]["properties"]
     require(
         set(manifest["retry_fields"]) == set(retry_fields),
         "Retry setting coverage differs from schema.",
     )
-    for category in ("settings", "retry_fields", "workflow_fields", "features"):
+    for category in ("settings", "retry_fields", "workflow_fields", "discovery_fields", "features"):
         for key, item in manifest[category].items():
             page = DOCS / item["page"]
             require(page.is_file(), f"{key}: missing feature page")

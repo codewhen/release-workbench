@@ -39,7 +39,7 @@ Python tests cover contracts, compiler rejection, Boolean returns, loop bounds, 
 ```bash
 .venv/bin/python -m build
 python3 -m venv /tmp/workbench-wheel-check
-/tmp/workbench-wheel-check/bin/python -m pip install ./dist/release_workbench-0.18.0a6-py3-none-any.whl
+/tmp/workbench-wheel-check/bin/python -m pip install ./dist/release_workbench-0.18.0-py3-none-any.whl
 mkdir /tmp/workbench-wheel-project
 cd /tmp/workbench-wheel-project
 /tmp/workbench-wheel-check/bin/workflow-workbench init --template python --name "Installed wheel"
@@ -49,11 +49,11 @@ cd /tmp/workbench-wheel-project
 
 Run from outside the source checkout with PYTHONPATH unset. Verify output/result.json, report.html, bundled UI assets and schema availability. Also test While, Parallel and recovery starters. The installed wheel does not need Node. Build the frontend and `npm --prefix docs-site run build` before packaging; stale assets are a release blocker.
 
-## Publish an isolated breaking preview
+## Publish a release
 
 1. Run all required checks, inspect desktop and mobile once, and record concrete results in acceptance.md.
 2. Confirm only generic code, synthetic tests, examples and documentation are tracked. Never add run evidence, credentials or project-specific workflows.
-3. Confirm package and __version__ agree on the prerelease version, then build wheel/source archive and SHA256SUMS.
-4. Commit the preview branch and publish a **prerelease** with those assets. Keep the existing stable installation and historical evidence separate.
-5. Start preview on a different port with an explicit preview-only library/storage. Do not update consuming projects' pins or recreate their workflows during this redesign.
+3. Confirm package and __version__ agree on the release version, then build wheel/source archive and SHA256SUMS.
+4. Commit the tested source and publish the release with those assets. Create a Git tag only with explicit user authorization. Mark stable releases as latest; mark preview releases as prereleases. Preserve historical evidence.
+5. Use disposable library/storage for release verification. Do not change existing projects, active dashboards or consumer pins as a side effect of publishing.
 6. Native Windows tests must pass before removing the unverified label. Do not imply production certification from macOS results.

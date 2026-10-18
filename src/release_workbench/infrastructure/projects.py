@@ -21,12 +21,17 @@ def register_starters(library: Library) -> None:
                 stream.write(render_document(starter(name, template)))
         except FileExistsError:
             pass
+    existing = {entry["id"] for entry in library.data["entries"]}
     library.register_project(project, restore=False)
-    if "Starter" not in library.data["folders"]:
+    new_entries = [
+        entry
+        for entry in library.data["entries"]
+        if entry["id"] not in existing and Path(entry["path"]).parent == project
+    ]
+    if new_entries and "Starter" not in library.data["folders"]:
         library.data["folders"].append("Starter")
-    for entry in library.data["entries"]:
-        if Path(entry["path"]).parent == project:
-            entry["folder"] = "Starter"
+    for entry in new_entries:
+        entry["folder"] = "Starter"
     library.save()
 
 

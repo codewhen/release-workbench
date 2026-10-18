@@ -1,6 +1,12 @@
-import { belongsToProject } from "./shared/projectPaths";
+import { navigate, useLocation } from "./navigation/location";
+import { LibraryBrowser } from "./home/LibraryBrowser";
+import {
+  folderName as leafName,
+  parentFolder,
+  withinFolder,
+} from "./home/folders";
 import { useEffect, useRef, useState } from "react";
-import { Folder, FolderPlus, Plus, Upload, GitBranch } from "lucide-react";
+import { Folder, Plus, Upload, GitBranch } from "lucide-react";
 import { api } from "./shared/api";
 import type { Catalog, Library, LibraryEntry } from "./shared/types";
 import { Choice } from "./components/Choice";
@@ -19,9 +25,6 @@ export function Home({
       entries: [],
     }),
     [error, setError] = useState(""),
-    [query, setQuery] = useState(""),
-    [folder, setFolder] = useState("*"),
-    [project, setProject] = useState("*"),
     [create, setCreate] = useState(false),
     [register, setRegister] = useState(false),
     [path, setPath] = useState(""),
@@ -34,8 +37,10 @@ export function Home({
       action: string;
       id?: string;
       old?: string;
+      parent?: string;
     } | null>(null),
     [folderName, setFolderName] = useState(""),
+    [folderParent, setFolderParent] = useState(""),
     [importFile, setImportFile] = useState<{
       filename: string;
       yaml: string;
@@ -47,6 +52,10 @@ export function Home({
     } | null>(null),
     [working, setWorking] = useState(false),
     [pickingFolder, setPickingFolder] = useState(false);
+  const { folder, project, query } = useLocation();
+  const setFolder = (folder: string) => navigate({ folder });
+  const setProject = (project: string) => navigate({ project });
+  const setQuery = (query: string) => navigate({ query }, true);
   const input = useRef<HTMLInputElement>(null);
   const [history, setHistory] = useState<
     { run_id: string; name: string; status: string }[]
@@ -77,20 +86,6 @@ export function Home({
       setWorking(false);
     }
   }
-  const entries = library.entries.filter(
-    (e) =>
-      (folder === "*" || e.folder === folder) &&
-      (project === "*" || belongsToProject(e.path, project)) &&
-      (e.name + " " + e.path).toLowerCase().includes(query.toLowerCase()),
-  );
-  const context = (
-    event: React.MouseEvent,
-    kind: "card" | "area",
-    id: string,
-  ) => {
-    event.preventDefault();
-    setMenu({ kind, id, x: event.clientX, y: event.clientY });
-  };
   return (
     <main className="home">
       <header className="home-header">
@@ -217,6 +212,8 @@ export function Home({
                 project: newProject,
                 template,
               });
+              if (folder && folder !== "*")
+                await api("organize", { action: "move", folder }, entry.id);
               onOpen(entry.id);
             });
           }}
@@ -259,112 +256,35 @@ export function Home({
               />
             </label>
           </div>
-          <button disabled={working} className="primary">
+          <button
+            disabled={
+              working || !name.trim() || !filename.trim() || !newProject.trim()
+            }
+            className="primary"
+          >
             Create workflow
           </button>
         </form>
       )}
-      <div className="library-layout">
-        <nav aria-label="Workflow folders">
-          <h3>Folders</h3>
-          <button
-            onClick={() => {
-              setFolderName("");
-              setOrganize({ action: "new_folder" });
-            }}
-          >
-            <FolderPlus size={17} />
-            New folder
-          </button>
-          {[
-            { id: "*", name: "All workflows" },
-            { id: "", name: "Unfiled" },
-            ...library.folders.map((id) => ({ id, name: id })),
-          ].map((f) => (
-            <button
-              className="folder-button"
-              aria-pressed={folder === f.id}
-              key={f.id}
-              onClick={() => setFolder(f.id)}
-              onContextMenu={(e) => {
-                if (f.id && f.id !== "*") context(e, "area", f.id);
-              }}
-              onKeyDown={(e) => {
-                if (e.shiftKey && e.key === "F10" && f.id && f.id !== "*") {
-                  e.preventDefault();
-                  setMenu({ kind: "area", id: f.id, x: 24, y: 300 });
-                }
-              }}
-            >
-              <Folder size={16} />
-              {f.name}
-            </button>
-          ))}
-        </nav>
-        <section>
-          <div className="library-filter">
-            <label>
-              Find a workflow
-              <input
-                type="search"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              />
-            </label>
-            <label>
-              Project
-              <Choice
-                label="Project"
-                value={project}
-                onChange={setProject}
-                options={[
-                  { value: "*", label: "All projects" },
-                  ...library.projects.map((value) => ({ value, label: value })),
-                ]}
-              />
-            </label>
-            {project !== "*" && (
-              <button onClick={() => setRemoval({ project, name: project })}>
-                Remove project from Home
-              </button>
-            )}
-            <button onClick={() => void load()}>Refresh</button>
-          </div>
-          {!entries.length && (
-            <div className="empty">
-              <h3>No workflows here yet</h3>
-              <p>Create a blank flowchart or start from a working example.</p>
-              <button onClick={() => setCreate(true)}>Create a workflow</button>
-            </div>
-          )}
-          {entries.map((entry) => (
-            <article
-              className="workflow-row"
-              key={entry.id}
-              onContextMenu={(e) => context(e, "card", entry.id)}
-            >
-              <div>
-                <h3>{entry.name}</h3>
-                <p className="path">{entry.path}</p>
-                <small>{entry.error ?? (entry.folder || "Unfiled")}</small>
-              </div>
-              <div className="actions">
-                <button
-                  onClick={() => setRemoval({ id: entry.id, name: entry.name })}
-                >
-                  Remove from Home
-                </button>
-                <button
-                  disabled={!entry.supported}
-                  onClick={() => onOpen(entry.id)}
-                >
-                  Open workflow
-                </button>
-              </div>
-            </article>
-          ))}
-        </section>
-      </div>
+      <LibraryBrowser
+        library={library}
+        folder={folder}
+        project={project}
+        query={query}
+        onFolder={setFolder}
+        onProject={setProject}
+        onQuery={setQuery}
+        onOpen={onOpen}
+        onMenu={setMenu}
+        onRefresh={() => void load()}
+        onCreate={() => setCreate(true)}
+        onRemoveProject={() => setRemoval({ project, name: project })}
+        onNewFolder={(parent) => {
+          setFolderName("");
+          setFolderParent(parent);
+          setOrganize({ action: "new_folder", parent });
+        }}
+      />
       {removal && (
         <Dialog
           title={
@@ -455,6 +375,8 @@ export function Home({
                     ...importFile,
                     project: newProject,
                   });
+                  if (folder && folder !== "*")
+                    await api("organize", { action: "move", folder }, entry.id);
                   onOpen(entry.id);
                 })
               }
@@ -470,11 +392,13 @@ export function Home({
           items={
             menu.kind === "area"
               ? [
+                  { id: "new_subfolder", label: "New subfolder" },
                   { id: "rename_folder", label: "Rename folder" },
+                  { id: "move_folder", label: "Move folder" },
                   {
                     id: "remove_folder",
                     label: "Remove folder",
-                    description: "Keep its workflows in Unfiled",
+                    description: "Keep workflows in the parent folder",
                   },
                 ]
               : [
@@ -494,8 +418,17 @@ export function Home({
               setMenu(null);
               return;
             }
-            setOrganize({ action, id: menu.id, old: menu.id });
-            setFolderName(action === "rename_folder" ? (menu.id ?? "") : "");
+            const selected = menu.id ?? "";
+            const parent =
+              action === "new_subfolder" ? selected : parentFolder(selected);
+            setFolderParent(parent);
+            setOrganize({
+              action: action === "new_subfolder" ? "new_folder" : action,
+              id: selected,
+              old: selected,
+              parent,
+            });
+            setFolderName(action === "rename_folder" ? leafName(selected) : "");
             setMenu(null);
           }}
         />
@@ -505,21 +438,41 @@ export function Home({
           title={organize.action.replaceAll("_", " ")}
           onClose={() => setOrganize(null)}
         >
-          {organize.action === "move" ? (
+          {error && (
+            <p role="alert" className="error">
+              {error}
+            </p>
+          )}
+          {organize.action === "move" || organize.action === "move_folder" ? (
             <label>
               Folder
               <Choice
                 label="Move to folder"
-                value={folderName}
-                onChange={setFolderName}
+                value={
+                  organize.action === "move_folder" ? folderParent : folderName
+                }
+                onChange={
+                  organize.action === "move_folder"
+                    ? setFolderParent
+                    : setFolderName
+                }
                 options={[
-                  { value: "", label: "Unfiled" },
-                  ...library.folders.map((value) => ({ value, label: value })),
+                  { value: "", label: "My workspace" },
+                  ...library.folders
+                    .filter(
+                      (path) =>
+                        organize.action !== "move_folder" ||
+                        !withinFolder(path, organize.old ?? ""),
+                    )
+                    .map((value) => ({ value, label: value })),
                 ]}
               />
             </label>
           ) : organize.action === "remove_folder" ? (
-            <p>Workflows stay available in Unfiled.</p>
+            <p>
+              This removes this folder and its subfolders from the library.
+              Their workflows stay in the parent folder. Files on disk are kept.
+            </p>
           ) : (
             <label>
               Folder name
@@ -529,29 +482,67 @@ export function Home({
               />
             </label>
           )}
+          {organize.action === "new_folder" && (
+            <label>
+              Parent folder
+              <Choice
+                label="Parent folder"
+                value={folderParent}
+                onChange={setFolderParent}
+                options={[
+                  { value: "", label: "My workspace" },
+                  ...library.folders.map((value) => ({ value, label: value })),
+                ]}
+              />
+            </label>
+          )}
           <div className="actions">
             <button onClick={() => setOrganize(null)}>Cancel</button>
             <button
               disabled={working}
               onClick={() =>
                 void act(async () => {
-                  setLibrary(
-                    await api<Library>(
-                      "organize",
-                      {
-                        action: organize.action,
-                        old: organize.old,
-                        name:
-                          organize.action === "remove_folder"
-                            ? organize.old
-                            : folderName,
-                        folder: folderName,
-                      },
-                      organize.id,
-                    ),
+                  const result = await api<Library>(
+                    "organize",
+                    {
+                      action: organize.action,
+                      old: organize.old,
+                      name:
+                        organize.action === "remove_folder"
+                          ? organize.old
+                          : folderName,
+                      folder: folderName,
+                      parent: folderParent,
+                    },
+                    organize.id,
                   );
+                  setLibrary(result);
+                  if (
+                    organize.action === "rename_folder" &&
+                    organize.old &&
+                    withinFolder(folder, organize.old)
+                  ) {
+                    const renamed =
+                      (parentFolder(organize.old)
+                        ? parentFolder(organize.old) + "/"
+                        : "") + folderName.trim();
+                    setFolder(renamed + folder.slice(organize.old.length));
+                  } else if (
+                    organize.action === "move_folder" &&
+                    organize.old &&
+                    withinFolder(folder, organize.old)
+                  ) {
+                    const moved =
+                      (folderParent ? folderParent + "/" : "") +
+                      leafName(organize.old);
+                    setFolder(moved + folder.slice(organize.old.length));
+                  } else if (
+                    organize.action === "remove_folder" &&
+                    organize.old &&
+                    withinFolder(folder, organize.old)
+                  )
+                    setFolder(parentFolder(organize.old));
                   setOrganize(null);
-                  setFolder("*");
                 })
               }
             >

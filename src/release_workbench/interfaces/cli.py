@@ -98,7 +98,7 @@ def main() -> None:
         elif args.command == "report":
             file = (args.storage / "runs" / args.run / "report.html").resolve()
             if not file.is_relative_to((args.storage / "runs").resolve()) or not file.is_file():
-                raise ValueError("Report does not exist inside preview storage.")
+                raise ValueError("Report does not exist inside Workbench storage.")
             print(file)
         else:
             workflow = compile_document(DocumentStore(args.config).read()["workflow"])

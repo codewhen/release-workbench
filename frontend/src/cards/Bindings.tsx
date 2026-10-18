@@ -23,6 +23,7 @@ export function Bindings({
     graphId === "main" ? (workflow.inputs ?? {}) : (definition?.inputs ?? {}),
   );
   const choices = [
+    { value: "runtime:python", label: "Workbench Python executable" },
     ...inputNames.map((id) => ({
       value: "input:" + id,
       label: "Input · " + id,

@@ -24,6 +24,31 @@ export interface WorkflowDocument {
   };
   secrets?: string[];
   source_paths?: string[];
+  /**
+   * Execution root relative to the workflow YAML directory.
+   */
+  workspace?: string;
+  report_paths?: string[];
+  input_detection?: {
+    /**
+     * @minItems 1
+     */
+    argv: [
+      (
+        | string
+        | {
+            $ref: "runtime:python";
+          }
+      ),
+      ...(
+        | string
+        | {
+            $ref: "runtime:python";
+          }
+      )[]
+    ];
+    timeout?: number;
+  };
 }
 export interface Parameter {
   type: "void" | "null" | "boolean" | "number" | "string" | "array" | "object" | "json";

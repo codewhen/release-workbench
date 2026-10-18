@@ -14,7 +14,7 @@ Native Windows acceptance remains unverified.
 ## Install globally with npm
 
 ```bash
-npm install -g @codewhen/workbench@preview
+npm install -g @codewhen/workbench
 workbench --version
 workbench
 ```
@@ -36,15 +36,15 @@ The wizard asks for a project name and YAML filename, creates a blank Start → 
 Use npx without installing a global command:
 
 ```bash
-npx @codewhen/workbench@preview
+npx @codewhen/workbench
 ```
 
 Pass commands and options after the package name:
 
 ```bash
-npx @codewhen/workbench@preview serve
-npx @codewhen/workbench@preview create
-npx @codewhen/workbench@preview --version
+npx @codewhen/workbench serve
+npx @codewhen/workbench create
+npx @codewhen/workbench --version
 ```
 
 The first invocation may ask permission to download the package. No subcommand, `serve`, and `run` all open the dashboard. They do not execute workflow cards automatically.
@@ -52,7 +52,7 @@ The first invocation may ask permission to download the package. No subcommand, 
 To execute a saved workflow directly in the terminal:
 
 ```bash
-npx @codewhen/workbench@preview run --non-interactive --config checks.yaml
+npx @codewhen/workbench run --non-interactive --config checks.yaml
 ```
 
 ## Common commands
@@ -70,17 +70,17 @@ The default dashboard port is 3104. Follow the URL printed in your terminal. Use
 
 ## Versions, updates and removal
 
-`@preview` selects the preview release channel. An untagged package name selects `latest`. To pin a version:
+An untagged package name installs the stable `latest` release. To pin version 0.18.0:
 
 ```bash
-npm install -g @codewhen/workbench@0.18.0-preview.6
-npx @codewhen/workbench@0.18.0-preview.6 serve
+npm install -g @codewhen/workbench@0.18.0
+npx @codewhen/workbench@0.18.0 serve
 ```
 
-Update to the current preview release or uninstall the global command:
+Update to the current stable release or uninstall the global command:
 
 ```bash
-npm install -g @codewhen/workbench@preview
+npm install -g @codewhen/workbench
 npm uninstall -g @codewhen/workbench
 ```
 
@@ -107,9 +107,9 @@ npm view @codewhen/workbench dist-tags versions --json
 
 ## Documentation and source
 
-- [Installation and first project](https://github.com/codewhen/release-workbench/blob/main/docs/user/installation.md)
-- [Complete user manual](https://github.com/codewhen/release-workbench/blob/main/docs/index.md)
-- [Packaging and contributor instructions](https://github.com/codewhen/release-workbench/blob/main/docs/developer/packaging.md)
+- [Installation and first project](https://github.com/codewhen/release-workbench/blob/v0.18.0/docs/user/installation.md)
+- [Complete user manual](https://github.com/codewhen/release-workbench/blob/v0.18.0/docs/index.md)
+- [Packaging and contributor instructions](https://github.com/codewhen/release-workbench/blob/v0.18.0/docs/developer/packaging.md)
 - [Source code and issues](https://github.com/codewhen/release-workbench)
 
 You can also open **Documentation** from Home or the editor without leaving your workflow.

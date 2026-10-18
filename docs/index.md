@@ -7,6 +7,7 @@ Build a flowchart, run local automation, and inspect what happened. This manual 
 - **New to Workbench?** Begin with [installation](user/installation.md), then [your first workflow](user/first-workflow.md).
 - **Need a particular operation?** Browse the [card reference](user/cards/index.md): 25 executable card types and three layout tools, each with screenshots and downloadable examples.
 - **Confused about data or control flow?** Read [connections and values](user/values.md), [Start/Finish/Return](user/tutorials/completion.md), [functions](user/tutorials/functions.md) and [variables](user/tutorials/variables.md).
+- **Need values before a run?** Follow [Run inputs and automatic discovery](user/inputs.md) for typed declarations, candidate selection and a reusable detector.
 - **Already running work?** Read [running and evidence](user/running.md), [troubleshooting](user/troubleshooting.md) and [storage](user/storage.md).
 - **Contributing code?** The [Developer guide](developer/index.md) explains internals, tests and packaging separately.
 

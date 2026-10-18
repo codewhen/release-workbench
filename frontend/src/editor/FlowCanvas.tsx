@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ReactFlow,
   Background,
@@ -35,6 +35,7 @@ export function FlowCanvas({
   statuses,
   focus,
   following,
+  reveal,
   onInspect,
   onSelect,
   onConnect,
@@ -51,6 +52,7 @@ export function FlowCanvas({
   statuses: Record<string, string>;
   focus: string | null;
   following: boolean;
+  reveal?: { card: string; graph: string; key: string } | null;
   onInspect: () => void;
   onSelect: (id: string) => void;
   onConnect: (connection: Connection) => void;
@@ -70,6 +72,7 @@ export function FlowCanvas({
 } & CanvasActions) {
   const flow = useReactFlow<CanvasNode>();
   const nodesReady = useNodesInitialized();
+  const revealed = useRef("");
   const graph = workflow.graphs[graphId];
   const [nodes, setNodes] = useState<CanvasNode[]>([]);
   const visible = useMemo(
@@ -128,6 +131,28 @@ export function FlowCanvas({
           : 200,
       });
   }, [focus, following, nodesReady, graphId]);
+  useEffect(() => {
+    if (
+      !reveal ||
+      reveal.graph !== graphId ||
+      !nodesReady ||
+      revealed.current === reveal.key
+    )
+      return;
+    const node = flow.getNode(reveal.card);
+    if (!node || node.data.graphId !== graphId) return;
+    const frame = requestAnimationFrame(() => {
+      const current = flow.getNode(reveal.card);
+      if (!current) return;
+      void flow.setCenter(
+        current.position.x + (current.measured?.width ?? 268) / 2,
+        current.position.y + (current.measured?.height ?? 200) / 2,
+        { zoom: 0.95, duration: 0 },
+      );
+      revealed.current = reveal.key;
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [reveal?.key, nodesReady, graphId]);
   const edges: FlowEdge[] = graph.edges
     .filter(
       (e) =>
@@ -199,7 +224,7 @@ export function FlowCanvas({
       onMoveStart={(event) => {
         if (event) onInspect();
       }}
-      fitView
+      fitView={reveal?.graph !== graphId}
       fitViewOptions={{ padding: 0.2 }}
       minZoom={0.2}
       maxZoom={1.5}

@@ -44,6 +44,7 @@ export function ValueInput({
   const inputs = graphInputs(workflow, graphId);
   const options = [
     { value: "literal", label: "Type a value" },
+    { value: "runtime:python", label: "Workbench Python executable" },
     ...graph.cards
       .filter(
         (c) =>
@@ -107,7 +108,9 @@ export function ValueInput({
             <JsonInput
               label={field.label + " reference"}
               value={
-                binding?.connected ? { $ref: reference, ...(path ? { path } : {}) } : value
+                binding?.connected
+                  ? { $ref: reference, ...(path ? { path } : {}) }
+                  : value
               }
               onChange={onChange}
               disabled={disabled}

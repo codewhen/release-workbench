@@ -53,3 +53,21 @@ The editor composes `EditorToolbar`, `CardInspector`, canvas, run panel and dial
 `run/useRunState.ts` owns polling. It issues one cancellable request at a time and invalidates pre-start responses when a newer run state is adopted. UI initialization and validation remain explicit: background polling does not validate a draft.
 
 Architecture tests recursively check layer imports and verify schema/catalog/executor agreement, concrete inheritance and separate implementation modules. New cards must update their public schema contract and explicit registry; registration through incidental import side effects is intentionally avoided.
+
+## Library organization
+
+`domain/library_folders.py` validates logical folder creation, subtree relocation and removal without filesystem dependencies. `Library.organize` atomically saves the validated metadata replacement; HTTP handlers delegate to it. Folder paths in library.json use `/` as hierarchy, independently of OS project paths. Existing top-level labels remain unchanged. No folder operation rewrites workflow YAML or execution evidence.
+
+The Home shell owns dialogs and API mutations; `home/LibraryBrowser.tsx` renders the responsive folder/workflow grids, breadcrumbs and keyboard/context navigation. `home/folders.ts` owns shared path relationships. Starter registration assigns only newly discovered entries, preserving user organization across restarts.
+
+## Browser locations
+
+`navigation/location.ts` owns URL parsing, typed query patches, History API notifications and guarded navigation. Home filters and editor location use the same external location store; `navigation/useEditorLocation.ts` validates graph/selection against the loaded workflow. UI navigation pushes history, search and automatic active-card tracking replace it. Back/Forward traversals leaving a dirty workflow are reversed until an explicit in-page confirmation permits them; graph edits stay in the editor state rather than URLs. Readable `/workspace`, `/folders/...` and `/workflows/...` paths are canonical; legacy query links are normalized with replaceState. `interfaces/application_routes.py` recognizes only supported application paths for HTML-shell fallback, leaving unknown API/file/report paths and traversal attempts as real 404s. The same origin/token checks protect mutation endpoints on every page.
+
+## Child workflow navigation
+
+The protected `open-workspace` mutation resolves a selected workspace card through `interfaces/workspace_navigation.py`, validates the child document and reuses its library registration. It accepts the current schema-valid draft without saving it. Runtime evidence records `child_source`, allowing Run navigation to select the executed file for dynamic paths. The shared `cards/WorkspaceLink.tsx` opens the definition in Edit mode or the exact nested execution in Run mode. A `run` URL selector identifies the child invocation, not an alias in the workflow-ID map. The server resolves it through retained root run trees, validates its source against the registered workflow, and serves the executed configuration snapshot. State, manual evidence, cancellation and report links target that same invocation. Child execution activity is tracked independently of dedicated root threads. Live contexts last for the server session; persisted reports remain the historical fallback.
+
+### Partial execution
+
+`Run from here` uses the existing graph interpreter with an explicit starting card, not a second scheduler. `application/start_context.py` restores only compatible, passed, non-redacted ancestor results and per-card global changes into the invocation frame. Reached cards execute afresh through the normal executor registry. `infrastructure/run_checkpoints.py` locates compatible completed evidence after restart; an explicitly selected live context takes precedence. Evidence records the start scope, base fingerprint and reused source run. Controlled-body entry requires its enclosing container; main graphs must reach Finish, function graphs Return.

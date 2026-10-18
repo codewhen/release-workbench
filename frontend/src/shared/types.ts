@@ -55,6 +55,7 @@ export interface ValidationIssue {
   message: string;
 }
 export interface SavedDocument {
+  inspection?: string;
   runnable?: boolean;
   validation_errors?: string[];
   issues?: ValidationIssue[];
@@ -78,6 +79,10 @@ export interface Library {
   entries: LibraryEntry[];
 }
 export interface Execution {
+  child_report?: string;
+  child_status?: string;
+  child_active?: string[];
+  child_progress?: { done: number; total: number; stage: string };
   card: string;
   graph: string;
   name: string;
@@ -101,7 +106,15 @@ export interface ManualRequest {
   mode: string;
 }
 export interface RunState {
+  input_context?: {
+    source_run: string;
+    results: Record<string, { type: string; value?: unknown }>;
+  };
+  selection?: { graph: string; card: string; name: string; mode?: string };
+  attachments?: { path: string; url: string }[];
   run_id?: string;
+  report_base?: string;
+  can_run_from_here?: boolean;
   status: string;
   busy: boolean;
   paused: boolean;

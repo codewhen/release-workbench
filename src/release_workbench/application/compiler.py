@@ -48,6 +48,15 @@ class Compiler:
                     "Unsupported workflow version. This preview accepts schema v3 only; the original file was not changed."
                 ]
             )
+        from pathlib import PurePosixPath, PureWindowsPath
+
+        for pattern in raw.get("report_paths", []):
+            if (
+                PurePosixPath(pattern).is_absolute()
+                or PureWindowsPath(pattern).is_absolute()
+                or ".." in PurePosixPath(pattern.replace("\\", "/")).parts
+            ):
+                raise CompilationError(["Report paths must stay inside the workspace."])
         graphs: dict[str, Graph] = {}
         errors: list[str] = []
         for graph_id, data in raw["graphs"].items():
@@ -263,6 +272,7 @@ class Compiler:
                 if not ref.startswith(("card:", "input:", "env:")) and ref not in (
                     "error",
                     "loop",
+                    "runtime:python",
                 ):
                     errors.append(f"{card.id}: unknown reference {ref}.")
         flows: dict[tuple[str, str], list[Edge]] = {}
